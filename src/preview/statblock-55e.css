@@ -36,13 +36,18 @@
   line-height: 1.1;
 }
 
+/* The underline spans the whole row so it runs under the context-menu trigger. */
+.statblock.v55e .name-row {
+  border-bottom: 0.063rem solid var(--accent);
+  margin-bottom: 0.45rem;
+}
+
 .statblock.v55e .name {
   font-family: "Scala Sans Sc Offc", "Scala Sans Offc", Roboto, Helvetica, sans-serif;
   font-weight: bold;
   font-size: 1.75rem;
   color: var(--accent);
-  border-bottom: 0.063rem solid var(--accent);
-  margin: 0 0 0.45rem;
+  margin: 0;
 }
 
 .statblock.v55e .meta {

@@ -98,16 +98,12 @@ export class EditorPanel {
 
     const slot = block.querySelector<HTMLElement>(".name-menu");
     if (slot) {
+      // Offer only the layout we're not currently in.
+      const other = monster.ruleset === "5e" ? "5.5e" : "5e";
       this.menu = new ContextMenu([
         {
-          label: "Use 5e stat block",
-          active: monster.ruleset === "5e",
-          onClick: () => this.adapter.setRuleset("5e"),
-        },
-        {
-          label: "Use 5.5e stat block",
-          active: monster.ruleset === "5.5e",
-          onClick: () => this.adapter.setRuleset("5.5e"),
+          label: `Use ${other} stat block`,
+          onClick: () => this.adapter.setRuleset(other),
         },
         { label: "Close", danger: true, onClick: () => this.close() },
       ]);
