@@ -8,7 +8,7 @@
  */
 import type { PageAdapter } from "../adapter/types.js";
 import { renderStatBlock } from "../preview/statblock-view.js";
-import { ContextMenu } from "./context-menu.js";
+import { ContextMenu, makeIcon } from "./context-menu.js";
 import panelCss from "./panel.css";
 import contextMenuCss from "./context-menu.css";
 import statblock5eCss from "../preview/statblock-5e.css";
@@ -106,9 +106,15 @@ export class EditorPanel {
           icon: "loop",
           onClick: () => this.adapter.setRuleset(other),
         },
-        { label: "Close", icon: "close", danger: true, onClick: () => this.close() },
       ]);
-      slot.append(this.menu.element);
+      // Close is a standalone icon button, pinned to the far right of the row.
+      const closeBtn = document.createElement("button");
+      closeBtn.type = "button";
+      closeBtn.className = "name-close";
+      closeBtn.setAttribute("aria-label", "Close");
+      closeBtn.append(makeIcon("close"));
+      closeBtn.addEventListener("click", () => this.close());
+      slot.append(this.menu.element, closeBtn);
     }
 
     this.stage.replaceChildren(block);

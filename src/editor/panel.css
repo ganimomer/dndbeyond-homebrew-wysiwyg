@@ -42,7 +42,7 @@
   border-radius: 4px;
 }
 
-/* Name row hosts the name and the context-menu trigger. */
+/* Name row hosts the name, the context-menu trigger, and the close button. */
 .statblock .name-row {
   display: flex;
   align-items: flex-start;
@@ -51,4 +51,48 @@
 }
 .statblock .name-row .name {
   flex: 1;
+}
+
+/* Menu + close button, right-aligned; close pinned to the far right. */
+.statblock .name-menu {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.statblock .name-close {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  color: #6f7478;
+}
+.statblock .name-close:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+.statblock .name-close svg {
+  display: block;
+}
+
+/* Free-form "Description" section, below the framed block in plain body type
+ * (matches D&D Beyond's monster page: Roboto, black, no accent/small-caps). */
+.sb-description {
+  margin: 22px 2px 0;
+  font-family: Roboto, Helvetica, sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #242528;
+}
+.sb-description .sb-description-heading {
+  margin: 0 0 14px;
+  font-family: Roboto, Helvetica, sans-serif;
+  font-size: 21px;
+  font-weight: 700;
+  color: #242528;
+}
+.sb-description .sb-description-content p {
+  margin: 0 0 10px;
 }

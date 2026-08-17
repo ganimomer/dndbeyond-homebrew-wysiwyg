@@ -189,10 +189,18 @@ function normalizeDdbMarkup(html: string): string {
     )
     .replace(
       /\[([a-z][\w-]*)\]([\s\S]*?)\[\/\1\]/gi,
-      // Some references carry a "display;slug" payload (e.g. [rules]); keep the
-      // visible display only.
-      (_all, _type: string, inner: string) => `<span class="ref">${inner.split(";")[0]}</span>`,
-    );
+      // Most references are just their visible text ([condition]Charmed[/condition]),
+      // but some carry a "slug;display" payload (e.g.
+      // [rules]shape-shifting;shape-shifts[/rules] reads as "shape-shifts"). The
+      // human-readable display is always the last segment.
+      (_all, _type: string, inner: string) => {
+        const parts = inner.split(";");
+        return `<span class="ref">${parts[parts.length - 1]}</span>`;
+      },
+    )
+    // Drop any stray unpaired macro tag (e.g. the unclosed [hover] keyword),
+    // which D&D Beyond itself renders as nothing.
+    .replace(/ ?\[\/?[a-z][\w-]*\]/gi, "");
 }
 
 /** Splits the combined "X - Resistance/Immunity/Vulnerability" multi-select. */

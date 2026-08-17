@@ -151,7 +151,6 @@ export function render5e(monster: Monster): HTMLElement {
   headedSection(root, monster, "Actions", "actions", monster.actions);
   headedSection(root, monster, "Bonus Actions", "bonusActions", monster.bonusActions);
   headedSection(root, monster, "Reactions", "reactions", monster.reactions);
-  headedSection(root, monster, "Characteristics", "characteristics");
   headedSection(root, monster, "Legendary Actions", "legendary", monster.legendaryActions, monster.legendaryActionsIntro);
   headedSection(root, monster, "Mythic Actions", "mythic");
   headedSection(root, monster, "Lair Actions", "lair");

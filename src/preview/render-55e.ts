@@ -181,7 +181,6 @@ export function render55e(monster: Monster): HTMLElement {
     ["Actions", "actions", monster.actions],
     ["Bonus Actions", "bonusActions", monster.bonusActions],
     ["Reactions", "reactions", monster.reactions],
-    ["Characteristics", "characteristics"],
     ["Legendary Actions", "legendary", monster.legendaryActions, monster.legendaryActionsIntro],
     ["Mythic Actions", "mythic"],
     ["Lair Actions", "lair"],

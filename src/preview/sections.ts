@@ -8,14 +8,28 @@ import { el } from "./dom.js";
 import { expandInline } from "./inline.js";
 import { sanitizeHtml } from "./sanitize-html.js";
 
+/**
+ * Whether an HTML fragment carries anything worth showing. D&D Beyond leaves
+ * unused sections as placeholder markup (`<p><br data-mce-bogus="1"></p>`),
+ * which is a non-empty string but renders blank — so test the text/media it
+ * actually produces, not the raw length. `<template>` content is inert (no
+ * network or script), so this is safe to build off arbitrary input.
+ */
+export function htmlHasContent(html: string | undefined): boolean {
+  if (!html || !html.trim()) return false;
+  const t = document.createElement("template");
+  t.innerHTML = html;
+  const text = (t.content.textContent ?? "").replace(/ /g, " ").trim();
+  return !!text || !!t.content.querySelector("img, image, svg, table");
+}
+
 /** True when the section has any content to show (HTML or entries). */
 export function hasSection(
   monster: Monster,
   key: SectionKey,
   entries?: NamedEntry[],
 ): boolean {
-  const html = monster.descriptionHtml?.[key];
-  if (html && html.trim()) return true;
+  if (htmlHasContent(monster.descriptionHtml?.[key])) return true;
   return !!entries && entries.length > 0;
 }
 
@@ -30,8 +44,8 @@ export function sectionBody(
   intro?: string,
 ): DocumentFragment | null {
   const html = monster.descriptionHtml?.[key];
-  if (html && html.trim()) {
-    return sanitizeHtml(html);
+  if (htmlHasContent(html)) {
+    return sanitizeHtml(html!);
   }
   if (entries && entries.length > 0) {
     const frag = document.createDocumentFragment();
