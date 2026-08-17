@@ -4,30 +4,62 @@
  *
  * Responsibilities:
  *   1. Pick the adapter for the current homebrew page (monsters, for now).
- *   2. Mount the WYSIWYG panel when a matching form is present.
+ *   2. When a matching editor is present, show the "Open in Microbrewery"
+ *      launcher; opening it swaps the launcher for the WYSIWYG panel, and
+ *      closing the panel restores the launcher.
  *   3. Re-evaluate on D&D Beyond's client-side navigations (it's a SPA, so
  *      the content script isn't re-injected between "pages").
  */
 import { DdbMonsterAdapter } from "../adapter/ddb-monster.js";
 import type { PageAdapter } from "../adapter/types.js";
 import { EditorPanel } from "../editor/panel.js";
+import { Fab } from "../editor/fab.js";
 
 const adapters: PageAdapter[] = [new DdbMonsterAdapter()];
 
+let currentAdapter: PageAdapter | null = null;
+let fab: Fab | null = null;
 let panel: EditorPanel | null = null;
 
 function activeAdapter(): PageAdapter | null {
   return adapters.find((a) => a.matches()) ?? null;
 }
 
+function showLauncher(): void {
+  if (!currentAdapter || fab || panel) return;
+  fab = new Fab({ onOpen: openEditor });
+  fab.mount();
+}
+
+function openEditor(): void {
+  if (!currentAdapter || panel) return;
+  fab?.unmount();
+  fab = null;
+  panel = new EditorPanel(currentAdapter, { onClose: closeEditor });
+  panel.mount();
+}
+
+function closeEditor(): void {
+  panel?.unmount();
+  panel = null;
+  showLauncher();
+}
+
+function teardown(): void {
+  fab?.unmount();
+  fab = null;
+  panel?.unmount();
+  panel = null;
+}
+
 function sync(): void {
   const adapter = activeAdapter();
-  if (adapter && !panel) {
-    panel = new EditorPanel(adapter);
-    panel.mount();
-  } else if (!adapter && panel) {
-    panel.unmount();
-    panel = null;
+  if (adapter) {
+    currentAdapter = adapter;
+    if (!fab && !panel) showLauncher();
+  } else if (currentAdapter) {
+    currentAdapter = null;
+    teardown();
   }
 }
 
@@ -52,7 +84,7 @@ function start(): void {
   let attempts = 0;
   const poll = window.setInterval(() => {
     sync();
-    if (++attempts >= 20 || panel) window.clearInterval(poll);
+    if (++attempts >= 20 || fab || panel) window.clearInterval(poll);
   }, 500);
 }
 

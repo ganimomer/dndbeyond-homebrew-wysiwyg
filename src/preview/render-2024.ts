@@ -4,7 +4,7 @@
  * and small-caps section headings. Class names live under `.statblock.v2024`
  * (see statblock-2024.css). Structure mirrors the real page's DOM.
  */
-import type { Ability, Monster, NamedEntry } from "../statblock/model.js";
+import type { Ability, Monster, NamedEntry, SectionKey } from "../statblock/model.js";
 import {
   abilityModifier,
   formatModifier,
@@ -16,6 +16,7 @@ import {
 } from "../statblock/compute.js";
 import { el } from "./dom.js";
 import { expandInline } from "./inline.js";
+import { sectionBody } from "./sections.js";
 
 const ABILITY_LABEL: Record<Ability, string> = {
   str: "STR",
@@ -91,29 +92,21 @@ function immunitiesText(monster: Monster): string {
     .join("; ");
 }
 
-function descriptionBlock(heading: string, entries: NamedEntry[], intro?: string): HTMLElement | null {
-  if (entries.length === 0) return null;
+function descriptionBlock(
+  monster: Monster,
+  heading: string,
+  key: SectionKey,
+  entries?: NamedEntry[],
+  intro?: string,
+): HTMLElement | null {
+  const body = sectionBody(monster, key, entries, intro);
+  if (!body) return null;
   const block = el("section", "description-block");
   const head = el("div", "heading");
   head.textContent = heading;
   block.append(head);
-
   const content = el("div", "content");
-  if (intro) {
-    const p = el("p", "intro");
-    p.append(inline(intro));
-    content.append(p);
-  }
-  for (const entry of entries) {
-    const p = el("p");
-    if (entry.name) {
-      const label = el("span", "entry-label");
-      label.textContent = `${entry.name}.`;
-      p.append(label, " ");
-    }
-    p.append(inline(entry.text));
-    content.append(p);
-  }
+  content.append(body);
   block.append(content);
   return block;
 }
@@ -171,15 +164,18 @@ export function render2024(monster: Monster): HTMLElement {
 
   // Description blocks.
   const blocks = el("div", "description-blocks");
-  const sections: Array<[string, NamedEntry[], string?]> = [
-    ["Traits", monster.traits],
-    ["Actions", monster.actions],
-    ["Bonus Actions", monster.bonusActions],
-    ["Reactions", monster.reactions],
-    ["Legendary Actions", monster.legendaryActions, monster.legendaryActionsIntro],
+  const sections: Array<[string, SectionKey, NamedEntry[]?, string?]> = [
+    ["Traits", "traits", monster.traits],
+    ["Actions", "actions", monster.actions],
+    ["Bonus Actions", "bonusActions", monster.bonusActions],
+    ["Reactions", "reactions", monster.reactions],
+    ["Characteristics", "characteristics"],
+    ["Legendary Actions", "legendary", monster.legendaryActions, monster.legendaryActionsIntro],
+    ["Mythic Actions", "mythic"],
+    ["Lair Actions", "lair"],
   ];
-  for (const [heading, entries, intro] of sections) {
-    const block = descriptionBlock(heading, entries, intro);
+  for (const [heading, key, entries, intro] of sections) {
+    const block = descriptionBlock(monster, heading, key, entries, intro);
     if (block) blocks.append(block);
   }
   root.append(blocks);

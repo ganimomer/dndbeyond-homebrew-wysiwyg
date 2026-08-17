@@ -123,3 +123,10 @@
   white-space: nowrap;
   border-bottom: 1px dotted rgba(130, 32, 0, 0.4);
 }
+
+.statblock.v2014 .ref {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: rgba(130, 32, 0, 0.4);
+  text-underline-offset: 2px;
+}

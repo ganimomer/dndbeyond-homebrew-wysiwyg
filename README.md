@@ -1,18 +1,18 @@
-# D&D Beyond Homebrew WYSIWYG
+# Microbrewery
 
 A browser extension that turns the [D&D Beyond](https://www.dndbeyond.com)
-homebrew creation page into a WYSIWYG editor. It targets the **monster / stat
-block** builder first, and its headline feature is a **live stat-block preview**
-that renders your creature the way it will look, updating as you edit.
+homebrew **monster** builder into a WYSIWYG editor. On the editor page it adds a
+floating **"Open in Microbrewery"** button; opening it shows a **live stat-block
+preview** of the creature you're editing, matching D&D Beyond's own rendering
+and updating as you change the form.
 
 Built Firefox-first, but the real work lives in a shared, browser-agnostic core
 with a thin per-browser layer for each extension format.
 
-> **Status: scaffolding.** The cross-browser skeleton, build, and live preview
-> are working end-to-end. The one piece still to wire is reading/writing D&D
-> Beyond's *actual* form fields — the live page is behind auth and rendered
-> client-side, so its selectors have to be captured from a real session. See
-> [Wiring the real page](#wiring-the-real-page).
+> **Status.** The launcher, the full read of the monster editor form, and the
+> faithful 2014/2024 preview are working end-to-end against the live page.
+> Editing back into the form (write-back) is the next feature — the preview is
+> currently read-only.
 
 ## Preview
 
@@ -34,22 +34,27 @@ once the form is wired, the adapter will report the ruleset instead.
 
 ```
 src/                     shared, browser-agnostic core (all the real logic)
-├── content/index.ts      content-script entry: detect page, mount panel, follow SPA nav
+├── content/index.ts      content-script entry: detect editor, show launcher ↔ panel, SPA nav
 ├── background/index.ts   background entry (home for future storage/message routing)
 ├── platform/            browser.* API wrapper (webextension-polyfill) + build globals
 ├── adapter/             the seam between our model and DDB's DOM
 │   ├── types.ts         PageAdapter interface
-│   └── ddb-monster.ts   monster adapter — ⚠️ selectors are placeholders (see below)
+│   └── ddb-monster.ts   monster adapter — reads form#monster-form (field-* ids, listing tables)
 ├── statblock/           the domain model
-│   ├── model.ts         Monster model (incl. `ruleset` discriminator)
+│   ├── model.ts         Monster model (`ruleset` discriminator, per-section `descriptionHtml`)
 │   ├── compute.ts       ability modifiers, saves, proficiency, CR → XP, meta line
 │   └── sample.ts        era-accurate sample vampires (2014 + 2024)
+├── editor/              the injected UI
+│   ├── fab.ts / fab.css     the "Open in Microbrewery" launcher
+│   └── panel.ts / panel.css the WYSIWYG panel (preview + ruleset toggle + close)
 └── preview/             the live preview
     ├── statblock-view.ts   dispatcher: renders by monster.ruleset
     ├── render-2024.ts      2024 "mon-stat-block-2024" layout
     ├── render-2014.ts      2014 classic layout
     ├── statblock-2024.css  2024 styling (scoped .statblock.v2024)
     ├── statblock-2014.css  2014 styling (scoped .statblock.v2014)
+    ├── sections.ts         section body: DDB HTML (preferred) or structured entries
+    ├── sanitize-html.ts    allowlist sanitizer for DDB's description HTML
     ├── inline.ts           {roll}/**bold**/*italic*/newline expander
     └── dom.ts              tiny element builder
 
@@ -87,7 +92,8 @@ npm run typecheck
 1. `npm run build:firefox`
 2. Go to `about:debugging#/runtime/this-firefox`
 3. **Load Temporary Add-on…** → pick `dist/firefox/manifest.json`
-4. Open a D&D Beyond homebrew page — the panel appears top-right.
+4. Open a homebrew **monster editor** page (`…/homebrew/creations/monsters/<id>/edit`)
+   — the **Open in Microbrewery** button appears bottom-right.
 
 **Chrome / Edge**
 
@@ -95,20 +101,24 @@ npm run typecheck
 2. Go to `chrome://extensions`, enable **Developer mode**
 3. **Load unpacked** → pick the `dist/chrome` folder
 
-## Wiring the real page
+## How the editor is read
 
-All of D&D Beyond's DOM knowledge is deliberately funneled into one file so
-this is a localized change:
+All of D&D Beyond's DOM knowledge is funneled into **`src/adapter/ddb-monster.ts`**.
+The editor is a server-rendered form (`form#monster-form`) with stable
+`id="field-*"` controls, so `read()`:
 
-- **`src/adapter/ddb-monster.ts`** → the `SELECTORS` object and `URL_PATTERN`.
-  Replace each placeholder selector with the real one from the live monster
-  builder, then flesh out `read()` (parse repeating trait/action groups) and
-  `write()` (push values back and dispatch the `input`/`change` events DDB's
-  React state listens for).
+- pulls scalar fields (`#field-Name`, `#field-armor-class`, `#field-strength`…)
+  and reads the **selected option text** of coded `<select>`s (size, type,
+  alignment, CR, saves, damage adjustments);
+- composes HP / initiative, and parses the **listing tables** for Movement
+  (Speed), Skills, and Senses (`table.listing-rpgmonster-*-mapping`);
+- takes each description section's ready-made HTML from the
+  `#field-<section>-description-wysiwyg` textareas, converting DDB's inline
+  `[rollable]…[/rollable]` and `[type]…[/type]` markup to spans;
+- detects the layout from `#field-stat-block-type` (`5e` → 2014, `5.5e` → 2024).
 
-Until those are real, `read()` falls back to sample/best-effort data so the
-preview always has something to show, and `write()` is a no-op so we never
-clobber the form.
+`observe()` watches the form so the preview updates live. `write()` (pushing
+edits back into the form) is not implemented yet.
 
 ## License
 

@@ -11,22 +11,31 @@ import panelCss from "./panel.css";
 import statblock2014Css from "../preview/statblock-2014.css";
 import statblock2024Css from "../preview/statblock-2024.css";
 
-const HOST_ID = "ddb-homebrew-wysiwyg-host";
+const HOST_ID = "microbrewery-panel-host";
+
+export interface EditorPanelOptions {
+  /** Called when the user closes the panel (to restore the launcher button). */
+  onClose?: () => void;
+}
 
 export class EditorPanel {
   private host: HTMLDivElement;
   private root: ShadowRoot;
   private previewMount!: HTMLElement;
   private statusEl!: HTMLElement;
+  private toggleGroup!: HTMLElement;
   private unobserve: (() => void) | null = null;
   private rafToken = 0;
   /**
-   * Which layout to render. A temporary manual toggle until the page adapter
-   * reports the monster's actual ruleset from the form.
+   * Manual layout override. `null` follows the monster's own `ruleset` (read
+   * from the form); the toggle sets it to force a layout for comparison.
    */
-  private ruleset: Ruleset = "2024";
+  private ruleset: Ruleset | null = null;
 
-  constructor(private readonly adapter: PageAdapter) {
+  constructor(
+    private readonly adapter: PageAdapter,
+    private readonly options: EditorPanelOptions = {},
+  ) {
     this.host = document.createElement("div");
     this.host.id = HOST_ID;
     this.root = this.host.attachShadow({ mode: "open" });
@@ -60,7 +69,7 @@ export class EditorPanel {
     header.className = "panel-header";
     const title = document.createElement("span");
     title.className = "title";
-    title.textContent = "Homebrew WYSIWYG";
+    title.textContent = "Microbrewery";
 
     const toggle = this.buildRulesetToggle();
 
@@ -71,7 +80,16 @@ export class EditorPanel {
       panel.classList.toggle("collapsed");
       collapse.textContent = panel.classList.contains("collapsed") ? "+" : "–";
     });
-    header.append(title, toggle, collapse);
+
+    const close = document.createElement("button");
+    close.textContent = "×";
+    close.title = "Close";
+    close.addEventListener("click", () => {
+      this.unmount();
+      this.options.onClose?.();
+    });
+
+    header.append(title, toggle, collapse, close);
 
     const body = document.createElement("div");
     body.className = "panel-body";
@@ -88,7 +106,10 @@ export class EditorPanel {
     this.makeDraggable(panel, header);
   }
 
-  /** Segmented 2014 / 2024 toggle that re-renders the preview on change. */
+  /**
+   * Segmented 2014 / 2024 toggle. It overrides the layout for comparison; the
+   * active button reflects the effective ruleset (updated on each render).
+   */
   private buildRulesetToggle(): HTMLElement {
     const group = document.createElement("div");
     group.className = "ruleset-toggle";
@@ -98,17 +119,13 @@ export class EditorPanel {
       btn.textContent = rs;
       btn.dataset.ruleset = rs;
       btn.title = `Render the ${rs} stat-block layout`;
-      if (rs === this.ruleset) btn.classList.add("active");
       btn.addEventListener("click", () => {
-        if (this.ruleset === rs) return;
         this.ruleset = rs;
-        group.querySelectorAll("button").forEach((b) => {
-          b.classList.toggle("active", b.dataset.ruleset === rs);
-        });
         this.render();
       });
       group.append(btn);
     }
+    this.toggleGroup = group;
     return group;
   }
 
@@ -127,8 +144,12 @@ export class EditorPanel {
       this.setStatus("Waiting for the homebrew form to load…");
       return;
     }
-    // Until the adapter reports it from the form, the toggle drives the layout.
-    monster.ruleset = this.ruleset;
+    // Follow the monster's own ruleset unless the toggle forces one.
+    const effective = this.ruleset ?? monster.ruleset;
+    monster.ruleset = effective;
+    this.toggleGroup.querySelectorAll("button").forEach((b) => {
+      b.classList.toggle("active", b.dataset.ruleset === effective);
+    });
     this.setStatus(statusFor(monster));
     this.previewMount.replaceChildren(renderStatBlock(monster));
   }
@@ -171,15 +192,6 @@ export class EditorPanel {
 }
 
 function statusFor(monster: Monster): string {
-  const parts: string[] = [];
-  const total =
-    monster.traits.length +
-    monster.actions.length +
-    monster.bonusActions.length +
-    monster.reactions.length +
-    monster.legendaryActions.length;
-  parts.push(`Live preview of "${monster.name}".`);
-  parts.push(`${total} trait/action block${total === 1 ? "" : "s"}.`);
-  parts.push("Page fields not wired yet — showing sample/best-effort data.");
-  return parts.join(" ");
+  const label = monster.ruleset === "2024" ? "2024" : "2014";
+  return `Live ${label} preview of "${monster.name}" — updates as you edit the form.`;
 }

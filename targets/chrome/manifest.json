@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "D&D Beyond Homebrew WYSIWYG",
+  "name": "Microbrewery",
   "version": "0.1.0",
-  "description": "Turns the D&D Beyond homebrew creation page into a WYSIWYG editor with a live stat-block preview.",
+  "description": "A WYSIWYG editor for the D&D Beyond homebrew monster builder, with a live stat-block preview.",
   "minimum_chrome_version": "114",
   "permissions": ["storage"],
   "host_permissions": ["*://*.dndbeyond.com/*"],

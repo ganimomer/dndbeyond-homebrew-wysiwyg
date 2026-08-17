@@ -3,7 +3,13 @@
  * separators, a single six-across ability row, and the #822000 accent. Class
  * names live under `.statblock.v2014` (see statblock-2014.css).
  */
-import { ABILITIES, type Ability, type Monster, type NamedEntry } from "../statblock/model.js";
+import {
+  ABILITIES,
+  type Ability,
+  type Monster,
+  type NamedEntry,
+  type SectionKey,
+} from "../statblock/model.js";
 import {
   abilityModifier,
   formatModifier,
@@ -14,6 +20,7 @@ import {
 } from "../statblock/compute.js";
 import { el } from "./dom.js";
 import { expandInline } from "./inline.js";
+import { sectionBody } from "./sections.js";
 
 const ABILITY_LABEL: Record<Ability, string> = {
   str: "STR",
@@ -66,35 +73,19 @@ function challengeText(monster: Monster): string {
     : monster.challengeRating;
 }
 
-function unheadedEntries(root: HTMLElement, entries: NamedEntry[]): void {
-  for (const entry of entries) {
-    const p = el("p", "entry");
-    if (entry.name) {
-      const label = el("span", "entry-label");
-      label.textContent = `${entry.name}.`;
-      p.append(label, " ");
-    }
-    p.append(inline(entry.text));
-    root.append(p);
-  }
-}
-
 function headedSection(
   root: HTMLElement,
+  monster: Monster,
   heading: string,
-  entries: NamedEntry[],
+  key: SectionKey,
+  entries?: NamedEntry[],
   intro?: string,
 ): void {
-  if (entries.length === 0) return;
+  const body = sectionBody(monster, key, entries, intro);
+  if (!body) return;
   const h = el("h4");
   h.textContent = heading;
-  root.append(h);
-  if (intro) {
-    const p = el("p", "intro");
-    p.append(inline(intro));
-    root.append(p);
-  }
-  unheadedEntries(root, entries);
+  root.append(h, body);
 }
 
 export function render2014(monster: Monster): HTMLElement {
@@ -139,15 +130,19 @@ export function render2014(monster: Monster): HTMLElement {
   details.append(labeled("Proficiency Bonus", formatModifier(proficiencyBonus(monster))));
   root.append(details);
 
-  if (monster.traits.length > 0) {
+  const traitsBody = sectionBody(monster, "traits", monster.traits);
+  if (traitsBody) {
     root.append(el("hr", "rule"));
-    unheadedEntries(root, monster.traits);
+    root.append(traitsBody);
   }
 
-  headedSection(root, "Actions", monster.actions);
-  headedSection(root, "Bonus Actions", monster.bonusActions);
-  headedSection(root, "Reactions", monster.reactions);
-  headedSection(root, "Legendary Actions", monster.legendaryActions, monster.legendaryActionsIntro);
+  headedSection(root, monster, "Actions", "actions", monster.actions);
+  headedSection(root, monster, "Bonus Actions", "bonusActions", monster.bonusActions);
+  headedSection(root, monster, "Reactions", "reactions", monster.reactions);
+  headedSection(root, monster, "Characteristics", "characteristics");
+  headedSection(root, monster, "Legendary Actions", "legendary", monster.legendaryActions, monster.legendaryActionsIntro);
+  headedSection(root, monster, "Mythic Actions", "mythic");
+  headedSection(root, monster, "Lair Actions", "lair");
 
   return root;
 }

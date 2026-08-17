@@ -9,6 +9,17 @@
 /** Which D&D Beyond stat-block layout a monster is authored/rendered under. */
 export type Ruleset = "2014" | "2024";
 
+/** A description section of the stat block. */
+export type SectionKey =
+  | "traits"
+  | "actions"
+  | "bonusActions"
+  | "reactions"
+  | "characteristics"
+  | "legendary"
+  | "mythic"
+  | "lair";
+
 export type Ability = "str" | "dex" | "con" | "int" | "wis" | "cha";
 
 export const ABILITIES: readonly Ability[] = [
@@ -91,6 +102,14 @@ export interface Monster {
   legendaryActions: NamedEntry[];
   /** Preamble shown above the legendary action list ("The X can take 3…"). */
   legendaryActionsIntro?: string;
+
+  /**
+   * Ready-to-render HTML for description sections, keyed by section. Populated
+   * when reading from D&D Beyond's editor (its bodies are already HTML); the
+   * renderers prefer this over the structured `NamedEntry[]` arrays above,
+   * which samples still use.
+   */
+  descriptionHtml?: Partial<Record<SectionKey, string>>;
 }
 
 /** A blank monster with sane defaults, safe to render immediately. */
