@@ -9,7 +9,7 @@ export function abilityModifier(score: number): number {
 /**
  * Saving-throw bonus for an ability. A recorded value in `savingThrows` means
  * the creature is proficient; otherwise the save equals the ability modifier
- * (the 2024 stat block shows a Save column for every ability).
+ * (the 5.5e stat block shows a Save column for every ability).
  */
 export function saveBonus(monster: Monster, ability: Ability): number {
   const recorded = monster.savingThrows[ability];
@@ -17,7 +17,7 @@ export function saveBonus(monster: Monster, ability: Ability): number {
   return abilityModifier(monster.abilities[ability]);
 }
 
-/** Initiative shown on the 2024 AC line; defaults to the Dexterity modifier. */
+/** Initiative shown on the 5.5e AC line; defaults to the Dexterity modifier. */
 export function initiativeText(monster: Monster): string {
   if (monster.initiative) return monster.initiative;
   return formatModifier(abilityModifier(monster.abilities.dex));

@@ -1,7 +1,7 @@
 /**
- * Renders a monster in D&D Beyond's 2014 layout ("mon-stat-block"): tapered
+ * Renders a monster in D&D Beyond's 5e layout ("mon-stat-block"): tapered
  * separators, a single six-across ability row, and the #822000 accent. Class
- * names live under `.statblock.v2014` (see statblock-2014.css).
+ * names live under `.statblock.v5e` (see statblock-5e.css).
  */
 import {
   ABILITIES,
@@ -88,12 +88,24 @@ function headedSection(
   root.append(h, body);
 }
 
-export function render2014(monster: Monster): HTMLElement {
-  const root = el("div", "statblock v2014");
+export function render5e(monster: Monster): HTMLElement {
+  const root = el("div", "statblock v5e");
 
+  if (monster.image) {
+    const image = el("div", "sb-image");
+    const img = el("img");
+    img.src = monster.image;
+    img.alt = monster.name;
+    image.append(img);
+    root.append(image);
+  }
+
+  const nameRow = el("div", "name-row");
   const name = el("div", "name");
   name.textContent = monster.name || "Unnamed Creature";
-  root.append(name);
+  const nameMenu = el("div", "name-menu"); // filled by the editor overlay
+  nameRow.append(name, nameMenu);
+  root.append(nameRow);
 
   const meta = el("div", "meta");
   meta.textContent = metaLine(monster);

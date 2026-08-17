@@ -1,12 +1,12 @@
 /*
- * D&D Beyond 2024 stat block ("mon-stat-block-2024"), reimplemented on our own
- * class tree under `.statblock.v2024`. Values mirror DDB's compiled CSS (rem
+ * D&D Beyond 5.5e stat block ("mon-stat-block-2024"), reimplemented on our own
+ * class tree under `.statblock.v55e`. Values mirror DDB's compiled CSS (rem
  * where DDB uses rem, so on the real page it tracks their root font-size). The
  * licensed fonts are named exactly so the shadow root inherits them from DDB's
  * document-scoped @font-face at runtime; off-site they fall back.
  */
 
-.statblock.v2024 {
+.statblock.v55e {
   --accent: #5b160c;
   --meta: #68747b;
   --frame: #afa47a;
@@ -28,15 +28,15 @@
   padding: 15px;
 }
 
-.statblock.v2024 * {
+.statblock.v55e * {
   box-sizing: border-box;
 }
 
-.statblock.v2024 .header {
+.statblock.v55e .header {
   line-height: 1.1;
 }
 
-.statblock.v2024 .name {
+.statblock.v55e .name {
   font-family: "Scala Sans Sc Offc", "Scala Sans Offc", Roboto, Helvetica, sans-serif;
   font-weight: bold;
   font-size: 1.75rem;
@@ -45,44 +45,44 @@
   margin: 0 0 0.45rem;
 }
 
-.statblock.v2024 .meta {
+.statblock.v55e .meta {
   font-style: italic;
   color: var(--meta);
   margin: 0.188rem 0 0.938rem;
 }
 
-.statblock.v2024 .attributes .line,
-.statblock.v2024 .tidbits .line {
+.statblock.v55e .attributes .line,
+.statblock.v55e .tidbits .line {
   margin: 5px 0;
   color: var(--accent);
   line-height: 1.2;
 }
 
-.statblock.v2024 .attributes .label,
-.statblock.v2024 .tidbits .label {
+.statblock.v55e .attributes .label,
+.statblock.v55e .tidbits .label {
   font-weight: bold;
 }
 
 /* Ability tables: physical (tan) + mental (grey-green), each with Mod + Save. */
-.statblock.v2024 .stats {
+.statblock.v55e .stats {
   display: flex;
   flex-wrap: nowrap;
   gap: 0.625rem;
   margin: 0.375rem 0 0.5rem;
 }
 
-.statblock.v2024 .stat-table {
+.statblock.v55e .stat-table {
   flex: 1;
   margin: 0;
   border-collapse: collapse;
 }
 
-.statblock.v2024 .stat-table th,
-.statblock.v2024 .stat-table td {
+.statblock.v55e .stat-table th,
+.statblock.v55e .stat-table td {
   border: 0;
 }
 
-.statblock.v2024 .stat-table thead th {
+.statblock.v55e .stat-table thead th {
   color: var(--meta);
   font-weight: 400;
   padding: 0.3125rem 0.125rem 0;
@@ -92,7 +92,7 @@
   text-align: center;
 }
 
-.statblock.v2024 .stat-table tbody tr {
+.statblock.v55e .stat-table tbody tr {
   border-top: 0.0625rem solid #fff;
   border-bottom: 0.0625rem solid #fff;
   color: var(--accent);
@@ -100,35 +100,35 @@
   font-size: 0.938rem;
 }
 
-.statblock.v2024 .stat-table td {
+.statblock.v55e .stat-table td {
   padding: 0.125rem 0.5rem;
 }
 
-.statblock.v2024 .stat-table tbody th {
+.statblock.v55e .stat-table tbody th {
   font-weight: bold;
   padding: 0.125rem 0.25rem;
 }
 
-.statblock.v2024 .stat-table.physical th,
-.statblock.v2024 .stat-table.physical td {
+.statblock.v55e .stat-table.physical th,
+.statblock.v55e .stat-table.physical td {
   background: #ede6d9;
 }
-.statblock.v2024 .stat-table.physical td.modifier {
+.statblock.v55e .stat-table.physical td.modifier {
   background: #ded4cc;
 }
-.statblock.v2024 .stat-table.mental th,
-.statblock.v2024 .stat-table.mental td {
+.statblock.v55e .stat-table.mental th,
+.statblock.v55e .stat-table.mental td {
   background: #d8dad1;
 }
-.statblock.v2024 .stat-table.mental td.modifier {
+.statblock.v55e .stat-table.mental td.modifier {
   background: #d0caca;
 }
 
-.statblock.v2024 .description-blocks {
+.statblock.v55e .description-blocks {
   margin-top: 20px;
 }
 
-.statblock.v2024 .description-block .heading {
+.statblock.v55e .description-block .heading {
   border-bottom: 0.063rem solid var(--accent);
   color: var(--accent);
   font-size: 1.25rem;
@@ -138,22 +138,22 @@
   margin: 1.25rem 0 0.938rem;
 }
 
-.statblock.v2024 .description-block .content p {
+.statblock.v55e .description-block .content p {
   margin: 0 0 10px;
 }
 
-.statblock.v2024 .description-block .entry-label {
+.statblock.v55e .description-block .entry-label {
   font-weight: bold;
   font-style: italic;
 }
 
 /* Inline roll/reference tokens — unobtrusive, hinting interactivity. */
-.statblock.v2024 .roll {
+.statblock.v55e .roll {
   white-space: nowrap;
   border-bottom: 0.0625rem dotted rgba(91, 22, 12, 0.35);
 }
 
-.statblock.v2024 .ref {
+.statblock.v55e .ref {
   color: var(--accent);
   text-decoration: underline;
   text-decoration-color: rgba(91, 22, 12, 0.4);

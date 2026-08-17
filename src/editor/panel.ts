@@ -1,36 +1,33 @@
 /**
- * The injected WYSIWYG panel: a shadow-DOM host that shows a live stat-block
- * preview of whatever the page adapter currently reads. The editing surface
- * (toolbar, structured fields) hangs off this same panel as we build it out —
- * for now the headline feature is the live preview.
+ * The full-page editor overlay. Opened from the launcher, it covers the D&D
+ * Beyond homebrew form with a stat block that looks like the monster outside
+ * edit mode (artwork + all sections), and carries an Encounters-style context
+ * menu on the name row for switching ruleset or closing back to the form.
+ *
+ * Everything lives in one shadow root so DDB's page styles can't leak in.
  */
 import type { PageAdapter } from "../adapter/types.js";
-import type { Monster, Ruleset } from "../statblock/model.js";
 import { renderStatBlock } from "../preview/statblock-view.js";
+import { ContextMenu } from "./context-menu.js";
 import panelCss from "./panel.css";
-import statblock2014Css from "../preview/statblock-2014.css";
-import statblock2024Css from "../preview/statblock-2024.css";
+import contextMenuCss from "./context-menu.css";
+import statblock5eCss from "../preview/statblock-5e.css";
+import statblock55eCss from "../preview/statblock-55e.css";
 
 const HOST_ID = "microbrewery-panel-host";
 
 export interface EditorPanelOptions {
-  /** Called when the user closes the panel (to restore the launcher button). */
+  /** Called when the user closes the overlay (to restore the launcher). */
   onClose?: () => void;
 }
 
 export class EditorPanel {
   private host: HTMLDivElement;
   private root: ShadowRoot;
-  private previewMount!: HTMLElement;
-  private statusEl!: HTMLElement;
-  private toggleGroup!: HTMLElement;
+  private stage!: HTMLElement;
   private unobserve: (() => void) | null = null;
   private rafToken = 0;
-  /**
-   * Manual layout override. `null` follows the monster's own `ruleset` (read
-   * from the form); the toggle sets it to force a layout for comparison.
-   */
-  private ruleset: Ruleset | null = null;
+  private menu: ContextMenu | null = null;
 
   constructor(
     private readonly adapter: PageAdapter,
@@ -42,94 +39,48 @@ export class EditorPanel {
     this.build();
   }
 
-  /** Mounts the panel and starts tracking the page. */
+  /** Mounts the overlay and starts tracking the form. */
   mount(): void {
     if (document.getElementById(HOST_ID)) return;
     document.body.appendChild(this.host);
+    // Freeze the page underneath so only the overlay scrolls.
+    document.documentElement.style.overflow = "hidden";
     this.render();
     this.unobserve = this.adapter.observe(() => this.scheduleRender());
   }
 
-  /** Removes the panel and stops tracking. */
+  /** Removes the overlay and stops tracking. */
   unmount(): void {
     this.unobserve?.();
     this.unobserve = null;
+    this.menu?.destroy();
+    this.menu = null;
+    document.documentElement.style.overflow = "";
     this.host.remove();
+  }
+
+  private close(): void {
+    this.unmount();
+    this.options.onClose?.();
   }
 
   private build(): void {
     const style = document.createElement("style");
-    style.textContent = `${panelCss}\n${statblock2014Css}\n${statblock2024Css}`;
+    style.textContent = [panelCss, contextMenuCss, statblock5eCss, statblock55eCss].join("\n");
     this.root.appendChild(style);
 
-    const panel = document.createElement("div");
-    panel.className = "panel";
-
-    const header = document.createElement("div");
-    header.className = "panel-header";
-    const title = document.createElement("span");
-    title.className = "title";
-    title.textContent = "Microbrewery";
-
-    const toggle = this.buildRulesetToggle();
-
-    const collapse = document.createElement("button");
-    collapse.textContent = "–";
-    collapse.title = "Collapse";
-    collapse.addEventListener("click", () => {
-      panel.classList.toggle("collapsed");
-      collapse.textContent = panel.classList.contains("collapsed") ? "+" : "–";
-    });
-
-    const close = document.createElement("button");
-    close.textContent = "×";
-    close.title = "Close";
-    close.addEventListener("click", () => {
-      this.unmount();
-      this.options.onClose?.();
-    });
-
-    header.append(title, toggle, collapse, close);
-
-    const body = document.createElement("div");
-    body.className = "panel-body";
-
-    this.statusEl = document.createElement("p");
-    this.statusEl.className = "panel-status";
-
-    this.previewMount = document.createElement("div");
-
-    body.append(this.statusEl, this.previewMount);
-    panel.append(header, body);
-    this.root.appendChild(panel);
-
-    this.makeDraggable(panel, header);
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    const page = document.createElement("div");
+    page.className = "page";
+    this.stage = document.createElement("div");
+    this.stage.className = "stage";
+    page.appendChild(this.stage);
+    overlay.appendChild(page);
+    this.root.appendChild(overlay);
   }
 
-  /**
-   * Segmented 2014 / 2024 toggle. It overrides the layout for comparison; the
-   * active button reflects the effective ruleset (updated on each render).
-   */
-  private buildRulesetToggle(): HTMLElement {
-    const group = document.createElement("div");
-    group.className = "ruleset-toggle";
-    const rulesets: Ruleset[] = ["2014", "2024"];
-    for (const rs of rulesets) {
-      const btn = document.createElement("button");
-      btn.textContent = rs;
-      btn.dataset.ruleset = rs;
-      btn.title = `Render the ${rs} stat-block layout`;
-      btn.addEventListener("click", () => {
-        this.ruleset = rs;
-        this.render();
-      });
-      group.append(btn);
-    }
-    this.toggleGroup = group;
-    return group;
-  }
-
-  /** Coalesces bursts of page mutations into a single render per frame. */
+  /** Coalesces bursts of form mutations into a single render per frame. */
   private scheduleRender(): void {
     if (this.rafToken) return;
     this.rafToken = requestAnimationFrame(() => {
@@ -140,58 +91,29 @@ export class EditorPanel {
 
   private render(): void {
     const monster = this.adapter.read();
-    if (!monster) {
-      this.setStatus("Waiting for the homebrew form to load…");
-      return;
+    if (!monster) return;
+
+    this.menu?.destroy();
+    const block = renderStatBlock(monster);
+
+    const slot = block.querySelector<HTMLElement>(".name-menu");
+    if (slot) {
+      this.menu = new ContextMenu([
+        {
+          label: "Use 5e stat block",
+          active: monster.ruleset === "5e",
+          onClick: () => this.adapter.setRuleset("5e"),
+        },
+        {
+          label: "Use 5.5e stat block",
+          active: monster.ruleset === "5.5e",
+          onClick: () => this.adapter.setRuleset("5.5e"),
+        },
+        { label: "Close", danger: true, onClick: () => this.close() },
+      ]);
+      slot.append(this.menu.element);
     }
-    // Follow the monster's own ruleset unless the toggle forces one.
-    const effective = this.ruleset ?? monster.ruleset;
-    monster.ruleset = effective;
-    this.toggleGroup.querySelectorAll("button").forEach((b) => {
-      b.classList.toggle("active", b.dataset.ruleset === effective);
-    });
-    this.setStatus(statusFor(monster));
-    this.previewMount.replaceChildren(renderStatBlock(monster));
+
+    this.stage.replaceChildren(block);
   }
-
-  private setStatus(text: string): void {
-    this.statusEl.textContent = text;
-  }
-
-  private makeDraggable(panel: HTMLElement, handle: HTMLElement): void {
-    let startX = 0;
-    let startY = 0;
-    let originLeft = 0;
-    let originTop = 0;
-
-    const onMove = (e: MouseEvent) => {
-      const rect = panel.getBoundingClientRect();
-      panel.style.left = `${originLeft + (e.clientX - startX)}px`;
-      panel.style.top = `${originTop + (e.clientY - startY)}px`;
-      panel.style.right = "auto";
-      // Keep the panel from being dragged fully off-screen.
-      if (rect.left < 0) panel.style.left = "0px";
-    };
-    const onUp = () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-
-    handle.addEventListener("mousedown", (e) => {
-      if ((e.target as HTMLElement).tagName === "BUTTON") return;
-      const rect = panel.getBoundingClientRect();
-      startX = e.clientX;
-      startY = e.clientY;
-      originLeft = rect.left;
-      originTop = rect.top;
-      window.addEventListener("mousemove", onMove);
-      window.addEventListener("mouseup", onUp);
-      e.preventDefault();
-    });
-  }
-}
-
-function statusFor(monster: Monster): string {
-  const label = monster.ruleset === "2024" ? "2024" : "2014";
-  return `Live ${label} preview of "${monster.name}" — updates as you edit the form.`;
 }

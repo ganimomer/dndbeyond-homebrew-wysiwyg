@@ -1,15 +1,15 @@
 /**
  * Dispatches to the stat-block renderer for a monster's ruleset. Callers (the
- * panel) depend only on this; the 2014/2024 split lives behind it.
+ * overlay) depend only on this; the 5e/5.5e split lives behind it.
  */
 import type { Monster } from "../statblock/model.js";
 import { parseChallengeRating } from "../statblock/compute.js";
-import { render2014 } from "./render-2014.js";
-import { render2024 } from "./render-2024.js";
+import { render5e } from "./render-5e.js";
+import { render55e } from "./render-55e.js";
 
 /** Builds the stat-block element for a monster in its authored layout. */
 export function renderStatBlock(monster: Monster): HTMLElement {
-  return monster.ruleset === "2014" ? render2014(monster) : render2024(monster);
+  return monster.ruleset === "5e" ? render5e(monster) : render55e(monster);
 }
 
 /** Numeric challenge rating, e.g. for encounter math. */

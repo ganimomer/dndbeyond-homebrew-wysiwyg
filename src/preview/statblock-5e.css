@@ -1,12 +1,12 @@
 /*
- * D&D Beyond 2014 stat block ("mon-stat-block"), reimplemented on our own class
- * tree under `.statblock.v2014`. Values mirror DDB's compiled CSS: the #822000
+ * D&D Beyond 5e stat block ("mon-stat-block"), reimplemented on our own class
+ * tree under `.statblock.v5e`. Values mirror DDB's compiled CSS: the #822000
  * accent, MrsEavesSmallCaps name, tapered edge/section bars, and a single
  * six-across ability row. Fonts are named to inherit DDB's licensed faces at
  * runtime; off-site they fall back.
  */
 
-.statblock.v2014 {
+.statblock.v5e {
   --accent: #822000;
   --rule: #922610;
   box-sizing: border-box;
@@ -24,13 +24,13 @@
   padding: 15px;
 }
 
-.statblock.v2014 * {
+.statblock.v5e * {
   box-sizing: border-box;
 }
 
 /* Tapered top/bottom edge bars (own asset, in place of DDB's PNG). */
-.statblock.v2014::before,
-.statblock.v2014::after {
+.statblock.v5e::before,
+.statblock.v5e::after {
   content: "";
   position: absolute;
   left: -3px;
@@ -39,14 +39,14 @@
   background: var(--rule);
   clip-path: polygon(0 50%, 1% 0, 99% 0, 100% 50%, 99% 100%, 1% 100%);
 }
-.statblock.v2014::before {
+.statblock.v5e::before {
   top: -3px;
 }
-.statblock.v2014::after {
+.statblock.v5e::after {
   bottom: -3px;
 }
 
-.statblock.v2014 .name {
+.statblock.v5e .name {
   font-family: MrsEavesSmallCaps, "Scala Sans Offc", Roboto, Helvetica, sans-serif;
   font-weight: bold;
   font-size: 34px;
@@ -55,13 +55,13 @@
   margin: 0;
 }
 
-.statblock.v2014 .meta {
+.statblock.v5e .meta {
   font-style: italic;
   margin: 2px 0 8px;
 }
 
 /* Tapered section separators. */
-.statblock.v2014 .rule {
+.statblock.v5e .rule {
   height: 5px;
   border: none;
   margin: 8px 0;
@@ -69,37 +69,37 @@
   clip-path: polygon(0 50%, 1% 0, 99% 0, 100% 50%, 99% 100%, 1% 100%);
 }
 
-.statblock.v2014 .attributes {
+.statblock.v5e .attributes {
   color: var(--accent);
 }
-.statblock.v2014 .attributes .line {
+.statblock.v5e .attributes .line {
   margin: 2px 0;
   line-height: 1.2;
 }
-.statblock.v2014 .attributes .label {
+.statblock.v5e .attributes .label {
   font-weight: bold;
 }
 
 /* Single six-across ability row. */
-.statblock.v2014 .ability-block {
+.statblock.v5e .ability-block {
   display: flex;
   flex-wrap: wrap;
   margin: 10px 0;
   color: var(--accent);
   text-align: center;
 }
-.statblock.v2014 .ability-block .stat {
+.statblock.v5e .ability-block .stat {
   width: 16.6667%;
   padding: 5px 0;
 }
-.statblock.v2014 .ability-block .heading {
+.statblock.v5e .ability-block .heading {
   font-weight: bold;
 }
-.statblock.v2014 .ability-block .modifier {
+.statblock.v5e .ability-block .modifier {
   margin-left: 2px;
 }
 
-.statblock.v2014 h4 {
+.statblock.v5e h4 {
   color: var(--accent);
   font-family: "Scala Sans Offc", Roboto, Helvetica, sans-serif;
   font-size: 24px;
@@ -110,21 +110,21 @@
   padding-bottom: 2px;
 }
 
-.statblock.v2014 .entry,
-.statblock.v2014 .intro {
+.statblock.v5e .entry,
+.statblock.v5e .intro {
   margin: 8px 0;
 }
-.statblock.v2014 .entry-label {
+.statblock.v5e .entry-label {
   font-weight: bold;
   font-style: italic;
 }
 
-.statblock.v2014 .roll {
+.statblock.v5e .roll {
   white-space: nowrap;
   border-bottom: 1px dotted rgba(130, 32, 0, 0.4);
 }
 
-.statblock.v2014 .ref {
+.statblock.v5e .ref {
   color: var(--accent);
   text-decoration: underline;
   text-decoration-color: rgba(130, 32, 0, 0.4);

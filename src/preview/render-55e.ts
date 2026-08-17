@@ -1,8 +1,8 @@
 /**
- * Renders a monster in D&D Beyond's 2024 layout ("mon-stat-block-2024"):
+ * Renders a monster in D&D Beyond's 5.5e layout ("mon-stat-block-2024"):
  * Initiative on the AC line, two Mod/Save ability tables, short tidbit labels,
- * and small-caps section headings. Class names live under `.statblock.v2024`
- * (see statblock-2024.css). Structure mirrors the real page's DOM.
+ * and small-caps section headings. Class names live under `.statblock.v55e`
+ * (see statblock-55e.css). Structure mirrors the real page's DOM.
  */
 import type { Ability, Monster, NamedEntry, SectionKey } from "../statblock/model.js";
 import {
@@ -111,15 +111,27 @@ function descriptionBlock(
   return block;
 }
 
-export function render2024(monster: Monster): HTMLElement {
-  const root = el("div", "statblock v2024");
+export function render55e(monster: Monster): HTMLElement {
+  const root = el("div", "statblock v55e");
+
+  if (monster.image) {
+    const image = el("div", "sb-image");
+    const img = el("img");
+    img.src = monster.image;
+    img.alt = monster.name;
+    image.append(img);
+    root.append(image);
+  }
 
   const header = el("div", "header");
+  const nameRow = el("div", "name-row");
   const name = el("div", "name");
   name.textContent = monster.name || "Unnamed Creature";
+  const nameMenu = el("div", "name-menu"); // filled by the editor overlay
+  nameRow.append(name, nameMenu);
   const meta = el("div", "meta");
   meta.textContent = metaLine(monster);
-  header.append(name, meta);
+  header.append(nameRow, meta);
   root.append(header);
 
   // Attributes: AC (+ Initiative), HP, Speed.
@@ -148,7 +160,7 @@ export function render2024(monster: Monster): HTMLElement {
   );
   root.append(stats);
 
-  // Tidbits (short labels, canonical 2024 order, empties skipped).
+  // Tidbits (short labels, canonical 5.5e order, empties skipped).
   const tidbits = el("div", "tidbits");
   const skills = skillsText(monster);
   if (skills) tidbits.append(labeled("Skills", skills));

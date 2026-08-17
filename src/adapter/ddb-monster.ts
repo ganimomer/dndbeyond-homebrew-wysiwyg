@@ -189,7 +189,9 @@ function normalizeDdbMarkup(html: string): string {
     )
     .replace(
       /\[([a-z][\w-]*)\]([\s\S]*?)\[\/\1\]/gi,
-      (_all, _type: string, inner: string) => `<span class="ref">${inner}</span>`,
+      // Some references carry a "display;slug" payload (e.g. [rules]); keep the
+      // visible display only.
+      (_all, _type: string, inner: string) => `<span class="ref">${inner.split(";")[0]}</span>`,
     );
 }
 
@@ -230,6 +232,15 @@ function readSavingThrows(
   return saves;
 }
 
+/** The monster's artwork URL, if an avatar has been uploaded (large preferred). */
+function readImage(): string | undefined {
+  const img = document.querySelector<HTMLImageElement>(
+    ".ddb-homebrew-create-form-fields-item-large-avatar img, .ddb-homebrew-create-form-fields-item-avatar img",
+  );
+  const src = img?.src ?? "";
+  return src && !/gravatar|placeholder|blank|thumbnails\/0\b/i.test(src) ? src : undefined;
+}
+
 function readDescriptions(): Partial<Record<SectionKey, string>> {
   const out: Partial<Record<SectionKey, string>> = {};
   for (const [key, textareaId, flag] of SECTION_TEXTAREA) {
@@ -251,8 +262,9 @@ export class DdbMonsterAdapter implements PageAdapter {
     if (!document.querySelector(SELECTORS.formRoot)) return null;
 
     const m = emptyMonster();
-    m.ruleset = (byId<HTMLSelectElement>(SELECTORS.ruleset)?.value === "1" ? "2024" : "2014") as Ruleset;
+    m.ruleset = byId<HTMLSelectElement>(SELECTORS.ruleset)?.value === "1" ? "5.5e" : "5e";
     m.name = val(SELECTORS.name) || m.name;
+    m.image = readImage();
 
     const abilities = {
       str: num(`field-${ABILITY_FIELD.str}`),
@@ -301,7 +313,16 @@ export class DdbMonsterAdapter implements PageAdapter {
   }
 
   write(_monster: Monster): void {
-    // Read-only for now; write-back is a later feature.
+    // Full write-back is a later feature; setRuleset is the first field wired.
+  }
+
+  setRuleset(ruleset: Ruleset): void {
+    const select = byId<HTMLSelectElement>(SELECTORS.ruleset);
+    if (!select) return;
+    select.value = ruleset === "5.5e" ? "1" : "0";
+    // Dispatch the events DDB's form listeners expect.
+    select.dispatchEvent(new Event("input", { bubbles: true }));
+    select.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
   observe(onChange: () => void): () => void {

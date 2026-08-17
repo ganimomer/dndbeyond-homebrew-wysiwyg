@@ -7,7 +7,7 @@
  */
 
 /** Which D&D Beyond stat-block layout a monster is authored/rendered under. */
-export type Ruleset = "2014" | "2024";
+export type Ruleset = "5e" | "5.5e";
 
 /** A description section of the stat block. */
 export type SectionKey =
@@ -49,17 +49,19 @@ export interface NamedEntry {
 }
 
 export interface Monster {
-  /** Layout to render under. Defaults to 2024; the page adapter sets it. */
+  /** Layout to render under. Defaults to 5.5e; the page adapter sets it. */
   ruleset: Ruleset;
 
   name: string;
+  /** Optional creature artwork URL, shown atop the full-page stat block. */
+  image?: string;
   size: Size;
   /** e.g. "humanoid (elf)" */
   type: string;
   alignment: string;
   /**
    * Optional exact meta line, used when size/type/alignment don't compose
-   * cleanly (e.g. 2024's "Medium or Small Undead, Lawful Evil"). When unset the
+   * cleanly (e.g. 5.5e's "Medium or Small Undead, Lawful Evil"). When unset the
    * renderers build the line from size + type + alignment.
    */
   metaOverride?: string;
@@ -67,7 +69,7 @@ export interface Monster {
   /** Free text so we can preserve the parenthetical, e.g. "15 (natural armor)". */
   armorClass: string;
   /**
-   * 2024 only: the Initiative value shown beside AC, e.g. "+14 (24)". When
+   * 5.5e only: the Initiative value shown beside AC, e.g. "+14 (24)". When
    * omitted the preview derives it from the Dexterity modifier.
    */
   initiative?: string;
@@ -85,7 +87,7 @@ export interface Monster {
   damageResistances: string;
   damageImmunities: string;
   conditionImmunities: string;
-  /** 2024 only: carried equipment shown as a "Gear" tidbit. */
+  /** 5.5e only: carried equipment shown as a "Gear" tidbit. */
   gear: string;
   senses: string;
   languages: string;
@@ -115,7 +117,7 @@ export interface Monster {
 /** A blank monster with sane defaults, safe to render immediately. */
 export function emptyMonster(): Monster {
   return {
-    ruleset: "2024",
+    ruleset: "5.5e",
     name: "New Creature",
     size: "Medium",
     type: "humanoid",

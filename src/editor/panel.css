@@ -1,103 +1,54 @@
-/* Chrome for the injected WYSIWYG panel. Lives in the same shadow root as the
- * stat block, so it's isolated from D&D Beyond's page styles. */
+/* Full-page editor overlay. Lives in a shadow root, isolated from D&D Beyond's
+ * page styles. */
 
-/* Block D&D Beyond's inherited (font/color/etc.) styles from reaching into the
- * shadow root. Each component re-declares what it needs explicitly. */
+/* Block DDB's inherited (font/color/etc.) styles from reaching into the shadow
+ * root. Each component re-declares what it needs explicitly. */
 :host {
   all: initial;
 }
 
-.panel {
+.overlay {
   position: fixed;
-  top: 76px;
-  right: 16px;
+  inset: 0;
   z-index: 2147483000;
-  width: 400px;
-  max-width: calc(100vw - 32px);
-  max-height: calc(100vh - 100px);
-  display: flex;
-  flex-direction: column;
-  font-family: "Noto Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  color: #1f2933;
-  background: #ffffff;
-  border: 1px solid #cbd2d9;
-  border-radius: 8px;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.28);
-  overflow: hidden;
+  overflow: auto;
+  background: #ece8e0;
+  background-image:
+    radial-gradient(120% 80% at 50% 0%, rgba(120, 90, 40, 0.06), transparent 60%);
 }
 
-.panel.collapsed .panel-body {
-  display: none;
+.page {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100%;
+  box-sizing: border-box;
+  padding: 40px 24px 80px;
 }
 
-.panel-header {
+.stage {
+  width: 100%;
+  max-width: 720px;
+}
+
+/* Artwork atop the stat block. */
+.statblock .sb-image {
+  margin: 0 0 12px;
+}
+.statblock .sb-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+/* Name row hosts the name and the context-menu trigger. */
+.statblock .name-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 8px;
-  padding: 8px 12px;
-  background: #7a200d;
-  color: #fdf1dc;
-  cursor: grab;
-  user-select: none;
 }
-
-.panel-header .title {
-  font-weight: 700;
-  font-size: 13px;
+.statblock .name-row .name {
   flex: 1;
-  letter-spacing: 0.3px;
-}
-
-.ruleset-toggle {
-  display: inline-flex;
-  border: 1px solid rgba(253, 241, 220, 0.55);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.ruleset-toggle button {
-  all: unset;
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.5;
-  padding: 1px 7px;
-  color: #fdf1dc;
-}
-
-.ruleset-toggle button.active {
-  background: #fdf1dc;
-  color: #7a200d;
-}
-
-.panel-header button {
-  all: unset;
-  cursor: pointer;
-  width: 22px;
-  height: 22px;
-  line-height: 22px;
-  text-align: center;
-  border-radius: 4px;
-  color: #fdf1dc;
-  font-size: 14px;
-}
-
-.panel-header button:hover {
-  background: rgba(255, 255, 255, 0.18);
-}
-
-.panel-body {
-  padding: 12px;
-  overflow-y: auto;
-  background: #f5f7fa;
-}
-
-.panel-status {
-  font-size: 11px;
-  color: #52616b;
-  margin: 0 0 10px;
-  padding: 6px 8px;
-  background: #e4ebf1;
-  border-radius: 4px;
-  line-height: 1.4;
 }

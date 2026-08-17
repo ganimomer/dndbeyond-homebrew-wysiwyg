@@ -5,7 +5,7 @@
  * below it knows about DDB's DOM. Swapping content types (spells, items) later
  * means adding another adapter, not touching the editor or preview.
  */
-import type { Monster } from "../statblock/model.js";
+import type { Monster, Ruleset } from "../statblock/model.js";
 
 export type HomebrewKind = "monster" | "item" | "spell" | "unknown";
 
@@ -24,6 +24,9 @@ export interface PageAdapter {
 
   /** Writes our model back into DDB's form fields. */
   write(monster: Monster): void;
+
+  /** Sets the monster's stat-block ruleset in the form (the first wired edit). */
+  setRuleset(ruleset: Ruleset): void;
 
   /**
    * Watches DDB's own fields for user edits and invokes `onChange`. Returns an

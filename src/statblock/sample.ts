@@ -4,16 +4,16 @@ import type { Monster, Ruleset } from "./model.js";
  * Sample creatures used by the preview until the live form is wired. Each
  * matches its era's real D&D Beyond page so the rendering can be compared
  * side by side:
- *   2024 → dndbeyond.com/monsters/5195251-vampire (Monster Manual 2024)
- *   2014 → the SRD vampire
+ *   5.5e → dndbeyond.com/monsters/5195251-vampire (Monster Manual 2024)
+ *   5e   → the SRD vampire
  *
  * Inline markup in the text: {roll token}, **bold**, *italic*, and \n breaks.
  */
 
-/** The 2024 Monster Manual Vampire, matching the linked DDB page 1:1. */
-export function sampleVampire2024(): Monster {
+/** The 5.5e Monster Manual Vampire, matching the linked DDB page 1:1. */
+export function sampleVampire55e(): Monster {
   return {
-    ruleset: "2024",
+    ruleset: "5.5e",
     name: "Vampire",
     size: "Medium",
     type: "Undead",
@@ -92,10 +92,10 @@ export function sampleVampire2024(): Monster {
   };
 }
 
-/** The 2014 SRD Vampire, for exercising the classic layout. */
-export function sampleVampire2014(): Monster {
+/** The 5e SRD Vampire, for exercising the classic layout. */
+export function sampleVampire5e(): Monster {
   return {
-    ruleset: "2014",
+    ruleset: "5e",
     name: "Vampire",
     size: "Medium",
     type: "undead (shapechanger)",
@@ -172,7 +172,7 @@ export function sampleVampire2014(): Monster {
   };
 }
 
-/** Returns the sample creature matching the requested ruleset (default 2024). */
-export function sampleMonster(ruleset: Ruleset = "2024"): Monster {
-  return ruleset === "2014" ? sampleVampire2014() : sampleVampire2024();
+/** Returns the sample creature matching the requested ruleset (default 5.5e). */
+export function sampleMonster(ruleset: Ruleset = "5.5e"): Monster {
+  return ruleset === "5e" ? sampleVampire5e() : sampleVampire55e();
 }

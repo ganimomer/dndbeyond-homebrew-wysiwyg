@@ -16,19 +16,19 @@ with a thin per-browser layer for each extension format.
 
 ## Preview
 
-The preview renders a full 5e stat block from the shared model in **either D&D
-Beyond layout** — the 2024 `mon-stat-block-2024` design (Initiative on the AC
-line, two Mod/Save ability tables, short tidbit labels) or the classic 2014
-layout — picked by each monster's `ruleset`. Colors, spacing, and the frame are
-reproduced from DDB's own compiled CSS; the licensed fonts (`Scala Sans`,
-`MrsEavesSmallCaps`) are named so the shadow root inherits them from DDB's
-document-scoped `@font-face` at runtime. Ability modifiers, saves, proficiency
-bonus, and XP are all derived. Inline `{...}` tokens are placeholders for D&D
-Beyond's roll/reference tags; `**bold**`, `*italic*`, and newlines are also
-supported in entry text.
+Opening the launcher shows a **full-page** stat block that covers the editor
+form and looks like the monster viewed outside edit mode. It renders from the
+shared model in **either D&D Beyond layout** — the **5.5e** `mon-stat-block-2024`
+design (Initiative on the AC line, two Mod/Save ability tables, short tidbit
+labels) or the classic **5e** layout — picked by each monster's `ruleset`.
+Colors, spacing, and the frame are reproduced from DDB's own compiled CSS; the
+licensed fonts (`Scala Sans`, `MrsEavesSmallCaps`) are named so the shadow root
+inherits them from DDB's document-scoped `@font-face` at runtime. Ability
+modifiers, saves, proficiency bonus, and XP are all derived.
 
-A **2014 / 2024 toggle** in the panel header switches layouts for comparison;
-once the form is wired, the adapter will report the ruleset instead.
+A kebab **context menu** on the name row (styled after the Encounters tool)
+switches ruleset — **Use 5e / Use 5.5e stat block**, which writes back to the
+form's Stat Block Type field — or **Close** to restore the editor.
 
 ## Architecture
 
@@ -43,16 +43,17 @@ src/                     shared, browser-agnostic core (all the real logic)
 ├── statblock/           the domain model
 │   ├── model.ts         Monster model (`ruleset` discriminator, per-section `descriptionHtml`)
 │   ├── compute.ts       ability modifiers, saves, proficiency, CR → XP, meta line
-│   └── sample.ts        era-accurate sample vampires (2014 + 2024)
+│   └── sample.ts        era-accurate sample vampires (5e + 5.5e)
 ├── editor/              the injected UI
-│   ├── fab.ts / fab.css     the "Open in Microbrewery" launcher
-│   └── panel.ts / panel.css the WYSIWYG panel (preview + ruleset toggle + close)
+│   ├── fab.ts / fab.css                 the "Open in Microbrewery" launcher
+│   ├── panel.ts / panel.css             the full-page editor overlay
+│   └── context-menu.ts / context-menu.css  Encounters-style kebab menu
 └── preview/             the live preview
     ├── statblock-view.ts   dispatcher: renders by monster.ruleset
-    ├── render-2024.ts      2024 "mon-stat-block-2024" layout
-    ├── render-2014.ts      2014 classic layout
-    ├── statblock-2024.css  2024 styling (scoped .statblock.v2024)
-    ├── statblock-2014.css  2014 styling (scoped .statblock.v2014)
+    ├── render-55e.ts       5.5e "mon-stat-block-2024" layout
+    ├── render-5e.ts        5e classic layout
+    ├── statblock-55e.css   5.5e styling (scoped .statblock.v55e)
+    ├── statblock-5e.css    5e styling (scoped .statblock.v5e)
     ├── sections.ts         section body: DDB HTML (preferred) or structured entries
     ├── sanitize-html.ts    allowlist sanitizer for DDB's description HTML
     ├── inline.ts           {roll}/**bold**/*italic*/newline expander
@@ -115,10 +116,12 @@ The editor is a server-rendered form (`form#monster-form`) with stable
 - takes each description section's ready-made HTML from the
   `#field-<section>-description-wysiwyg` textareas, converting DDB's inline
   `[rollable]…[/rollable]` and `[type]…[/type]` markup to spans;
-- detects the layout from `#field-stat-block-type` (`5e` → 2014, `5.5e` → 2024).
+- detects the layout from `#field-stat-block-type` (`0` → `5e`, `1` → `5.5e`).
 
-`observe()` watches the form so the preview updates live. `write()` (pushing
-edits back into the form) is not implemented yet.
+`observe()` watches the form so the preview updates live. The first write-back is
+`setRuleset()` — the context menu's "Use 5e / Use 5.5e" sets
+`#field-stat-block-type` and dispatches `change` (persists on save). Broader
+field editing is a later feature.
 
 ## License
 
