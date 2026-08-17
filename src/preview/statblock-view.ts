@@ -1,4 +1,4 @@
-/** Renders a {@link Monster} into a classic 5e stat block DOM node. */
+/** Renders a {@link Monster} into a D&D Beyond-style stat block DOM node. */
 import { ABILITIES, type Monster, type NamedEntry } from "../statblock/model.js";
 import {
   abilityModifier,
@@ -70,12 +70,21 @@ function abilityCell(name: string, score: number): HTMLElement {
   return cell;
 }
 
-function entrySection(heading: string, entries: NamedEntry[]): HTMLElement | null {
+function entrySection(
+  heading: string,
+  entries: NamedEntry[],
+  intro?: string,
+): HTMLElement | null {
   if (entries.length === 0) return null;
   const wrap = document.createDocumentFragment();
   const h = el("h4");
   h.textContent = heading;
   wrap.append(h);
+  if (intro) {
+    const introEl = el("p", "legendary-intro");
+    introEl.append(inline(intro));
+    wrap.append(introEl);
+  }
   for (const entry of entries) {
     const p = el("p", "entry");
     if (entry.name) {
@@ -174,14 +183,14 @@ export function renderStatBlock(monster: Monster): HTMLElement {
     }
   }
 
-  const sections: Array<[string, NamedEntry[]]> = [
+  const sections: Array<[string, NamedEntry[], string?]> = [
     ["Actions", monster.actions],
     ["Bonus Actions", monster.bonusActions],
     ["Reactions", monster.reactions],
-    ["Legendary Actions", monster.legendaryActions],
+    ["Legendary Actions", monster.legendaryActions, monster.legendaryActionsIntro],
   ];
-  for (const [heading, entries] of sections) {
-    const section = entrySection(heading, entries);
+  for (const [heading, entries, intro] of sections) {
+    const section = entrySection(heading, entries, intro);
     if (section) root.append(section);
   }
 

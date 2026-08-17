@@ -70,6 +70,8 @@ export interface Monster {
   bonusActions: NamedEntry[];
   reactions: NamedEntry[];
   legendaryActions: NamedEntry[];
+  /** Preamble shown above the legendary action list ("The X can take 3…"). */
+  legendaryActionsIntro?: string;
 }
 
 /** A blank monster with sane defaults, safe to render immediately. */
