@@ -61,16 +61,17 @@
   background: #f2f5f7;
 }
 
-.cm-item.active {
-  font-weight: 600;
+.cm-icon {
+  width: 18px;
+  flex: 0 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #1579bc;
 }
 
-.cm-icon {
-  width: 16px;
-  flex: 0 0 16px;
-  text-align: center;
-  color: #1579bc;
-  font-weight: 700;
+.cm-icon svg {
+  display: block;
 }
 
 .cm-item.danger .cm-icon {

@@ -103,9 +103,10 @@ export class EditorPanel {
       this.menu = new ContextMenu([
         {
           label: `Use ${other} stat block`,
+          icon: "loop",
           onClick: () => this.adapter.setRuleset(other),
         },
-        { label: "Close", danger: true, onClick: () => this.close() },
+        { label: "Close", icon: "close", danger: true, onClick: () => this.close() },
       ]);
       slot.append(this.menu.element);
     }
