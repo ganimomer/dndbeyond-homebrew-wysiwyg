@@ -1,6 +1,12 @@
 /* Chrome for the injected WYSIWYG panel. Lives in the same shadow root as the
  * stat block, so it's isolated from D&D Beyond's page styles. */
 
+/* Block D&D Beyond's inherited (font/color/etc.) styles from reaching into the
+ * shadow root. Each component re-declares what it needs explicitly. */
+:host {
+  all: initial;
+}
+
 .panel {
   position: fixed;
   top: 76px;
@@ -40,6 +46,28 @@
   font-size: 13px;
   flex: 1;
   letter-spacing: 0.3px;
+}
+
+.ruleset-toggle {
+  display: inline-flex;
+  border: 1px solid rgba(253, 241, 220, 0.55);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ruleset-toggle button {
+  all: unset;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  padding: 1px 7px;
+  color: #fdf1dc;
+}
+
+.ruleset-toggle button.active {
+  background: #fdf1dc;
+  color: #7a200d;
 }
 
 .panel-header button {

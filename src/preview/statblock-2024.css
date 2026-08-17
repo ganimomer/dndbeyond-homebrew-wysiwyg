@@ -1,0 +1,154 @@
+/*
+ * D&D Beyond 2024 stat block ("mon-stat-block-2024"), reimplemented on our own
+ * class tree under `.statblock.v2024`. Values mirror DDB's compiled CSS (rem
+ * where DDB uses rem, so on the real page it tracks their root font-size). The
+ * licensed fonts are named exactly so the shadow root inherits them from DDB's
+ * document-scoped @font-face at runtime; off-site they fall back.
+ */
+
+.statblock.v2024 {
+  --accent: #5b160c;
+  --meta: #68747b;
+  --frame: #afa47a;
+  box-sizing: border-box;
+  font-family: "Scala Sans Offc", Roboto, Helvetica, sans-serif;
+  font-size: 15px;
+  line-height: 1.35;
+  color: #242528;
+  background-color: #f5f3ee;
+  /* Subtle paper texture (own asset) in place of DDB's PNG. */
+  background-image:
+    repeating-linear-gradient(0deg, rgba(120, 90, 40, 0.022) 0 2px, transparent 2px 4px),
+    radial-gradient(120% 60% at 50% 0%, rgba(150, 120, 70, 0.06), transparent 70%);
+  border: 1px solid var(--frame);
+  outline: 1px solid var(--frame);
+  outline-offset: -0.25rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 0 5px #979aa4;
+  padding: 15px;
+}
+
+.statblock.v2024 * {
+  box-sizing: border-box;
+}
+
+.statblock.v2024 .header {
+  line-height: 1.1;
+}
+
+.statblock.v2024 .name {
+  font-family: "Scala Sans Sc Offc", "Scala Sans Offc", Roboto, Helvetica, sans-serif;
+  font-weight: bold;
+  font-size: 1.75rem;
+  color: var(--accent);
+  border-bottom: 0.063rem solid var(--accent);
+  margin: 0 0 0.45rem;
+}
+
+.statblock.v2024 .meta {
+  font-style: italic;
+  color: var(--meta);
+  margin: 0.188rem 0 0.938rem;
+}
+
+.statblock.v2024 .attributes .line,
+.statblock.v2024 .tidbits .line {
+  margin: 5px 0;
+  color: var(--accent);
+  line-height: 1.2;
+}
+
+.statblock.v2024 .attributes .label,
+.statblock.v2024 .tidbits .label {
+  font-weight: bold;
+}
+
+/* Ability tables: physical (tan) + mental (grey-green), each with Mod + Save. */
+.statblock.v2024 .stats {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.625rem;
+  margin: 0.375rem 0 0.5rem;
+}
+
+.statblock.v2024 .stat-table {
+  flex: 1;
+  margin: 0;
+  border-collapse: collapse;
+}
+
+.statblock.v2024 .stat-table th,
+.statblock.v2024 .stat-table td {
+  border: 0;
+}
+
+.statblock.v2024 .stat-table thead th {
+  color: var(--meta);
+  font-weight: 400;
+  padding: 0.3125rem 0.125rem 0;
+  text-transform: uppercase;
+  font-family: Roboto, Helvetica, sans-serif;
+  font-size: 0.6875rem;
+  text-align: center;
+}
+
+.statblock.v2024 .stat-table tbody tr {
+  border-top: 0.0625rem solid #fff;
+  border-bottom: 0.0625rem solid #fff;
+  color: var(--accent);
+  text-align: center;
+  font-size: 0.938rem;
+}
+
+.statblock.v2024 .stat-table td {
+  padding: 0.125rem 0.5rem;
+}
+
+.statblock.v2024 .stat-table tbody th {
+  font-weight: bold;
+  padding: 0.125rem 0.25rem;
+}
+
+.statblock.v2024 .stat-table.physical th,
+.statblock.v2024 .stat-table.physical td {
+  background: #ede6d9;
+}
+.statblock.v2024 .stat-table.physical td.modifier {
+  background: #ded4cc;
+}
+.statblock.v2024 .stat-table.mental th,
+.statblock.v2024 .stat-table.mental td {
+  background: #d8dad1;
+}
+.statblock.v2024 .stat-table.mental td.modifier {
+  background: #d0caca;
+}
+
+.statblock.v2024 .description-blocks {
+  margin-top: 20px;
+}
+
+.statblock.v2024 .description-block .heading {
+  border-bottom: 0.063rem solid var(--accent);
+  color: var(--accent);
+  font-size: 1.25rem;
+  font-weight: normal;
+  font-family: "Scala Sans Sc Offc", "Scala Sans Offc", Roboto, Helvetica, sans-serif;
+  line-height: 1.4;
+  margin: 1.25rem 0 0.938rem;
+}
+
+.statblock.v2024 .description-block .content p {
+  margin: 0 0 10px;
+}
+
+.statblock.v2024 .description-block .entry-label {
+  font-weight: bold;
+  font-style: italic;
+}
+
+/* Inline roll/reference tokens — unobtrusive, hinting interactivity. */
+.statblock.v2024 .roll {
+  white-space: nowrap;
+  border-bottom: 0.0625rem dotted rgba(91, 22, 12, 0.35);
+}

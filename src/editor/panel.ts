@@ -5,10 +5,11 @@
  * for now the headline feature is the live preview.
  */
 import type { PageAdapter } from "../adapter/types.js";
-import type { Monster } from "../statblock/model.js";
+import type { Monster, Ruleset } from "../statblock/model.js";
 import { renderStatBlock } from "../preview/statblock-view.js";
 import panelCss from "./panel.css";
-import statblockCss from "../preview/statblock.css";
+import statblock2014Css from "../preview/statblock-2014.css";
+import statblock2024Css from "../preview/statblock-2024.css";
 
 const HOST_ID = "ddb-homebrew-wysiwyg-host";
 
@@ -19,6 +20,11 @@ export class EditorPanel {
   private statusEl!: HTMLElement;
   private unobserve: (() => void) | null = null;
   private rafToken = 0;
+  /**
+   * Which layout to render. A temporary manual toggle until the page adapter
+   * reports the monster's actual ruleset from the form.
+   */
+  private ruleset: Ruleset = "2024";
 
   constructor(private readonly adapter: PageAdapter) {
     this.host = document.createElement("div");
@@ -44,7 +50,7 @@ export class EditorPanel {
 
   private build(): void {
     const style = document.createElement("style");
-    style.textContent = `${panelCss}\n${statblockCss}`;
+    style.textContent = `${panelCss}\n${statblock2014Css}\n${statblock2024Css}`;
     this.root.appendChild(style);
 
     const panel = document.createElement("div");
@@ -55,6 +61,9 @@ export class EditorPanel {
     const title = document.createElement("span");
     title.className = "title";
     title.textContent = "Homebrew WYSIWYG";
+
+    const toggle = this.buildRulesetToggle();
+
     const collapse = document.createElement("button");
     collapse.textContent = "–";
     collapse.title = "Collapse";
@@ -62,7 +71,7 @@ export class EditorPanel {
       panel.classList.toggle("collapsed");
       collapse.textContent = panel.classList.contains("collapsed") ? "+" : "–";
     });
-    header.append(title, collapse);
+    header.append(title, toggle, collapse);
 
     const body = document.createElement("div");
     body.className = "panel-body";
@@ -77,6 +86,30 @@ export class EditorPanel {
     this.root.appendChild(panel);
 
     this.makeDraggable(panel, header);
+  }
+
+  /** Segmented 2014 / 2024 toggle that re-renders the preview on change. */
+  private buildRulesetToggle(): HTMLElement {
+    const group = document.createElement("div");
+    group.className = "ruleset-toggle";
+    const rulesets: Ruleset[] = ["2014", "2024"];
+    for (const rs of rulesets) {
+      const btn = document.createElement("button");
+      btn.textContent = rs;
+      btn.dataset.ruleset = rs;
+      btn.title = `Render the ${rs} stat-block layout`;
+      if (rs === this.ruleset) btn.classList.add("active");
+      btn.addEventListener("click", () => {
+        if (this.ruleset === rs) return;
+        this.ruleset = rs;
+        group.querySelectorAll("button").forEach((b) => {
+          b.classList.toggle("active", b.dataset.ruleset === rs);
+        });
+        this.render();
+      });
+      group.append(btn);
+    }
+    return group;
   }
 
   /** Coalesces bursts of page mutations into a single render per frame. */
@@ -94,6 +127,8 @@ export class EditorPanel {
       this.setStatus("Waiting for the homebrew form to load…");
       return;
     }
+    // Until the adapter reports it from the form, the toggle drives the layout.
+    monster.ruleset = this.ruleset;
     this.setStatus(statusFor(monster));
     this.previewMount.replaceChildren(renderStatBlock(monster));
   }

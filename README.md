@@ -16,10 +16,19 @@ with a thin per-browser layer for each extension format.
 
 ## Preview
 
-The preview renders a full 5e stat block from the shared model, with ability
-modifiers, proficiency bonus, and XP derived from the challenge rating. Inline
-`{...}` tokens are placeholders for D&D Beyond's special tags (dice, condition
-and monster references) that we'll expand into real links.
+The preview renders a full 5e stat block from the shared model in **either D&D
+Beyond layout** — the 2024 `mon-stat-block-2024` design (Initiative on the AC
+line, two Mod/Save ability tables, short tidbit labels) or the classic 2014
+layout — picked by each monster's `ruleset`. Colors, spacing, and the frame are
+reproduced from DDB's own compiled CSS; the licensed fonts (`Scala Sans`,
+`MrsEavesSmallCaps`) are named so the shadow root inherits them from DDB's
+document-scoped `@font-face` at runtime. Ability modifiers, saves, proficiency
+bonus, and XP are all derived. Inline `{...}` tokens are placeholders for D&D
+Beyond's roll/reference tags; `**bold**`, `*italic*`, and newlines are also
+supported in entry text.
+
+A **2014 / 2024 toggle** in the panel header switches layouts for comparison;
+once the form is wired, the adapter will report the ruleset instead.
 
 ## Architecture
 
@@ -32,12 +41,17 @@ src/                     shared, browser-agnostic core (all the real logic)
 │   ├── types.ts         PageAdapter interface
 │   └── ddb-monster.ts   monster adapter — ⚠️ selectors are placeholders (see below)
 ├── statblock/           the domain model
-│   ├── model.ts         Monster stat-block model
-│   ├── compute.ts       ability modifiers, proficiency, CR → XP
-│   └── sample.ts        example creature used until the page is wired
+│   ├── model.ts         Monster model (incl. `ruleset` discriminator)
+│   ├── compute.ts       ability modifiers, saves, proficiency, CR → XP, meta line
+│   └── sample.ts        era-accurate sample vampires (2014 + 2024)
 └── preview/             the live preview
-    ├── statblock-view.ts  model → 5e stat-block DOM
-    └── statblock.css      classic parchment styling (injected into a shadow root)
+    ├── statblock-view.ts   dispatcher: renders by monster.ruleset
+    ├── render-2024.ts      2024 "mon-stat-block-2024" layout
+    ├── render-2014.ts      2014 classic layout
+    ├── statblock-2024.css  2024 styling (scoped .statblock.v2024)
+    ├── statblock-2014.css  2014 styling (scoped .statblock.v2014)
+    ├── inline.ts           {roll}/**bold**/*italic*/newline expander
+    └── dom.ts              tiny element builder
 
 targets/                 the thin per-browser layer — just manifests
 ├── firefox/manifest.json   MV3 + browser_specific_settings, background.scripts

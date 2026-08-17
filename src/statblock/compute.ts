@@ -1,9 +1,33 @@
 /** Derived stat-block math: ability modifiers, proficiency, CR → XP. */
-import type { Monster } from "./model.js";
+import type { Ability, Monster } from "./model.js";
 
 /** D&D 5e ability modifier: floor((score - 10) / 2). */
 export function abilityModifier(score: number): number {
   return Math.floor((score - 10) / 2);
+}
+
+/**
+ * Saving-throw bonus for an ability. A recorded value in `savingThrows` means
+ * the creature is proficient; otherwise the save equals the ability modifier
+ * (the 2024 stat block shows a Save column for every ability).
+ */
+export function saveBonus(monster: Monster, ability: Ability): number {
+  const recorded = monster.savingThrows[ability];
+  if (recorded !== undefined) return recorded;
+  return abilityModifier(monster.abilities[ability]);
+}
+
+/** Initiative shown on the 2024 AC line; defaults to the Dexterity modifier. */
+export function initiativeText(monster: Monster): string {
+  if (monster.initiative) return monster.initiative;
+  return formatModifier(abilityModifier(monster.abilities.dex));
+}
+
+/** The size/type/alignment line, honoring an explicit override. */
+export function metaLine(monster: Monster): string {
+  if (monster.metaOverride) return monster.metaOverride;
+  const typeLine = [monster.size, monster.type].filter(Boolean).join(" ");
+  return `${typeLine}${monster.alignment ? `, ${monster.alignment}` : ""}`;
 }
 
 /** Formats a modifier with an explicit sign, e.g. 3 → "+3", -1 → "−1". */
