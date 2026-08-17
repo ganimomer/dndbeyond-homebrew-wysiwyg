@@ -1,0 +1,24 @@
+{
+  "name": "dndbeyond-homebrew-wysiwyg",
+  "version": "0.1.0",
+  "description": "Browser extension that turns the D&D Beyond homebrew creation page into a WYSIWYG editor with a live stat-block preview.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs --browser firefox && node build.mjs --browser chrome",
+    "build:firefox": "node build.mjs --browser firefox",
+    "build:chrome": "node build.mjs --browser chrome",
+    "dev:firefox": "node build.mjs --browser firefox --watch",
+    "dev:chrome": "node build.mjs --browser chrome --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "webextension-polyfill": "^0.12.0"
+  },
+  "devDependencies": {
+    "@types/webextension-polyfill": "^0.12.1",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.3"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "D&D Beyond Homebrew WYSIWYG",
+  "version": "0.1.0",
+  "description": "Turns the D&D Beyond homebrew creation page into a WYSIWYG editor with a live stat-block preview.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "dndbeyond-homebrew-wysiwyg@ganimomer.dev",
+      "strict_min_version": "115.0"
+    }
+  },
+  "permissions": ["storage"],
+  "host_permissions": ["*://*.dndbeyond.com/*"],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.dndbeyond.com/homebrew/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

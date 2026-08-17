@@ -1,0 +1,75 @@
+/* Chrome for the injected WYSIWYG panel. Lives in the same shadow root as the
+ * stat block, so it's isolated from D&D Beyond's page styles. */
+
+.panel {
+  position: fixed;
+  top: 76px;
+  right: 16px;
+  z-index: 2147483000;
+  width: 400px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 100px);
+  display: flex;
+  flex-direction: column;
+  font-family: "Noto Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  color: #1f2933;
+  background: #ffffff;
+  border: 1px solid #cbd2d9;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.28);
+  overflow: hidden;
+}
+
+.panel.collapsed .panel-body {
+  display: none;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #7a200d;
+  color: #fdf1dc;
+  cursor: grab;
+  user-select: none;
+}
+
+.panel-header .title {
+  font-weight: 700;
+  font-size: 13px;
+  flex: 1;
+  letter-spacing: 0.3px;
+}
+
+.panel-header button {
+  all: unset;
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  line-height: 22px;
+  text-align: center;
+  border-radius: 4px;
+  color: #fdf1dc;
+  font-size: 14px;
+}
+
+.panel-header button:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.panel-body {
+  padding: 12px;
+  overflow-y: auto;
+  background: #f5f7fa;
+}
+
+.panel-status {
+  font-size: 11px;
+  color: #52616b;
+  margin: 0 0 10px;
+  padding: 6px 8px;
+  background: #e4ebf1;
+  border-radius: 4px;
+  line-height: 1.4;
+}
