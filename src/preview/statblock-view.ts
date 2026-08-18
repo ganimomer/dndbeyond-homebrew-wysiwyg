@@ -6,8 +6,26 @@ import type { Monster } from "../statblock/model.js";
 import { parseChallengeRating } from "../statblock/compute.js";
 import { el } from "./dom.js";
 import { sectionBody } from "./sections.js";
+import { defaultImageUrl } from "./default-image.js";
 import { render5e } from "./render-5e.js";
 import { render55e } from "./render-55e.js";
+
+/**
+ * The creature artwork, placed *beside* the stat block (top-right) to match D&D
+ * Beyond's monster page, or null when there's neither an avatar nor a type
+ * default. Uses the creature-type default when no avatar is set.
+ */
+function renderImage(monster: Monster): HTMLElement | null {
+  const src = monster.image ?? defaultImageUrl(monster.type);
+  if (!src) return null;
+  const image = el("div", "sb-image");
+  if (!monster.image) image.classList.add("is-default");
+  const img = el("img");
+  img.src = src;
+  img.alt = monster.name;
+  image.append(img);
+  return image;
+}
 
 /**
  * The monster's free-form characteristics, shown as a plain "Description"
@@ -27,15 +45,24 @@ function renderDescription(monster: Monster): HTMLElement | null {
 }
 
 /**
- * Builds the full stat-block document for a monster: the framed block in its
- * authored layout, plus the Description section beneath it when present.
+ * Builds the full stat-block document for a monster: the framed block with its
+ * artwork alongside (top-right), plus the Description section beneath when
+ * present.
  */
 export function renderStatBlock(monster: Monster): HTMLElement {
   const block = monster.ruleset === "5e" ? render5e(monster) : render55e(monster);
-  const description = renderDescription(monster);
-  if (!description) return block;
+
+  // Stat block and artwork sit side by side; the image wraps below on narrow
+  // viewports (see .sb-layout).
+  const layout = el("div", "sb-layout");
+  layout.append(block);
+  const image = renderImage(monster);
+  if (image) layout.append(image);
+
   const doc = el("div", "sb-doc");
-  doc.append(block, description);
+  doc.append(layout);
+  const description = renderDescription(monster);
+  if (description) doc.append(description);
   return doc;
 }
 

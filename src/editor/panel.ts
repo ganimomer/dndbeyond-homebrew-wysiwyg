@@ -11,6 +11,7 @@ import type { Ability, Monster } from "../statblock/model.js";
 import { renderStatBlock } from "../preview/statblock-view.js";
 import { ContextMenu, makeIcon } from "./context-menu.js";
 import { applyDependencyHighlights, wireAbilityInputs } from "./ability-editing.js";
+import { wireMetaControls } from "./meta-editing.js";
 import { ProseEditor } from "./prose-editor.js";
 import panelCss from "./panel.css";
 import contextMenuCss from "./context-menu.css";
@@ -145,6 +146,9 @@ export class EditorPanel {
       this.adapter.setAbility(ability, score);
     });
     applyDependencyHighlights(block, this.changedAbilities);
+
+    // Type dropdown + subtype tag editor in the meta line write back to the form.
+    wireMetaControls(block, this.adapter);
 
     // Preserve caret focus across the blur→re-render so tabbing between ability
     // inputs stays usable.

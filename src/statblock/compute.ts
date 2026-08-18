@@ -23,11 +23,17 @@ export function initiativeText(monster: Monster): string {
   return formatModifier(abilityModifier(monster.abilities.dex));
 }
 
-/** The size/type/alignment line, honoring an explicit override. */
+/** The creature's type with its subtypes in parentheses, e.g. "humanoid (elf)". */
+export function typeLine(monster: Monster): string {
+  return monster.subTypes.length
+    ? `${monster.type} (${monster.subTypes.join(", ")})`
+    : monster.type;
+}
+
+/** The size/type/alignment line, composed from the discrete fields. */
 export function metaLine(monster: Monster): string {
-  if (monster.metaOverride) return monster.metaOverride;
-  const typeLine = [monster.size, monster.type].filter(Boolean).join(" ");
-  return `${typeLine}${monster.alignment ? `, ${monster.alignment}` : ""}`;
+  const line = [monster.size, typeLine(monster)].filter(Boolean).join(" ");
+  return `${line}${monster.alignment ? `, ${monster.alignment}` : ""}`;
 }
 
 /** Formats a modifier with an explicit sign, e.g. 3 → "+3", -1 → "−1". */

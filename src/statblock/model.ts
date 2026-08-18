@@ -31,6 +31,11 @@ export const ABILITIES: readonly Ability[] = [
   "cha",
 ];
 
+/**
+ * The standard 5e sizes, kept as a documented hint. The model's `size` is a
+ * free-form string, because D&D Beyond's size can be free text (e.g. 5.5e's
+ * "Medium or Small") that no fixed enum can hold.
+ */
 export type Size =
   | "Tiny"
   | "Small"
@@ -55,16 +60,16 @@ export interface Monster {
   name: string;
   /** Optional creature artwork URL, shown atop the full-page stat block. */
   image?: string;
-  size: Size;
-  /** e.g. "humanoid (elf)" */
+  /** Free-form size display, e.g. "Medium" or 5.5e's "Medium or Small". */
+  size: string;
+  /** Base creature type, e.g. "humanoid" or "Undead". */
   type: string;
-  alignment: string;
   /**
-   * Optional exact meta line, used when size/type/alignment don't compose
-   * cleanly (e.g. 5.5e's "Medium or Small Undead, Lawful Evil"). When unset the
-   * renderers build the line from size + type + alignment.
+   * Subtype tags, shown parenthetically after the type ("humanoid (elf)"). DDB's
+   * sub-type is a multi-select, so this is a list (usually empty or one entry).
    */
-  metaOverride?: string;
+  subTypes: string[];
+  alignment: string;
 
   /** Free text so we can preserve the parenthetical, e.g. "15 (natural armor)". */
   armorClass: string;
@@ -121,6 +126,7 @@ export function emptyMonster(): Monster {
     name: "New Creature",
     size: "Medium",
     type: "humanoid",
+    subTypes: [],
     alignment: "unaligned",
     armorClass: "10",
     hitPoints: "1 (1d4 - 1)",

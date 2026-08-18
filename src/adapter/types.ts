@@ -9,6 +9,16 @@ import type { Ability, Monster, Ruleset, SectionKey } from "../statblock/model.j
 
 export type HomebrewKind = "monster" | "item" | "spell" | "unknown";
 
+/** One option of a form `<select>`, for building an editable dropdown. */
+export interface SelectOption {
+  /** The form's option value (DDB uses numeric codes). */
+  value: string;
+  /** The human-readable label. */
+  text: string;
+  /** Whether this option is the currently selected one. */
+  selected: boolean;
+}
+
 export interface PageAdapter {
   /** Which homebrew content type this adapter understands. */
   readonly kind: HomebrewKind;
@@ -36,6 +46,15 @@ export interface PageAdapter {
    * editor's marker-span HTML; the adapter re-encodes it to DDB's inline macros.
    */
   setDescription(section: SectionKey, editorHtml: string): void;
+
+  /** The creature-type options from the form's type `<select>`. */
+  typeOptions(): SelectOption[];
+  /** The full sub-type tag options (value + label + selected). */
+  subTypeOptions(): SelectOption[];
+  /** Writes the creature type (an option value) back to the form. */
+  setType(value: string): void;
+  /** Writes the full set of chosen subtype tags (option values) back to the form. */
+  setSubTypes(values: string[]): void;
 
   /**
    * Watches DDB's own fields for user edits and invokes `onChange`. Returns an

@@ -28,3 +28,42 @@ export function scoreInput(
   input.setAttribute("aria-label", label);
   return input;
 }
+
+/** Which meta-line control a `<select>` drives. */
+export type MetaKind = "type" | "subType";
+
+/** True where the browser supports the customizable-select feature (Chrome 135+). */
+const SUPPORTS_BASE_SELECT =
+  typeof CSS !== "undefined" && typeof CSS.supports === "function" &&
+  CSS.supports("appearance", "base-select");
+
+/**
+ * An editable creature type/subtype control for the meta line: a real `<select>`
+ * tagged for `wireMetaSelects` to fill with options. Where the customizable-
+ * select feature exists it gets the `<button><selectedcontent>` trigger so it
+ * can be styled to read as inline text; elsewhere it stays a plain native select
+ * (Firefox). Seeded with the current label as a lone option until wired.
+ */
+export function metaSelect(
+  kind: MetaKind,
+  currentText: string,
+  isPlaceholder = false,
+): HTMLSelectElement {
+  const select = el("select", "meta-select");
+  select.dataset.meta = kind;
+  select.setAttribute("aria-label", kind === "type" ? "Creature type" : "Creature subtype");
+  if (isPlaceholder) select.classList.add("is-placeholder");
+
+  if (SUPPORTS_BASE_SELECT) {
+    const button = el("button", "meta-select-button");
+    button.type = "button";
+    button.appendChild(document.createElement("selectedcontent"));
+    select.appendChild(button);
+  }
+
+  const option = el("option");
+  option.textContent = currentText;
+  option.selected = true;
+  select.appendChild(option);
+  return select;
+}

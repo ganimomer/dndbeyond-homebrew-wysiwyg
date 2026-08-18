@@ -13,7 +13,6 @@ import {
 import {
   abilityModifier,
   formatModifier,
-  metaLine,
   proficiencyBonus,
   saveBonus,
   xpForCr,
@@ -21,6 +20,7 @@ import {
 import { el, scoreInput } from "./dom.js";
 import { expandInline } from "./inline.js";
 import { sectionBody } from "./sections.js";
+import { metaContent } from "./meta.js";
 
 const ABILITY_LABEL: Record<Ability, string> = {
   str: "STR",
@@ -95,15 +95,6 @@ function headedSection(
 export function render5e(monster: Monster): HTMLElement {
   const root = el("div", "statblock v5e");
 
-  if (monster.image) {
-    const image = el("div", "sb-image");
-    const img = el("img");
-    img.src = monster.image;
-    img.alt = monster.name;
-    image.append(img);
-    root.append(image);
-  }
-
   const nameRow = el("div", "name-row");
   const name = el("div", "name");
   name.textContent = monster.name || "Unnamed Creature";
@@ -112,7 +103,7 @@ export function render5e(monster: Monster): HTMLElement {
   root.append(nameRow);
 
   const meta = el("div", "meta");
-  meta.textContent = metaLine(monster);
+  meta.append(...metaContent(monster));
   root.append(meta);
 
   root.append(el("hr", "rule"));

@@ -28,18 +28,36 @@
 
 .stage {
   width: 100%;
-  max-width: 720px;
+  /* Wide enough to hold the stat block and its artwork side by side. */
+  max-width: 1060px;
 }
 
-/* Artwork atop the stat block. */
-.statblock .sb-image {
-  margin: 0 0 12px;
+/* Stat block + artwork side by side (D&D Beyond's page layout); the image wraps
+ * below the block on narrow viewports. */
+.sb-layout {
+  display: flex;
+  align-items: flex-start;
+  /* Left-align the block+image group so the Description below lines up with the
+   * stat block's left edge (not centered under it). */
+  justify-content: flex-start;
+  gap: 28px;
+  flex-wrap: wrap;
 }
-.statblock .sb-image img {
+.sb-layout .statblock {
+  flex: 0 1 720px;
+  min-width: 0;
+}
+/* Artwork column, top-aligned beside the stat block. */
+.sb-image {
+  flex: 0 0 300px;
+  max-width: 100%;
+  margin: 0;
+}
+.sb-image img {
   display: block;
   width: 100%;
   height: auto;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 /* Name row hosts the name, the context-menu trigger, and the close button. */
@@ -114,6 +132,115 @@
   vertical-align: baseline;
 }
 
+/* Editable creature type / subtype in the meta line. It reads as inline text
+ * with a quiet hover/focus affordance. Where the browser supports customizable
+ * selects (appearance: base-select) the popup is styled below; elsewhere (e.g.
+ * Firefox) it falls back to a plain native <select>. */
+.statblock .meta-select {
+  appearance: base-select;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  padding: 0 1px;
+  margin: 0;
+  cursor: pointer;
+}
+.statblock .meta-select:hover {
+  background: rgba(91, 22, 12, 0.08);
+}
+.statblock .meta-select:focus-visible {
+  outline: 1px solid var(--accent, #5b160c);
+  outline-offset: 1px;
+}
+.statblock .meta-select.is-placeholder {
+  opacity: 0.6;
+  font-style: italic;
+}
+.statblock .meta-select-button {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+/* Customizable-select popup (supporting browsers only). */
+.statblock .meta-select::picker(select) {
+  appearance: base-select;
+  background: #fff;
+  color: #242528;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  padding: 4px;
+  font-family: Roboto, Helvetica, sans-serif;
+  font-size: 14px;
+  font-style: normal;
+  max-height: 320px;
+}
+.statblock .meta-select::picker(select) option {
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+.statblock .meta-select::picker(select) option:hover {
+  background: rgba(91, 22, 12, 0.1);
+}
+.statblock .meta-select option:checked {
+  font-weight: 600;
+}
+
+/* Subtype multi-tag editor: removable chips + a searchable add box, inline in
+ * the meta line. The add box uses a native <datalist> for type-to-filter. */
+.statblock .meta-tag {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(91, 22, 12, 0.1);
+}
+.statblock .meta-tag-remove {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.55;
+}
+.statblock .meta-tag-remove:hover {
+  opacity: 1;
+}
+.statblock .meta-add {
+  /* Auto-size to the placeholder/typed text so nothing is cropped (the `size`
+   * attribute only approximates width). Falls back to `size` where unsupported. */
+  field-sizing: content;
+  min-width: 4ch;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0 1px;
+  border-radius: 3px;
+}
+.statblock .meta-add::placeholder {
+  color: inherit;
+  opacity: 0.5;
+  font-style: italic;
+}
+.statblock .meta-add:hover {
+  background: rgba(91, 22, 12, 0.08);
+}
+.statblock .meta-add:focus {
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}
+
 /* Flags a value a recent ability edit may have invalidated (see
  * ability-editing.ts). Deliberately loud enough to notice, soft enough to read
  * through on both the parchment frame and the plain Description section. */
@@ -126,7 +253,8 @@
 /* Free-form "Description" section, below the framed block in plain body type
  * (matches D&D Beyond's monster page: Roboto, black, no accent/small-caps). */
 .sb-description {
-  margin: 22px 2px 0;
+  max-width: 720px;
+  margin: 22px 0 0;
   font-family: Roboto, Helvetica, sans-serif;
   font-size: 14px;
   line-height: 1.7;

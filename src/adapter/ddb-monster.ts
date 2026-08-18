@@ -9,7 +9,7 @@
  * trait/action bodies are ready-to-render HTML in `*-description-wysiwyg`
  * textareas. All of that DOM knowledge is centralized here.
  */
-import type { PageAdapter } from "./types.js";
+import type { PageAdapter, SelectOption } from "./types.js";
 import {
   emptyMonster,
   type Ability,
@@ -108,6 +108,24 @@ function selTexts(id: string): string[] {
   const e = byId<HTMLSelectElement>(id);
   if (!e) return [];
   return Array.from(e.selectedOptions).map((o) => o.text.trim()).filter(Boolean);
+}
+/** Every option of a `<select>` as {value, text, selected} — for building a dropdown. */
+function selOptions(id: string): SelectOption[] {
+  const e = byId<HTMLSelectElement>(id);
+  if (!e) return [];
+  return Array.from(e.options).map((o) => ({
+    value: o.value,
+    text: o.text.trim(),
+    selected: o.selected,
+  }));
+}
+/** Sets a `<select>` to `value` and fires the events DDB's form listeners expect. */
+function setSelect(id: string, value: string): void {
+  const select = byId<HTMLSelectElement>(id);
+  if (!select) return;
+  select.value = value;
+  select.dispatchEvent(new Event("input", { bubbles: true }));
+  select.dispatchEvent(new Event("change", { bubbles: true }));
 }
 /** Rows of a listing table as arrays of cell text (trailing action cells kept). */
 function tableRows(selector: string): string[][] {
@@ -262,16 +280,12 @@ export class DdbMonsterAdapter implements PageAdapter {
     m.challengeRating = selText(SELECTORS.challengeRating) || m.challengeRating;
     const pb = proficiencyForCr(m.challengeRating);
 
-    // Meta: size/type/alignment come from selects whose text can be free-form
-    // ("Medium or Small"), so compose the exact line rather than the size enum.
-    const size = selText(SELECTORS.size);
-    const type = selText(SELECTORS.monsterType);
-    const subType = selText(SELECTORS.subType);
-    const alignment = selText(SELECTORS.alignment);
-    m.type = subType && !/^choose/i.test(subType) ? `${type} (${subType})` : type;
-    m.alignment = alignment;
-    m.metaOverride =
-      [size, m.type].filter(Boolean).join(" ") + (alignment ? `, ${alignment}` : "");
+    // Meta parts each come from a free-form <select> (size can read "Medium or
+    // Small"); the renderer composes them and turns type/subType into dropdowns.
+    m.size = selText(SELECTORS.size);
+    m.type = selText(SELECTORS.monsterType);
+    m.subTypes = selTexts(SELECTORS.subType); // multi-select tag field
+    m.alignment = selText(SELECTORS.alignment);
 
     m.armorClass = composeArmorClass();
     m.initiative = composeInitiative();
@@ -327,6 +341,32 @@ export class DdbMonsterAdapter implements PageAdapter {
     textarea.value = editorHtmlToDdb(editorHtml);
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
     textarea.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  typeOptions(): SelectOption[] {
+    return selOptions(SELECTORS.monsterType);
+  }
+
+  subTypeOptions(): SelectOption[] {
+    // The full sub-type tag list (value + label + which are currently chosen).
+    return selOptions(SELECTORS.subType);
+  }
+
+  setType(value: string): void {
+    setSelect(SELECTORS.monsterType, value);
+  }
+
+  setSubTypes(values: string[]): void {
+    // DDB's sub-type is a Select2 <select multiple>; set the underlying options'
+    // selection to `values` and fire change so the widget/form pick it up.
+    const select = byId<HTMLSelectElement>(SELECTORS.subType);
+    if (!select) return;
+    const wanted = new Set(values);
+    for (const option of Array.from(select.options)) {
+      option.selected = wanted.has(option.value);
+    }
+    select.dispatchEvent(new Event("input", { bubbles: true }));
+    select.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
   observe(onChange: () => void): () => void {
