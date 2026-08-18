@@ -18,5 +18,8 @@
     "types": ["webextension-polyfill"]
   },
   "include": ["src", "build.mjs"],
-  "exclude": ["node_modules", "dist"]
+  // Test files run through esbuild + node:test (their own toolchain, with Node
+  // and jsdom types the extension code deliberately excludes), so keep them out
+  // of the app typecheck.
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
 }

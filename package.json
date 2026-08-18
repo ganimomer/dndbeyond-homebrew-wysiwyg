@@ -11,14 +11,22 @@
     "dev:firefox": "node build.mjs --browser firefox --watch",
     "dev:chrome": "node build.mjs --browser chrome --watch",
     "typecheck": "tsc --noEmit",
+    "test": "node scripts/test.mjs",
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@lexical/history": "^0.49.0",
+    "@lexical/rich-text": "^0.49.0",
+    "@lexical/utils": "^0.49.0",
+    "lexical": "^0.49.0",
+    "lit-html": "^3.3.3",
     "webextension-polyfill": "^0.12.0"
   },
   "devDependencies": {
+    "@lexical/headless": "^0.49.0",
     "@types/webextension-polyfill": "^0.12.1",
     "esbuild": "^0.24.0",
+    "jsdom": "^29.1.1",
     "typescript": "^5.6.3"
   }
 }

@@ -157,7 +157,12 @@ export function render5e(monster: Monster): HTMLElement {
   const traitsBody = sectionBody(monster, "traits", monster.traits);
   if (traitsBody) {
     root.append(el("hr", "rule"));
-    root.append(traitsBody);
+    // Wrap in a tagged container so the overlay can locate the traits body and
+    // swap in the editor (mirrors the 5.5e `.content[data-section]` hook).
+    const traits = el("div", "content");
+    traits.dataset.section = "traits";
+    traits.append(traitsBody);
+    root.append(traits);
   }
 
   headedSection(root, monster, "Actions", "actions", monster.actions);

@@ -142,3 +142,26 @@
 .sb-description .sb-description-content p {
   margin: 0 0 10px;
 }
+
+/* The editable Traits body (Lexical mounts here). Inherits the surrounding
+ * stat-block typography so it reads identically to the read-only sections, with
+ * a quiet affordance that it can be edited and a focus ring while active. */
+.sb-prose {
+  outline: none;
+  border-radius: 3px;
+  transition: box-shadow 0.12s ease, background 0.12s ease;
+}
+.sb-prose:hover {
+  box-shadow: 0 0 0 1px rgba(91, 22, 12, 0.25);
+}
+.sb-prose:focus,
+.sb-prose:focus-within {
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}
+.sb-prose p {
+  margin: 0 0 10px;
+}
+.sb-prose p:last-child {
+  margin-bottom: 0;
+}

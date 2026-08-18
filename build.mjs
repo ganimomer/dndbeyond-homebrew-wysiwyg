@@ -46,6 +46,10 @@ const options = {
   bundle: true,
   format: "iife",
   target: ["firefox115", "chrome114"],
+  // Bundling Lexical + lit-html makes the content script large; minify release
+  // builds so the shipped size is the ~290KB minified figure, not ~900KB. Dev
+  // builds stay readable for debugging in the page.
+  minify: !watch,
   sourcemap: watch ? "inline" : false,
   logLevel: "info",
   define: {

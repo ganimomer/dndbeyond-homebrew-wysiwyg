@@ -108,6 +108,9 @@ function descriptionBlock(
   head.textContent = heading;
   block.append(head);
   const content = el("div", "content");
+  // Tag the body container so the overlay can locate a section to make editable
+  // (the traits editor mounts here, replacing the read-only body).
+  content.dataset.section = key;
   content.append(body);
   block.append(content);
   return block;

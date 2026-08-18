@@ -18,6 +18,7 @@ import {
   type SectionKey,
 } from "../statblock/model.js";
 import { abilityModifier, proficiencyForCr } from "../statblock/compute.js";
+import { ddbToEditorHtml, editorHtmlToDdb } from "../preview/ddb-markup.js";
 
 /** Every DOM hook the monster adapter needs, in one place. */
 export const SELECTORS = {
@@ -174,35 +175,6 @@ function readSkills(): Record<string, number> {
   return skills;
 }
 
-/**
- * Converts D&D Beyond's inline markup embedded in the description HTML into
- * spans showing the visible text:
- *   [rollable]display;{json}[/rollable] → a roll span,
- *   [type]text[/type]  (condition, spells, rules, monsters, items, …) → a
- *   reference span. The interactive roll/link behaviour is a later feature.
- */
-function normalizeDdbMarkup(html: string): string {
-  return html
-    .replace(
-      /\[rollable\]([\s\S]*?)(?:;\{[\s\S]*?\})?\[\/rollable\]/g,
-      (_all, display: string) => `<span class="roll">${display}</span>`,
-    )
-    .replace(
-      /\[([a-z][\w-]*)\]([\s\S]*?)\[\/\1\]/gi,
-      // Most references are just their visible text ([condition]Charmed[/condition]),
-      // but some carry a "slug;display" payload (e.g.
-      // [rules]shape-shifting;shape-shifts[/rules] reads as "shape-shifts"). The
-      // human-readable display is always the last segment.
-      (_all, _type: string, inner: string) => {
-        const parts = inner.split(";");
-        return `<span class="ref">${parts[parts.length - 1]}</span>`;
-      },
-    )
-    // Drop any stray unpaired macro tag (e.g. the unclosed [hover] keyword),
-    // which D&D Beyond itself renders as nothing.
-    .replace(/ ?\[\/?[a-z][\w-]*\]/gi, "");
-}
-
 /** Splits the combined "X - Resistance/Immunity/Vulnerability" multi-select. */
 function readDamageAdjustments(): {
   resistances: string;
@@ -254,7 +226,10 @@ function readDescriptions(): Partial<Record<SectionKey, string>> {
   for (const [key, textareaId, flag] of SECTION_TEXTAREA) {
     if (flag && !checked(SELECTORS[flag])) continue;
     const html = val(textareaId);
-    if (html) out[key] = normalizeDdbMarkup(html);
+    // Lossless decode: preserve each roll's JSON and each reference's slug/type
+    // (as span data-attributes) so the editor can re-encode them on write-back.
+    // The read-only renderer sanitizes these spans down to their class anyway.
+    if (html) out[key] = ddbToEditorHtml(html);
   }
   return out;
 }
@@ -341,6 +316,17 @@ export class DdbMonsterAdapter implements PageAdapter {
     // so a bubbling input+change is enough for observe() to re-read.
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  setDescription(section: SectionKey, editorHtml: string): void {
+    const entry = SECTION_TEXTAREA.find(([key]) => key === section);
+    if (!entry) return;
+    const textarea = byId<HTMLTextAreaElement>(entry[1]);
+    if (!textarea) return;
+    // Re-encode the editor's spans back into DDB's [rollable]/[type] macros.
+    textarea.value = editorHtmlToDdb(editorHtml);
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    textarea.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
   observe(onChange: () => void): () => void {

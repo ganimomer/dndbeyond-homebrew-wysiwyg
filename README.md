@@ -11,8 +11,15 @@ with a thin per-browser layer for each extension format.
 
 > **Status.** The launcher, the full read of the monster editor form, and the
 > faithful 2014/2024 preview are working end-to-end against the live page.
-> Editing back into the form (write-back) is the next feature — the preview is
-> currently read-only.
+> Ability scores and the ruleset are editable. The **Traits** section is the
+> first editable prose block: it mounts a [Lexical](https://lexical.dev) rich-text
+> editor and writes edits back to DDB's form (the foundation for editing every
+> section). This pulls Lexical + lit-html into the content script (~290 KB
+> minified / ~96 KB gzip); release builds are minified. The remaining prose
+> sections and the lit-html view conversion are next.
+>
+> The D&D Beyond ⇄ editor markup codec has unit + headless-Lexical round-trip
+> tests: `npm test`.
 
 ## Preview
 
@@ -47,6 +54,9 @@ src/                     shared, browser-agnostic core (all the real logic)
 ├── editor/              the injected UI
 │   ├── fab.ts / fab.css                 the "Open in Microbrewery" launcher
 │   ├── panel.ts / panel.css             the full-page editor overlay
+│   ├── ability-editing.ts               live ability-score inputs + dependency highlights
+│   ├── prose-editor.ts                  a section's Lexical editor (mount, edit, commit)
+│   ├── nodes.ts                         RollNode / RefNode — DDB roll & reference tokens
 │   └── context-menu.ts / context-menu.css  Encounters-style kebab menu
 └── preview/             the live preview
     ├── statblock-view.ts   dispatcher: renders by monster.ruleset
@@ -56,7 +66,8 @@ src/                     shared, browser-agnostic core (all the real logic)
     ├── statblock-5e.css    5e styling (scoped .statblock.v5e)
     ├── sections.ts         section body: DDB HTML (preferred) or structured entries
     ├── sanitize-html.ts    allowlist sanitizer for DDB's description HTML
-    ├── inline.ts           {roll}/**bold**/*italic*/newline expander
+    ├── ddb-markup.ts       bidirectional DDB-macro ⇄ editor-span codec (round-trip safe)
+    ├── inline.ts           {roll}/**bold**/*italic*/newline expander (samples only)
     └── dom.ts              tiny element builder
 
 targets/                 the thin per-browser layer — just manifests
