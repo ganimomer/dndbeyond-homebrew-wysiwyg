@@ -7,8 +7,10 @@
  * Everything lives in one shadow root so DDB's page styles can't leak in.
  */
 import type { PageAdapter } from "../adapter/types.js";
+import type { Ability } from "../statblock/model.js";
 import { renderStatBlock } from "../preview/statblock-view.js";
 import { ContextMenu, makeIcon } from "./context-menu.js";
+import { applyDependencyHighlights, wireAbilityInputs } from "./ability-editing.js";
 import panelCss from "./panel.css";
 import contextMenuCss from "./context-menu.css";
 import statblock5eCss from "../preview/statblock-5e.css";
@@ -28,6 +30,8 @@ export class EditorPanel {
   private unobserve: (() => void) | null = null;
   private rafToken = 0;
   private menu: ContextMenu | null = null;
+  /** Abilities the user has edited this session; drives dependency highlights. */
+  private changedAbilities = new Set<Ability>();
 
   constructor(
     private readonly adapter: PageAdapter,
@@ -117,6 +121,34 @@ export class EditorPanel {
       slot.append(this.menu.element, closeBtn);
     }
 
+    // Editing an ability writes it back (which re-renders via observe) and
+    // records it so its dependents stay flagged across renders.
+    wireAbilityInputs(block, monster, (ability, score) => {
+      this.changedAbilities.add(ability);
+      this.adapter.setAbility(ability, score);
+    });
+    applyDependencyHighlights(block, this.changedAbilities);
+
+    // Preserve caret focus across the blur→re-render so tabbing between ability
+    // inputs stays usable.
+    const focusedAbility = this.focusedAbility();
     this.stage.replaceChildren(block);
+    this.restoreFocus(block, focusedAbility);
+  }
+
+  /** The ability whose score input currently holds focus, if any. */
+  private focusedAbility(): string | null {
+    const active = this.root.activeElement as HTMLElement | null;
+    return active?.classList.contains("score-input")
+      ? (active.dataset.ability ?? null)
+      : null;
+  }
+
+  private restoreFocus(scope: ParentNode, ability: string | null): void {
+    if (!ability) return;
+    const input = scope.querySelector<HTMLInputElement>(
+      `.score-input[data-ability="${ability}"]`,
+    );
+    input?.focus();
   }
 }

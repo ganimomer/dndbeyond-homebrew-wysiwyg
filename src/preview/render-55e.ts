@@ -14,7 +14,7 @@ import {
   saveBonus,
   xpForCr,
 } from "../statblock/compute.js";
-import { el } from "./dom.js";
+import { el, scoreInput } from "./dom.js";
 import { expandInline } from "./inline.js";
 import { sectionBody } from "./sections.js";
 
@@ -60,10 +60,12 @@ function abilityTable(kind: "physical" | "mental", abilities: Ability[], monster
     const label = el("th");
     label.textContent = ABILITY_LABEL[a];
     const score = el("td");
-    score.textContent = String(monster.abilities[a]);
+    score.append(scoreInput(a, monster.abilities[a], `${ABILITY_LABEL[a]} score`));
     const mod = el("td", "modifier");
+    mod.dataset.mod = a;
     mod.textContent = formatModifier(abilityModifier(monster.abilities[a]));
     const save = el("td", "modifier");
+    save.dataset.save = a;
     save.textContent = formatModifier(saveBonus(monster, a));
     row.append(label, score, mod, save);
     tbody.append(row);
@@ -140,15 +142,19 @@ export function render55e(monster: Monster): HTMLElement {
   const acLabel = el("span", "label");
   acLabel.textContent = "AC";
   const acValue = el("span", "value");
+  acValue.dataset.dep = "dex";
   acValue.textContent = monster.armorClass;
   acLine.append(acLabel, " ", acValue);
   const initLabel = el("span", "label");
   initLabel.textContent = "Initiative";
   const initValue = el("span", "value");
+  initValue.dataset.dep = "dex";
   initValue.textContent = initiativeText(monster);
   acLine.append("  ", initLabel, " ", initValue);
   attrs.append(acLine);
-  attrs.append(labeled("HP", monster.hitPoints));
+  const hpLine = labeled("HP", monster.hitPoints);
+  hpLine.dataset.dep = "con";
+  attrs.append(hpLine);
   attrs.append(labeled("Speed", monster.speed));
   root.append(attrs);
 
@@ -163,7 +169,11 @@ export function render55e(monster: Monster): HTMLElement {
   // Tidbits (short labels, canonical 5.5e order, empties skipped).
   const tidbits = el("div", "tidbits");
   const skills = skillsText(monster);
-  if (skills) tidbits.append(labeled("Skills", skills));
+  if (skills) {
+    const skillsLine = labeled("Skills", skills);
+    skillsLine.dataset.dep = "all";
+    tidbits.append(skillsLine);
+  }
   if (monster.damageVulnerabilities) tidbits.append(labeled("Vulnerabilities", monster.damageVulnerabilities));
   if (monster.damageResistances) tidbits.append(labeled("Resistances", monster.damageResistances));
   const immunities = immunitiesText(monster);

@@ -333,6 +333,16 @@ export class DdbMonsterAdapter implements PageAdapter {
     select.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
+  setAbility(ability: Ability, score: number): void {
+    const input = byId<HTMLInputElement>(`field-${ABILITY_FIELD[ability]}`);
+    if (!input) return;
+    input.value = String(score);
+    // Same pattern as setRuleset: DDB's form has no derived-recompute to fight,
+    // so a bubbling input+change is enough for observe() to re-read.
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
   observe(onChange: () => void): () => void {
     const root = document.querySelector(SELECTORS.formRoot) ?? document.body;
     const observer = new MutationObserver(() => onChange());
