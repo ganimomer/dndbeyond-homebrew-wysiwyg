@@ -4,7 +4,13 @@
  * and small-caps section headings. Class names live under `.statblock.v55e`
  * (see statblock-55e.css). Structure mirrors the real page's DOM.
  */
-import type { Ability, Monster, NamedEntry, SectionKey } from "../statblock/model.js";
+import {
+  ABILITY_ABBREV,
+  type Ability,
+  type Monster,
+  type NamedEntry,
+  type SectionKey,
+} from "../statblock/model.js";
 import {
   abilityModifier,
   formatModifier,
@@ -14,19 +20,11 @@ import {
   xpForCr,
 } from "../statblock/compute.js";
 import { el, saveSlot, scoreInput } from "./dom.js";
+import { makeIcon } from "./icons.js";
 import { expandInline } from "./inline.js";
 import { sectionBody } from "./sections.js";
 import { metaContent } from "./meta.js";
 import { skillsChips } from "./skills-line.js";
-
-const ABILITY_LABEL: Record<Ability, string> = {
-  str: "STR",
-  dex: "DEX",
-  con: "CON",
-  int: "INT",
-  wis: "WIS",
-  cha: "CHA",
-};
 
 function inline(text: string): DocumentFragment {
   return expandInline(text, el, "roll");
@@ -40,6 +38,33 @@ function labeled(label: string, value: string | Node): HTMLElement {
   line.append(labelEl, " ");
   line.append(typeof value === "string" ? inline(value) : value);
   return line;
+}
+
+/**
+ * A Save cell: a character-sheet proficiency dot plus the bonus, the whole thing
+ * one button that `wireSavingThrows` toggles.
+ *
+ * The number lives in its own `[data-save]` span rather than on the cell,
+ * because `wireAbilityInputs` live-updates it by assigning `textContent` — on
+ * the cell that would wipe the icon out.
+ */
+function saveToggle(ability: Ability, monster: Monster): HTMLButtonElement {
+  const proficient = monster.savingThrows[ability] !== undefined;
+  const button = el("button", "save-toggle");
+  button.type = "button";
+  button.dataset.saveToggle = ability;
+  button.setAttribute("aria-pressed", String(proficient));
+  button.setAttribute(
+    "aria-label",
+    `${ABILITY_ABBREV[ability]} saving throw proficiency`,
+  );
+
+  const value = el("span");
+  value.dataset.save = ability;
+  value.textContent = formatModifier(saveBonus(monster, ability));
+
+  button.append(makeIcon(proficient ? "circle" : "radioButtonUnchecked", 13), value);
+  return button;
 }
 
 function abilityTable(kind: "physical" | "mental", abilities: Ability[], monster: Monster): HTMLTableElement {
@@ -59,15 +84,14 @@ function abilityTable(kind: "physical" | "mental", abilities: Ability[], monster
   for (const a of abilities) {
     const row = el("tr");
     const label = el("th");
-    label.textContent = ABILITY_LABEL[a];
+    label.textContent = ABILITY_ABBREV[a];
     const score = el("td");
-    score.append(scoreInput(a, monster.abilities[a], `${ABILITY_LABEL[a]} score`));
+    score.append(scoreInput(a, monster.abilities[a], `${ABILITY_ABBREV[a]} score`));
     const mod = el("td", "modifier");
     mod.dataset.mod = a;
     mod.textContent = formatModifier(abilityModifier(monster.abilities[a]));
     const save = el("td", "modifier");
-    save.dataset.save = a;
-    save.textContent = formatModifier(saveBonus(monster, a));
+    save.append(saveToggle(a, monster));
     row.append(label, score, mod, save);
     tbody.append(row);
   }

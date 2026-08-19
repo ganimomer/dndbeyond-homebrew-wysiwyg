@@ -12,9 +12,9 @@
  * on their own. They're also slow enough to need feedback, hence `is-busy`.
  */
 import type { SelectOption } from "../adapter/types.js";
-import type { Monster } from "../statblock/model.js";
+import { ABILITY_ABBREV, type Monster } from "../statblock/model.js";
 import { formatModifier } from "../statblock/compute.js";
-import { ABILITY_ABBREV, SKILL_ABILITY, skillBonus } from "../statblock/skills.js";
+import { SKILL_ABILITY, skillBonus } from "../statblock/skills.js";
 import { ContextMenu } from "./context-menu.js";
 
 /** The adapter surface the skills row needs (satisfied by PageAdapter). */

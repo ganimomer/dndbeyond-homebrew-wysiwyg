@@ -35,16 +35,6 @@ export const SKILL_ABILITY: Record<string, Ability> = {
   Persuasion: "cha",
 };
 
-/** Uppercase abbreviation used in menu labels ("Perception (WIS) +6"). */
-export const ABILITY_ABBREV: Record<Ability, string> = {
-  str: "STR",
-  dex: "DEX",
-  con: "CON",
-  int: "INT",
-  wis: "WIS",
-  cha: "CHA",
-};
-
 /**
  * The bonus a proficient creature has in `skill`, or undefined for a skill
  * outside the standard list (DDB could add one) so callers can fall back to

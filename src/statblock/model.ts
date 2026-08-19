@@ -31,6 +31,16 @@ export const ABILITIES: readonly Ability[] = [
   "cha",
 ];
 
+/** The uppercase abbreviation both layouts label an ability with. */
+export const ABILITY_ABBREV: Record<Ability, string> = {
+  str: "STR",
+  dex: "DEX",
+  con: "CON",
+  int: "INT",
+  wis: "WIS",
+  cha: "CHA",
+};
+
 /**
  * The standard 5e sizes, kept as a documented hint. The model's `size` is a
  * free-form string, because D&D Beyond's size can be free text (e.g. 5.5e's

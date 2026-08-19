@@ -14,6 +14,7 @@ import { ContextMenu, makeIcon } from "./context-menu.js";
 import { applyDependencyHighlights, wireAbilityInputs } from "./ability-editing.js";
 import { wireMetaControls } from "./meta-editing.js";
 import { wireSkills } from "./skills-editing.js";
+import { wireSavingThrows } from "./saves-editing.js";
 import { ProseEditor } from "./prose-editor.js";
 import { AutosaveController } from "./autosave.js";
 import { applySaveState, HEADER_ORIGIN } from "./save-indicator.js";
@@ -199,6 +200,18 @@ export class EditorPanel {
         this.autosave.request(HEADER_ORIGIN);
       },
     });
+
+    // Saving throws are one multi-select in the form, so they ride autosave
+    // like the rest — chips in 5e, proficiency dots in the 5.5e Save column.
+    this.menus.push(
+      ...wireSavingThrows(block, monster, {
+        savingThrowOptions: () => this.adapter.savingThrowOptions(),
+        setSavingThrows: (values) => {
+          this.adapter.setSavingThrows(values);
+          this.autosave.request(HEADER_ORIGIN);
+        },
+      }),
+    );
 
     // Skills are the one edit that doesn't go through autosave: DDB keeps them
     // as separate records, so the adapter persists each add/remove itself and

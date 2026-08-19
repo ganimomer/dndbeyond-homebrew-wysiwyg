@@ -173,6 +173,23 @@ function setSelect(id: string, value: string): void {
   select.dispatchEvent(new Event("input", { bubbles: true }));
   select.dispatchEvent(new Event("change", { bubbles: true }));
 }
+/**
+ * Selects exactly `values` in a `<select multiple>`. DDB dresses these as Select2
+ * widgets, but the underlying select is what the form posts, so setting the
+ * options' selection and firing change is enough. (Select2's own chips don't
+ * redraw from a programmatic write; the overlay covers them, and a reload
+ * reconciles.)
+ */
+function setMultiSelect(id: string, values: string[]): void {
+  const select = byId<HTMLSelectElement>(id);
+  if (!select) return;
+  const wanted = new Set(values);
+  for (const option of Array.from(select.options)) {
+    option.selected = wanted.has(option.value);
+  }
+  select.dispatchEvent(new Event("input", { bubbles: true }));
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+}
 /** Rows of a listing table as arrays of cell text (trailing action cells kept). */
 function tableRows(selector: string): string[][] {
   const table = document.querySelector(selector);
@@ -495,6 +512,20 @@ export class DdbMonsterAdapter implements PageAdapter {
     if (/sign-in|login/i.test(response.url)) throw new Error("save failed (signed out)");
   }
 
+  savingThrowOptions(): SelectOption[] {
+    // Values are 1..6 = STR..CHA; the labels are the abbreviations we render.
+    return selOptions(SELECTORS.savingThrows);
+  }
+
+  /**
+   * Sets the proficient saves. Same multi-select dance as `setSubTypes` — and
+   * deliberately no bonus: DDB derives a proficient save as mod + PB, and
+   * `field-<ability>-save-bonus` stays whatever the user typed there.
+   */
+  setSavingThrows(values: string[]): void {
+    setMultiSelect(SELECTORS.savingThrows, values);
+  }
+
   skillOptions(): SelectOption[] {
     const taken = new Set(skillRows().map((r) => r.name));
     return Object.entries(SKILL_ID).map(([text, value]) => ({
@@ -574,16 +605,7 @@ export class DdbMonsterAdapter implements PageAdapter {
   }
 
   setSubTypes(values: string[]): void {
-    // DDB's sub-type is a Select2 <select multiple>; set the underlying options'
-    // selection to `values` and fire change so the widget/form pick it up.
-    const select = byId<HTMLSelectElement>(SELECTORS.subType);
-    if (!select) return;
-    const wanted = new Set(values);
-    for (const option of Array.from(select.options)) {
-      option.selected = wanted.has(option.value);
-    }
-    select.dispatchEvent(new Event("input", { bubbles: true }));
-    select.dispatchEvent(new Event("change", { bubbles: true }));
+    setMultiSelect(SELECTORS.subType, values);
   }
 
   observe(onChange: () => void): () => void {

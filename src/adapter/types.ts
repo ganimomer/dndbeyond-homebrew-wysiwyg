@@ -68,6 +68,14 @@ export interface PageAdapter {
   /** Removes the named skill. Persists immediately, like `addSkill`. */
   removeSkill(name: string): Promise<void>;
 
+  /** The six abilities as options, with the proficient saves marked selected. */
+  savingThrowOptions(): SelectOption[];
+  /**
+   * Writes the full set of proficient saves (option values). Unlike skills these
+   * are an ordinary form field, so this is synchronous and autosave persists it.
+   */
+  setSavingThrows(values: string[]): void;
+
   /** The creature-type options from the form's type `<select>`. */
   typeOptions(): SelectOption[];
   /** The full sub-type tag options (value + label + selected). */

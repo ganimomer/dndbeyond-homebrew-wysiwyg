@@ -5,6 +5,7 @@
  */
 import {
   ABILITIES,
+  ABILITY_ABBREV,
   type Ability,
   type Monster,
   type NamedEntry,
@@ -14,7 +15,6 @@ import {
   abilityModifier,
   formatModifier,
   proficiencyBonus,
-  saveBonus,
   xpForCr,
 } from "../statblock/compute.js";
 import { el, saveSlot, scoreInput } from "./dom.js";
@@ -22,15 +22,7 @@ import { expandInline } from "./inline.js";
 import { sectionBody } from "./sections.js";
 import { metaContent } from "./meta.js";
 import { skillsChips } from "./skills-line.js";
-
-const ABILITY_LABEL: Record<Ability, string> = {
-  str: "STR",
-  dex: "DEX",
-  con: "CON",
-  int: "INT",
-  wis: "WIS",
-  cha: "CHA",
-};
+import { savingThrowChips } from "./saves-line.js";
 
 function inline(text: string): DocumentFragment {
   return expandInline(text, el, "roll");
@@ -47,9 +39,9 @@ function labeled(label: string, value: string | Node): HTMLElement {
 function abilityCell(ability: Ability, monster: Monster): HTMLElement {
   const cell = el("div", "stat");
   const heading = el("span", "heading");
-  heading.textContent = ABILITY_LABEL[ability];
+  heading.textContent = ABILITY_ABBREV[ability];
   const score = monster.abilities[ability];
-  const input = scoreInput(ability, score, `${ABILITY_LABEL[ability]} score`);
+  const input = scoreInput(ability, score, `${ABILITY_ABBREV[ability]} score`);
   const modifier = el("span", "modifier");
   const modValue = el("span");
   modValue.dataset.mod = ability;
@@ -57,12 +49,6 @@ function abilityCell(ability: Ability, monster: Monster): HTMLElement {
   modifier.append("(", modValue, ")");
   cell.append(heading, el("br"), input, document.createTextNode(" "), modifier);
   return cell;
-}
-
-function savingThrowsText(monster: Monster): string {
-  return ABILITIES.filter((a) => monster.savingThrows[a] !== undefined)
-    .map((a) => `${ABILITY_LABEL[a]} ${formatModifier(saveBonus(monster, a))}`)
-    .join(", ");
 }
 
 function challengeText(monster: Monster): string {
@@ -124,9 +110,9 @@ export function render5e(monster: Monster): HTMLElement {
   root.append(el("hr", "rule"));
 
   const details = el("div", "attributes");
-  const saves = savingThrowsText(monster);
-  if (saves) details.append(labeled("Saving Throws", saves));
-  // Always rendered, even with no skills: the "＋" needs somewhere to live.
+  // Saves and skills always render, even when empty: the "＋" needs a home.
+  details.append(labeled("Saving Throws", savingThrowChips(monster)));
+
   const skillsLine = labeled("Skills", skillsChips(monster));
   skillsLine.dataset.dep = "all";
   details.append(skillsLine);

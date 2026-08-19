@@ -11,7 +11,8 @@ with a thin per-browser layer for each extension format.
 
 > **Status.** The launcher, the full read of the monster editor form, and the
 > faithful 2014/2024 preview are working end-to-end against the live page.
-> Ability scores and the ruleset are editable. The **Traits** section is the
+> Ability scores, the ruleset, creature type/subtype, **skills** and **saving
+> throw proficiencies** are editable. The **Traits** section is the
 > first editable prose block: it mounts a [Lexical](https://lexical.dev) rich-text
 > editor and writes edits back to DDB's form (the foundation for editing every
 > section). **Autosave** persists those edits without a page reload. This pulls
@@ -51,11 +52,15 @@ src/                     shared, browser-agnostic core (all the real logic)
 ├── statblock/           the domain model
 │   ├── model.ts         Monster model (`ruleset` discriminator, per-section `descriptionHtml`)
 │   ├── compute.ts       ability modifiers, saves, proficiency, CR → XP, meta line
+│   ├── skills.ts        the 18 skills → governing ability, and the derived bonus
 │   └── sample.ts        era-accurate sample vampires (5e + 5.5e)
 ├── editor/              the injected UI
 │   ├── fab.ts / fab.css                 the "Open in Microbrewery" launcher
 │   ├── panel.ts / panel.css             the full-page editor overlay
 │   ├── ability-editing.ts               live ability-score inputs + dependency highlights
+│   ├── meta-editing.ts                  creature type dropdown + subtype tag editor
+│   ├── skills-editing.ts                skill chips + the "＋" menu (computes the bonus)
+│   ├── saves-editing.ts                 save chips (5e) / proficiency dots (5.5e)
 │   ├── autosave.ts                      debounced, single-flight save controller + retry
 │   ├── save-indicator.ts                paints save state into the renderers' slots
 │   ├── prose-editor.ts                  a section's Lexical editor (mount, edit, commit)
@@ -67,6 +72,11 @@ src/                     shared, browser-agnostic core (all the real logic)
     ├── render-5e.ts        5e classic layout
     ├── statblock-55e.css   5.5e styling (scoped .statblock.v55e)
     ├── statblock-5e.css    5e styling (scoped .statblock.v5e)
+    ├── meta.ts             the size/type/subtype/alignment line
+    ├── tags.ts             chip primitives shared by subtypes, skills and saves
+    ├── skills-line.ts      the Skills row's chips + "＋" host
+    ├── saves-line.ts       the 5e Saving Throws row's chips + "＋" host
+    ├── icons.ts            inlined Material icon paths (menu, save indicator, proficiency dots)
     ├── sections.ts         section body: DDB HTML (preferred) or structured entries
     ├── sanitize-html.ts    allowlist sanitizer for DDB's description HTML
     ├── ddb-markup.ts       bidirectional DDB-macro ⇄ editor-span codec (round-trip safe)
@@ -133,9 +143,24 @@ The editor is a server-rendered form (`form#monster-form`) with stable
 - detects the layout from `#field-stat-block-type` (`0` → `5e`, `1` → `5.5e`).
 
 `observe()` watches the form so the preview updates live. Write-backs
-(`setRuleset`, `setAbility`, `setType`/`setSubTypes`, `setDescription`) all set
-the control's value and dispatch a bubbling `input`+`change`. Broader field
-editing is a later feature.
+(`setRuleset`, `setAbility`, `setType`/`setSubTypes`, `setSavingThrows`,
+`setDescription`) all set the control's value and dispatch a bubbling
+`input`+`change`, leaving autosave to persist them. Broader field editing is a
+later feature.
+
+**Skills are the exception.** They aren't form fields at all: each is a separate
+server record, which is why D&D Beyond's own "Add a Skill" navigates away and
+saves. So `addSkill`/`removeSkill` are async and persist themselves — a POST to
+`/monster/skills/create/<monsterId>` (reusing the edit page's anti-forgery
+tokens) and to `/monster/skills/<id>/delete` (which instead needs the
+`RequestVerificationToken` cookie, as DDB's own `ajax-post` links send). Both
+patch the listing table in place, so the preview re-renders through `observe()`
+without a reload. Note that a rejected request comes back as **200 redirected to
+`/error`**, so success is tested on the URL, not the status.
+
+Saving throws, by contrast, are one ordinary multi-select
+(`#field-monster-saving-throw`), and DDB derives a proficient save as
+`mod + PB` itself — so toggling proficiency never writes a bonus.
 
 ## Autosave
 

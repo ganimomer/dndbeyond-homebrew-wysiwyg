@@ -276,6 +276,39 @@
   box-shadow: 0 0 0 1px var(--accent, #5b160c);
 }
 
+/* The 5.5e Save cell: a character-sheet proficiency dot beside the bonus, the
+ * whole cell being the toggle. Filling the cell is what makes the small dot a
+ * comfortable target; the icon inherits the table's accent via currentColor. */
+.statblock .save-toggle {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  width: 100%;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.statblock .save-toggle svg {
+  display: block;
+  opacity: 0.75;
+}
+.statblock .save-toggle:hover {
+  background: rgba(91, 22, 12, 0.1);
+}
+.statblock .save-toggle:hover svg {
+  opacity: 1;
+}
+.statblock .save-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}
+
 /* Flags a value a recent ability edit may have invalidated (see
  * ability-editing.ts). Deliberately loud enough to notice, soft enough to read
  * through on both the parchment frame and the plain Description section. */
