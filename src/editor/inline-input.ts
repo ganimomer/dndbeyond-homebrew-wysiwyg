@@ -1,6 +1,6 @@
 /**
- * Shared behavior for the stat block's inline number fields (ability scores,
- * movement distances).
+ * Shared behavior for the stat block's inline text fields (ability scores,
+ * movement distances, the creature name).
  */
 
 /**
@@ -13,9 +13,9 @@
  * being silently dropped. Blurring on Enter produces the `change` and the
  * commit the user expects (verified against the live page).
  */
-export function commitOnEnter(input: HTMLInputElement): void {
+export function commitOnEnter(input: HTMLElement): void {
   input.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter") return;
+    if ((event as KeyboardEvent).key !== "Enter") return;
     event.preventDefault();
     input.blur();
   });

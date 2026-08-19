@@ -22,6 +22,8 @@ import { wireMovements } from "./speed-editing.js";
 import { ProseEditor } from "./prose-editor.js";
 import { AutosaveController } from "./autosave.js";
 import { applySaveState, HEADER_ORIGIN } from "./save-indicator.js";
+import { wireName } from "./name-editing.js";
+import { NAME_FOCUS_KEY } from "../preview/name-row.js";
 import panelCss from "./panel.css";
 import contextMenuCss from "./context-menu.css";
 import statblock5eCss from "../preview/statblock-5e.css";
@@ -167,6 +169,10 @@ export class EditorPanel {
     // would re-parent the focused editor and disturb the caret, so skip it; the
     // chrome re-syncs on the next render once editing pauses.
     if (this.traitsEditor?.hasFocus()) return;
+    // Same reasoning for the name: it's a contenteditable the user types into a
+    // character at a time, and rebuilding the block would drop the caret. The
+    // save indicator is unaffected -- it paints from onStateChange, not render().
+    if (this.focusedKey() === NAME_FOCUS_KEY) return;
 
     const monster = this.adapter.read();
     if (!monster) return;
@@ -265,6 +271,15 @@ export class EditorPanel {
       onCancel: () => {
         this.hpEditing = null;
         this.render();
+      },
+    });
+
+    // The creature name is a contenteditable in the header row; it commits on
+    // blur or Enter, and rides autosave like the rest of the header.
+    wireName(block, monster, {
+      onCommit: (name) => {
+        this.adapter.setName(name);
+        this.autosave.request(HEADER_ORIGIN);
       },
     });
 

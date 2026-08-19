@@ -71,6 +71,31 @@
   flex: 1;
 }
 
+/* The name is edited in place: a contenteditable that keeps the display type and
+ * its line wrapping, with the same quiet hover/focus affordance as the inline
+ * selects and the armor-type field. */
+.statblock .name-row .name[contenteditable] {
+  border-radius: 3px;
+  padding: 0 2px;
+  margin: 0 -2px;
+  outline: none;
+  cursor: text;
+}
+.statblock .name-row .name[contenteditable]:hover {
+  background: rgba(91, 22, 12, 0.08);
+}
+.statblock .name-row .name[contenteditable]:focus {
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}
+/* Named while empty, like the meta line's Size.../Alignment... prompts. The
+ * class is toggled on input: an emptied contenteditable can keep a stray <br>,
+ * so :empty alone doesn't hold. */
+.statblock .name-row .name.is-empty::before {
+  content: "Unnamed Creature";
+  opacity: 0.5;
+  font-style: italic;
+}
+
 /* Menu + close button, right-aligned; close pinned to the far right. */
 .statblock .name-menu {
   display: inline-flex;

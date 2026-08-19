@@ -507,7 +507,10 @@ export class DdbMonsterAdapter implements PageAdapter {
 
     const m = emptyMonster();
     m.ruleset = byId<HTMLSelectElement>(SELECTORS.ruleset)?.value === "1" ? "5.5e" : "5e";
-    m.name = val(SELECTORS.name) || m.name;
+    // No `|| m.name` fallback: a cleared field is genuinely nameless, and the
+    // renderer draws its own prompt. Falling back would show "New Creature" as
+    // though the user had typed it.
+    m.name = val(SELECTORS.name);
     m.image = readImage();
 
     const abilities = {
@@ -718,6 +721,10 @@ export class DdbMonsterAdapter implements PageAdapter {
 
   async removeMovement(type: string): Promise<void> {
     await deleteListingRow(SELECTORS.movementTable, type);
+  }
+
+  setName(name: string): void {
+    setInput(SELECTORS.name, name);
   }
 
   sizeOptions(): SelectOption[] {

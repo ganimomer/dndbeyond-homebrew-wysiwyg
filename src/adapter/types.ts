@@ -106,6 +106,9 @@ export interface PageAdapter {
    */
   setSavingThrows(values: string[]): void;
 
+  /** Writes the creature name back to the form. */
+  setName(name: string): void;
+
   /** The size options from the form's size `<select>`. */
   sizeOptions(): SelectOption[];
   /** The creature-type options from the form's type `<select>`. */

@@ -24,6 +24,7 @@ import { makeIcon } from "./icons.js";
 import { expandInline } from "./inline.js";
 import { sectionBody } from "./sections.js";
 import { metaContent } from "./meta.js";
+import { nameRow } from "./name-row.js";
 import { skillsChips } from "./skills-line.js";
 import { speedChips } from "./speed-line.js";
 import { hitPointsChip } from "./hit-points-line.js";
@@ -144,14 +145,9 @@ export function render55e(monster: Monster): HTMLElement {
   const root = el("div", "statblock v55e");
 
   const header = el("div", "header");
-  const nameRow = el("div", "name-row");
-  const name = el("div", "name");
-  name.textContent = monster.name || "Unnamed Creature";
-  const nameMenu = el("div", "name-menu"); // filled by the editor overlay
-  nameRow.append(name, nameMenu);
   const meta = el("div", "meta");
   meta.append(...metaContent(monster));
-  header.append(nameRow, meta);
+  header.append(nameRow(monster), meta);
   root.append(header);
 
   // Attributes: AC (+ Initiative), HP, Speed.

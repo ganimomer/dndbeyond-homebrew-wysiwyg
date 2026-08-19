@@ -18,6 +18,7 @@ import {
   xpForCr,
 } from "../statblock/compute.js";
 import { el, saveSlot, scoreInput } from "./dom.js";
+import { nameRow } from "./name-row.js";
 import { expandInline } from "./inline.js";
 import { sectionBody } from "./sections.js";
 import { metaContent } from "./meta.js";
@@ -81,12 +82,7 @@ function headedSection(
 export function render5e(monster: Monster): HTMLElement {
   const root = el("div", "statblock v5e");
 
-  const nameRow = el("div", "name-row");
-  const name = el("div", "name");
-  name.textContent = monster.name || "Unnamed Creature";
-  const nameMenu = el("div", "name-menu"); // filled by the editor overlay
-  nameRow.append(name, nameMenu);
-  root.append(nameRow);
+  root.append(nameRow(monster));
 
   const meta = el("div", "meta");
   meta.append(...metaContent(monster));
