@@ -87,6 +87,25 @@ const SECTION_TEXTAREA: Array<[SectionKey, string, keyof typeof SELECTORS | null
 function byId<T extends HTMLElement = HTMLElement>(id: string): T | null {
   return document.getElementById(id) as T | null;
 }
+/**
+ * The `<body>` of the TinyMCE editor backing a description textarea, or null
+ * when TinyMCE isn't mounted on it.
+ *
+ * DDB runs TinyMCE 4 (iframe mode) on every `*-description-wysiwyg` textarea,
+ * and its jQuery submit handler calls `tinyMCE.triggerSave()` — which overwrites
+ * the textarea from TinyMCE's model. So writing the textarea alone means DDB's
+ * own Save button silently reverts our prose. We can't call `tinymce.get()` (the
+ * content script is in an isolated world and can't see page globals), but the
+ * editor body is same-origin DOM, and TinyMCE's model tracks it: writing there
+ * makes both save paths agree. `<id>_ifr` is TinyMCE 4's iframe id convention.
+ */
+function mceBody(textareaId: string): HTMLElement | null {
+  const frame =
+    byId<HTMLIFrameElement>(`${textareaId}_ifr`) ??
+    byId(`${textareaId}_parent`)?.querySelector("iframe") ??
+    null;
+  return frame?.contentDocument?.body ?? null;
+}
 function val(id: string): string {
   const e = byId<HTMLInputElement | HTMLTextAreaElement>(id);
   return e ? (e.value ?? "").trim() : "";
@@ -338,9 +357,48 @@ export class DdbMonsterAdapter implements PageAdapter {
     const textarea = byId<HTMLTextAreaElement>(entry[1]);
     if (!textarea) return;
     // Re-encode the editor's spans back into DDB's [rollable]/[type] macros.
-    textarea.value = editorHtmlToDdb(editorHtml);
+    const ddbHtml = editorHtmlToDdb(editorHtml);
+    textarea.value = ddbHtml;
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
     textarea.dispatchEvent(new Event("change", { bubbles: true }));
+    // Keep TinyMCE's copy in step, so DDB's own Save can't revert us (see
+    // mceBody). Our save() reads the textarea, so this is belt-and-braces —
+    // but it's also what keeps the two save paths from disagreeing.
+    const body = mceBody(entry[1]);
+    if (body) body.innerHTML = ddbHtml;
+  }
+
+  /**
+   * Persists the form by replaying the POST its Save button would send —
+   * `multipart/form-data` to the edit URL — as a `fetch`, so the page never
+   * navigates. `FormData` picks up the anti-forgery tokens for free (they're
+   * hidden inputs); they rotate per response but DDB accepts stale ones, so
+   * there's nothing to patch back.
+   *
+   * The response is the whole ~530 KB edit page, and we want none of it, so the
+   * body is discarded unread. A dead session answers 200 with a redirect to
+   * sign-in rather than a 4xx, hence the URL check.
+   *
+   * Serializing DDB's live form (never our model) is what makes this safe: the
+   * payload is byte-for-byte what a native submit sends. The flip side is that
+   * an *invalid* monster comes back as 200 with errors rendered into the page,
+   * which reads as success here — exactly as it would for DDB's own button.
+   */
+  async save(): Promise<void> {
+    const form = document.querySelector<HTMLFormElement>(SELECTORS.formRoot);
+    if (!form) throw new Error("monster form not found");
+
+    const response = await fetch(form.action || location.href, {
+      method: "POST",
+      body: new FormData(form),
+      credentials: "include",
+      redirect: "follow",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    });
+    void response.body?.cancel();
+
+    if (!response.ok) throw new Error(`save failed (${response.status})`);
+    if (/sign-in|login/i.test(response.url)) throw new Error("save failed (signed out)");
   }
 
   typeOptions(): SelectOption[] {

@@ -9,10 +9,13 @@
 import type { PageAdapter } from "../adapter/types.js";
 import type { Ability, Monster } from "../statblock/model.js";
 import { renderStatBlock } from "../preview/statblock-view.js";
+import { saveSlot } from "../preview/dom.js";
 import { ContextMenu, makeIcon } from "./context-menu.js";
 import { applyDependencyHighlights, wireAbilityInputs } from "./ability-editing.js";
 import { wireMetaControls } from "./meta-editing.js";
 import { ProseEditor } from "./prose-editor.js";
+import { AutosaveController } from "./autosave.js";
+import { applySaveState, HEADER_ORIGIN } from "./save-indicator.js";
 import panelCss from "./panel.css";
 import contextMenuCss from "./context-menu.css";
 import statblock5eCss from "../preview/statblock-5e.css";
@@ -41,6 +44,17 @@ export class EditorPanel {
    */
   private traitsEditor: ProseEditor | null = null;
   private traitsHost: HTMLElement | null = null;
+  /** Debounces edits into whole-form saves and tracks who's waiting. */
+  private readonly autosave: AutosaveController;
+  private unsubscribeSave: (() => void) | null = null;
+  /**
+   * Best-effort flush when the tab goes away mid-debounce. The save is far too
+   * large for `keepalive`, so an immediate unload can still cut it off — but DDB
+   * puts up its own unsaved-changes prompt, which usually buys enough time.
+   */
+  private readonly onBeforeUnload = () => {
+    void this.autosave.flush();
+  };
 
   constructor(
     private readonly adapter: PageAdapter,
@@ -49,6 +63,7 @@ export class EditorPanel {
     this.host = document.createElement("div");
     this.host.id = HOST_ID;
     this.root = this.host.attachShadow({ mode: "open" });
+    this.autosave = new AutosaveController(() => this.adapter.save());
     this.build();
   }
 
@@ -60,12 +75,26 @@ export class EditorPanel {
     document.documentElement.style.overflow = "hidden";
     this.render();
     this.unobserve = this.adapter.observe(() => this.scheduleRender());
+    // Save state changes on its own schedule — a request starting or finishing
+    // doesn't touch the form — so it repaints the indicators directly rather
+    // than waiting for a render.
+    this.unsubscribeSave = this.autosave.onStateChange((state) =>
+      applySaveState(this.stage, state, () => this.autosave.retry()),
+    );
+    window.addEventListener("beforeunload", this.onBeforeUnload);
   }
 
   /** Removes the overlay and stops tracking. */
   unmount(): void {
     this.unobserve?.();
     this.unobserve = null;
+    window.removeEventListener("beforeunload", this.onBeforeUnload);
+    this.unsubscribeSave?.();
+    this.unsubscribeSave = null;
+    // Persist anything still inside the debounce window before we let go. The
+    // form keeps the edits either way, but this is what makes closing the
+    // overlay feel like it committed them.
+    void this.autosave.flush().then(() => this.autosave.destroy());
     this.menu?.destroy();
     this.menu = null;
     this.traitsEditor?.destroy();
@@ -120,13 +149,19 @@ export class EditorPanel {
 
     const slot = block.querySelector<HTMLElement>(".name-menu");
     if (slot) {
+      // The top-area save indicator sits at the row's right end, immediately
+      // before the context menu.
+      slot.append(saveSlot(HEADER_ORIGIN));
       // Offer only the layout we're not currently in.
       const other = monster.ruleset === "5e" ? "5.5e" : "5e";
       this.menu = new ContextMenu([
         {
           label: `Use ${other} stat block`,
           icon: "loop",
-          onClick: () => this.adapter.setRuleset(other),
+          onClick: () => {
+            this.adapter.setRuleset(other);
+            this.autosave.request(HEADER_ORIGIN);
+          },
         },
       ]);
       // Close is a standalone icon button, pinned to the far right of the row.
@@ -140,15 +175,28 @@ export class EditorPanel {
     }
 
     // Editing an ability writes it back (which re-renders via observe) and
-    // records it so its dependents stay flagged across renders.
+    // records it so its dependents stay flagged across renders. Scores commit
+    // on `change`, i.e. on blur — never per keystroke.
     wireAbilityInputs(block, monster, (ability, score) => {
       this.changedAbilities.add(ability);
       this.adapter.setAbility(ability, score);
+      this.autosave.request(HEADER_ORIGIN);
     });
     applyDependencyHighlights(block, this.changedAbilities);
 
     // Type dropdown + subtype tag editor in the meta line write back to the form.
-    wireMetaControls(block, this.adapter);
+    wireMetaControls(block, {
+      typeOptions: () => this.adapter.typeOptions(),
+      subTypeOptions: () => this.adapter.subTypeOptions(),
+      setType: (value) => {
+        this.adapter.setType(value);
+        this.autosave.request(HEADER_ORIGIN);
+      },
+      setSubTypes: (values) => {
+        this.adapter.setSubTypes(values);
+        this.autosave.request(HEADER_ORIGIN);
+      },
+    });
 
     // Preserve caret focus across the blur→re-render so tabbing between ability
     // inputs stays usable.
@@ -158,6 +206,9 @@ export class EditorPanel {
 
     // Mount after the block is attached so Lexical binds to a connected node.
     this.mountTraitsEditor(block, monster);
+
+    // The block is brand new, so any in-progress save needs re-painting onto it.
+    applySaveState(this.stage, this.autosave.state, () => this.autosave.retry());
   }
 
   /**
@@ -182,7 +233,10 @@ export class EditorPanel {
       this.traitsEditor = new ProseEditor({
         section: "traits",
         initialHtml,
-        onCommit: (section, html) => this.adapter.setDescription(section, html),
+        onCommit: (section, html) => {
+          this.adapter.setDescription(section, html);
+          this.autosave.request(section);
+        },
       });
       this.traitsEditor.mount(this.traitsHost);
       return;

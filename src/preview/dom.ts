@@ -29,6 +29,18 @@ export function scoreInput(
   return input;
 }
 
+/**
+ * A placeholder the editor fills with an autosave spinner (or a retry button)
+ * for `origin`. Empty and zero-width while idle, so it costs nothing visually
+ * until something is actually saving. Same contract as `data-mod`/`data-dep`:
+ * the renderers mark the spot, the editor supplies the behavior.
+ */
+export function saveSlot(origin: string): HTMLElement {
+  const slot = el("span", "save-slot");
+  slot.dataset.saveOrigin = origin;
+  return slot;
+}
+
 /** Which meta-line control a `<select>` drives. */
 export type MetaKind = "type" | "subType";
 

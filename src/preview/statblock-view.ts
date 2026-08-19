@@ -4,7 +4,7 @@
  */
 import type { Monster } from "../statblock/model.js";
 import { parseChallengeRating } from "../statblock/compute.js";
-import { el } from "./dom.js";
+import { el, saveSlot } from "./dom.js";
 import { sectionBody } from "./sections.js";
 import { defaultImageUrl } from "./default-image.js";
 import { render5e } from "./render-5e.js";
@@ -38,6 +38,7 @@ function renderDescription(monster: Monster): HTMLElement | null {
   const section = el("div", "sb-description");
   const heading = el("h3", "sb-description-heading");
   heading.textContent = "Description";
+  heading.append(saveSlot("characteristics"));
   const content = el("div", "sb-description-content");
   content.append(body);
   section.append(heading, content);

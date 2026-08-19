@@ -13,7 +13,7 @@ import {
   saveBonus,
   xpForCr,
 } from "../statblock/compute.js";
-import { el, scoreInput } from "./dom.js";
+import { el, saveSlot, scoreInput } from "./dom.js";
 import { expandInline } from "./inline.js";
 import { sectionBody } from "./sections.js";
 import { metaContent } from "./meta.js";
@@ -106,6 +106,8 @@ function descriptionBlock(
   const block = el("section", "description-block");
   const head = el("div", "heading");
   head.textContent = heading;
+  // The autosave spinner rides the right end of the section's own heading.
+  head.append(saveSlot(key));
   block.append(head);
   const content = el("div", "content");
   // Tag the body container so the overlay can locate a section to make editable

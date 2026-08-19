@@ -271,6 +271,88 @@
   margin: 0 0 10px;
 }
 
+/* Autosave indicator. The renderers leave an empty `.save-slot` at the right end
+ * of each section heading (and the panel puts one in the name row, before the
+ * context menu); it only takes up space once a save is actually running. Sized
+ * in `em` so it matches whichever heading it sits in. */
+.save-slot {
+  display: inline-flex;
+  align-items: center;
+  /* Pushes the slot to the right end of its (flex) heading. */
+  margin-left: auto;
+  color: inherit;
+}
+.save-slot:empty {
+  display: none;
+}
+
+/* Headings that host a slot become flex rows so the indicator lands at the far
+ * right. They hold only their text and the slot, so nothing else shifts. */
+.statblock.v55e .description-block .heading,
+.statblock.v5e h4,
+.sb-description .sb-description-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.save-spinner {
+  display: block;
+  width: 0.7em;
+  height: 0.7em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  opacity: 0.65;
+  animation: save-spin 0.7s linear infinite;
+}
+@keyframes save-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* Respect a reduced-motion preference: pulse instead of spin. */
+@media (prefers-reduced-motion: reduce) {
+  .save-spinner {
+    animation: save-pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes save-pulse {
+    50% {
+      opacity: 0.2;
+    }
+  }
+}
+
+/* A failed save turns the slot into a retry button. */
+.save-retry {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  padding: 2px;
+  color: #9a3412;
+}
+.save-retry:hover {
+  background: rgba(154, 52, 18, 0.12);
+}
+.save-retry svg {
+  display: block;
+  width: 1em;
+  height: 1em;
+}
+
+/* In the name row the slot sits inline before the kebab, not pushed right (the
+ * row's own flex already right-aligns the group). */
+.statblock .name-menu .save-slot {
+  margin-left: 0;
+  margin-right: 2px;
+  /* The row's type is large; keep the indicator at control size. */
+  font-size: 16px;
+  color: #6f7478;
+}
+
 /* The editable Traits body (Lexical mounts here). Inherits the surrounding
  * stat-block typography so it reads identically to the read-only sections, with
  * a quiet affordance that it can be edited and a focus ring while active. */

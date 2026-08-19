@@ -14,9 +14,10 @@ with a thin per-browser layer for each extension format.
 > Ability scores and the ruleset are editable. The **Traits** section is the
 > first editable prose block: it mounts a [Lexical](https://lexical.dev) rich-text
 > editor and writes edits back to DDB's form (the foundation for editing every
-> section). This pulls Lexical + lit-html into the content script (~290 KB
-> minified / ~96 KB gzip); release builds are minified. The remaining prose
-> sections and the lit-html view conversion are next.
+> section). **Autosave** persists those edits without a page reload. This pulls
+> Lexical + lit-html into the content script (~290 KB minified / ~96 KB gzip);
+> release builds are minified. The remaining prose sections and the lit-html view
+> conversion are next.
 >
 > The D&D Beyond ⇄ editor markup codec has unit + headless-Lexical round-trip
 > tests: `npm test`.
@@ -46,7 +47,7 @@ src/                     shared, browser-agnostic core (all the real logic)
 ├── platform/            browser.* API wrapper (webextension-polyfill) + build globals
 ├── adapter/             the seam between our model and DDB's DOM
 │   ├── types.ts         PageAdapter interface
-│   └── ddb-monster.ts   monster adapter — reads form#monster-form (field-* ids, listing tables)
+│   └── ddb-monster.ts   monster adapter — reads/writes form#monster-form, saves it via fetch
 ├── statblock/           the domain model
 │   ├── model.ts         Monster model (`ruleset` discriminator, per-section `descriptionHtml`)
 │   ├── compute.ts       ability modifiers, saves, proficiency, CR → XP, meta line
@@ -55,6 +56,8 @@ src/                     shared, browser-agnostic core (all the real logic)
 │   ├── fab.ts / fab.css                 the "Open in Microbrewery" launcher
 │   ├── panel.ts / panel.css             the full-page editor overlay
 │   ├── ability-editing.ts               live ability-score inputs + dependency highlights
+│   ├── autosave.ts                      debounced, single-flight save controller + retry
+│   ├── save-indicator.ts                paints save state into the renderers' slots
 │   ├── prose-editor.ts                  a section's Lexical editor (mount, edit, commit)
 │   ├── nodes.ts                         RollNode / RefNode — DDB roll & reference tokens
 │   └── context-menu.ts / context-menu.css  Encounters-style kebab menu
@@ -129,10 +132,43 @@ The editor is a server-rendered form (`form#monster-form`) with stable
   `[rollable]…[/rollable]` and `[type]…[/type]` markup to spans;
 - detects the layout from `#field-stat-block-type` (`0` → `5e`, `1` → `5.5e`).
 
-`observe()` watches the form so the preview updates live. The first write-back is
-`setRuleset()` — the context menu's "Use 5e / Use 5.5e" sets
-`#field-stat-block-type` and dispatches `change` (persists on save). Broader
-field editing is a later feature.
+`observe()` watches the form so the preview updates live. Write-backs
+(`setRuleset`, `setAbility`, `setType`/`setSubTypes`, `setDescription`) all set
+the control's value and dispatch a bubbling `input`+`change`. Broader field
+editing is a later feature.
+
+## Autosave
+
+Edits persist by themselves — no page reload, no hunting for DDB's Save button.
+
+Text and number fields commit on **blur**, selects on **change**, and prose on
+the Lexical editor's own commit; all of them feed one **3-second debounce** in
+`AutosaveController` (`src/editor/autosave.ts`), which then calls
+`adapter.save()`. That replays the POST D&D Beyond's own Save button would send
+— `multipart/form-data` built with `new FormData(form#monster-form)` — as a
+`fetch`, so the page never navigates. Serializing DDB's *live form* rather than
+our model is what makes this safe: the payload is byte-for-byte a native submit,
+and the anti-forgery tokens come along as ordinary hidden inputs.
+
+Saves take ~5.5 s against DDB, so the controller runs **one at a time**: edits
+arriving mid-flight are coalesced into a single follow-up rather than racing.
+A failure retries once quietly, then surfaces.
+
+While a save is running, a spinner appears at the **right end of the heading of
+whichever section you edited**; edits to the top area (abilities, creature
+type/subtype, ruleset) put it in the **name row, just before the context menu**.
+The renderers reserve an empty `.save-slot[data-save-origin]` in each heading —
+the same "renderers mark the spot, the editor supplies behavior" contract as
+`data-mod`/`data-dep` — and `src/editor/save-indicator.ts` fills them. A section
+with no heading to hang a slot on (the 5e Traits block) falls back to the name
+row. A failed save turns its slot into a click-to-retry button.
+
+**TinyMCE.** The description fields are TinyMCE 4 editors that only sync their
+textarea at submit time, so writing the textarea alone would let DDB's own Save
+button silently revert our prose. The content script is in an isolated world and
+can't reach `window.tinymce`, but the editor body is same-origin DOM
+(`#<textareaId>_ifr`), and TinyMCE's model tracks it — so `setDescription`
+writes both, and the two save paths agree.
 
 ## License
 

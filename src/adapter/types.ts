@@ -35,6 +35,12 @@ export interface PageAdapter {
   /** Writes our model back into DDB's form fields. */
   write(monster: Monster): void;
 
+  /**
+   * Persists the page's current state, without navigating away. Rejects when
+   * the save didn't go through, so the caller can retry and surface it.
+   */
+  save(): Promise<void>;
+
   /** Sets the monster's stat-block ruleset in the form (the first wired edit). */
   setRuleset(ruleset: Ruleset): void;
 

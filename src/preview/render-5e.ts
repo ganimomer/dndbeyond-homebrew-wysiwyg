@@ -17,7 +17,7 @@ import {
   saveBonus,
   xpForCr,
 } from "../statblock/compute.js";
-import { el, scoreInput } from "./dom.js";
+import { el, saveSlot, scoreInput } from "./dom.js";
 import { expandInline } from "./inline.js";
 import { sectionBody } from "./sections.js";
 import { metaContent } from "./meta.js";
@@ -89,6 +89,8 @@ function headedSection(
   if (!body) return;
   const h = el("h4");
   h.textContent = heading;
+  // The autosave spinner rides the right end of the section's own heading.
+  h.append(saveSlot(key));
   root.append(h, body);
 }
 
