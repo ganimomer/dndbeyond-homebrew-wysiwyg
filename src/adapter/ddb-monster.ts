@@ -13,6 +13,7 @@ import type { PageAdapter, SelectOption } from "./types.js";
 import {
   emptyMonster,
   type Ability,
+  type HitPoints,
   type Monster,
   type Movement,
   type Ruleset,
@@ -175,6 +176,18 @@ function selOptions(id: string): SelectOption[] {
     selected: o.selected,
   }));
 }
+/**
+ * Sets an `<input>`'s value and fires the events DDB's form listeners expect.
+ * DDB's form has no derived-recompute to fight, so a bubbling input+change is
+ * enough — and it's what `observe()` re-reads on.
+ */
+function setInput(id: string, value: string): void {
+  const input = byId<HTMLInputElement>(id);
+  if (!input) return;
+  input.value = value;
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+}
 /** Sets a `<select>` to `value` and fires the events DDB's form listeners expect. */
 function setSelect(id: string, value: string): void {
   const select = byId<HTMLSelectElement>(id);
@@ -213,15 +226,22 @@ function signed(n: number): string {
   return n >= 0 ? `+${n}` : `-${Math.abs(n)}`;
 }
 
-function composeHitPoints(): string {
-  const avg = val(SELECTORS.hpAverage);
-  const count = val(SELECTORS.hpDieCount);
-  const die = selText(SELECTORS.hpDieValue); // "d8"
-  const mod = Number(val(SELECTORS.hpModifier));
-  if (!avg && !count) return "";
-  const modPart = Number.isFinite(mod) && mod !== 0 ? ` ${mod > 0 ? "+" : "-"} ${Math.abs(mod)}` : "";
-  const dice = count && die ? ` (${count}${die}${modPart})` : "";
-  return `${avg}${dice}`.trim();
+/** A field's value as a whole number, 0 when blank or unparseable. */
+function intVal(id: string): number {
+  const n = parseInt(val(id), 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** The four hit-point controls, read as the numbers they are. */
+function readHitPoints(): HitPoints {
+  // The Hit Die select labels its options "d8", not "8".
+  const dieValue = parseInt(selText(SELECTORS.hpDieValue).replace(/^d/i, ""), 10);
+  return {
+    average: intVal(SELECTORS.hpAverage),
+    dieCount: intVal(SELECTORS.hpDieCount),
+    dieValue: Number.isFinite(dieValue) ? dieValue : 0,
+    modifier: intVal(SELECTORS.hpModifier),
+  };
 }
 
 function composeInitiative(): string | undefined {
@@ -507,7 +527,7 @@ export class DdbMonsterAdapter implements PageAdapter {
 
     m.armorClass = composeArmorClass();
     m.initiative = composeInitiative();
-    m.hitPoints = composeHitPoints() || m.hitPoints;
+    m.hitPoints = readHitPoints();
     m.movements = readMovements();
     m.savingThrows = readSavingThrows(abilities, pb);
     m.skills = readSkills();
@@ -541,13 +561,24 @@ export class DdbMonsterAdapter implements PageAdapter {
   }
 
   setAbility(ability: Ability, score: number): void {
-    const input = byId<HTMLInputElement>(`field-${ABILITY_FIELD[ability]}`);
-    if (!input) return;
-    input.value = String(score);
-    // Same pattern as setRuleset: DDB's form has no derived-recompute to fight,
-    // so a bubbling input+change is enough for observe() to re-read.
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
+    setInput(`field-${ABILITY_FIELD[ability]}`, String(score));
+  }
+
+  hitDieOptions(): SelectOption[] {
+    return selOptions(SELECTORS.hpDieValue);
+  }
+
+  /**
+   * Writes all four hit-point controls. Ordinary form fields, so autosave
+   * persists them — no per-record endpoint like skills or movements.
+   */
+  setHitPoints(hp: HitPoints): void {
+    setInput(SELECTORS.hpAverage, String(hp.average));
+    setInput(SELECTORS.hpDieCount, String(hp.dieCount));
+    setInput(SELECTORS.hpModifier, String(hp.modifier));
+    // The select's values are DDB's own codes; its labels are "d4".."d20".
+    const die = selOptions(SELECTORS.hpDieValue).find((o) => o.text === `d${hp.dieValue}`);
+    if (die) setSelect(SELECTORS.hpDieValue, die.value);
   }
 
   setDescription(section: SectionKey, editorHtml: string): void {

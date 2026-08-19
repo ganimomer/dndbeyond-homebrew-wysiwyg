@@ -29,7 +29,8 @@ for (const [name, render] of [
 
   test(`${name} renders a chip per skill`, () => {
     const block = render({ ...emptyMonster(), skills: { Perception: 7, Stealth: -1 } });
-    const chips = [...block.querySelectorAll(".sb-chip")].map((c) => c.textContent);
+    const row = block.querySelector('.sb-chips[data-field="skills"]')!;
+    const chips = [...row.querySelectorAll(".sb-chip")].map((c) => c.textContent);
 
     assert.deepEqual(chips, ["Perception +7×", "Stealth −1×"]);
   });

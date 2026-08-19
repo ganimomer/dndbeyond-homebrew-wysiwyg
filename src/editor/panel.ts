@@ -12,6 +12,7 @@ import { renderStatBlock } from "../preview/statblock-view.js";
 import { saveSlot } from "../preview/dom.js";
 import { ContextMenu, makeIcon } from "./context-menu.js";
 import { applyDependencyHighlights, wireAbilityInputs } from "./ability-editing.js";
+import { wireHitPoints, type HitPointsEditing } from "./hit-points-editing.js";
 import { wireMetaControls } from "./meta-editing.js";
 import { wireSkills } from "./skills-editing.js";
 import { wireSavingThrows } from "./saves-editing.js";
@@ -47,6 +48,12 @@ export class EditorPanel {
   private pendingFocus: string | null = null;
   /** Abilities the user has edited this session; drives dependency highlights. */
   private changedAbilities = new Set<Ability>();
+  /**
+   * The open hit-points form, or null while it's a chip. The block is rebuilt on
+   * every form mutation, so the half-typed draft can't live in the DOM — it's
+   * held here and handed back to `wireHitPoints` on each render.
+   */
+  private hpEditing: HitPointsEditing | null = null;
   /**
    * The live editor for the Traits section (the first prose section wired for
    * editing). Persists across re-renders — its host is re-parented into each
@@ -193,6 +200,32 @@ export class EditorPanel {
       this.autosave.request(HEADER_ORIGIN);
     });
     applyDependencyHighlights(block, this.changedAbilities);
+
+    // Hit points are four fields behind one chip. Opening and cancelling only
+    // change our own state — nothing writes to the form, so `observe()` won't
+    // fire and we re-render by hand; committing writes and rides autosave.
+    wireHitPoints(block, monster, {
+      state: this.hpEditing,
+      conChanged: this.changedAbilities.has("con"),
+      dieOptions: () => this.adapter.hitDieOptions(),
+      onOpen: () => {
+        this.hpEditing = { draft: { ...monster.hitPoints }, baseline: { ...monster.hitPoints } };
+        this.pendingFocus = "hp:average";
+        this.render();
+      },
+      onChange: (draft) => {
+        if (this.hpEditing) this.hpEditing.draft = draft;
+      },
+      onCommit: (hitPoints) => {
+        this.hpEditing = null;
+        this.adapter.setHitPoints(hitPoints);
+        this.autosave.request(HEADER_ORIGIN);
+      },
+      onCancel: () => {
+        this.hpEditing = null;
+        this.render();
+      },
+    });
 
     // Type dropdown + subtype tag editor in the meta line write back to the form.
     wireMetaControls(block, {

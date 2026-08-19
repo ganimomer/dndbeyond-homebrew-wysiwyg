@@ -24,6 +24,7 @@ import { metaContent } from "./meta.js";
 import { skillsChips } from "./skills-line.js";
 import { savingThrowChips } from "./saves-line.js";
 import { speedChips } from "./speed-line.js";
+import { hitPointsChip } from "./hit-points-line.js";
 
 function inline(text: string): DocumentFragment {
   return expandInline(text, el, "roll");
@@ -96,7 +97,7 @@ export function render5e(monster: Monster): HTMLElement {
   const acLine = labeled("Armor Class", monster.armorClass);
   acLine.dataset.dep = "dex";
   attrs.append(acLine);
-  const hpLine = labeled("Hit Points", monster.hitPoints);
+  const hpLine = labeled("Hit Points", hitPointsChip(monster));
   hpLine.dataset.dep = "con";
   attrs.append(hpLine);
   attrs.append(labeled("Speed", speedChips(monster)));

@@ -21,7 +21,7 @@ export function sampleVampire55e(): Monster {
     alignment: "Lawful Evil",
     armorClass: "16",
     initiative: "+14 (24)",
-    hitPoints: "195 (23d8 + 92)",
+    hitPoints: { average: 195, dieCount: 23, dieValue: 8, modifier: 92 },
     movements: [
       { type: "Walk", speed: 40 },
       { type: "Climb", speed: 40 },
@@ -105,7 +105,7 @@ export function sampleVampire5e(): Monster {
     subTypes: ["shapechanger"],
     alignment: "lawful evil",
     armorClass: "16 (natural armor)",
-    hitPoints: "144 (17d8 + 68)",
+    hitPoints: { average: 144, dieCount: 17, dieValue: 8, modifier: 68 },
     movements: [{ type: "Walk", speed: 30 }],
     abilities: { str: 18, dex: 18, con: 18, int: 17, wis: 15, cha: 18 },
     savingThrows: { dex: 9, wis: 7, cha: 9 },

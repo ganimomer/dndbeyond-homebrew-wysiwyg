@@ -69,6 +69,20 @@ export interface Movement {
   note?: string;
 }
 
+/**
+ * Hit points as D&D Beyond stores them: four separate controls, not a sentence.
+ * The average is kept rather than derived because DDB's field is the author's
+ * to set — plenty of stat blocks carry a deliberately hand-tuned number.
+ */
+export interface HitPoints {
+  /** The printed average, e.g. the 195 in "195 (23d8 + 92)". */
+  average: number;
+  dieCount: number;
+  /** Die faces: 4, 6, 8, 10, 12 or 20. Zero when the creature has no dice. */
+  dieValue: number;
+  modifier: number;
+}
+
 /** A named block of prose: traits, actions, reactions, etc. */
 export interface NamedEntry {
   name: string;
@@ -101,8 +115,8 @@ export interface Monster {
    * omitted the preview derives it from the Dexterity modifier.
    */
   initiative?: string;
-  /** Free text, e.g. "45 (6d8 + 18)". */
-  hitPoints: string;
+  /** The four numbers behind "45 (6d8 + 18)" (see statblock/hit-points.ts). */
+  hitPoints: HitPoints;
   /** One entry per movement type, Walk first (see statblock/movement.ts). */
   movements: Movement[];
 
@@ -152,7 +166,7 @@ export function emptyMonster(): Monster {
     subTypes: [],
     alignment: "unaligned",
     armorClass: "10",
-    hitPoints: "1 (1d4 - 1)",
+    hitPoints: { average: 1, dieCount: 1, dieValue: 4, modifier: -1 },
     movements: [],
     abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
     savingThrows: {},

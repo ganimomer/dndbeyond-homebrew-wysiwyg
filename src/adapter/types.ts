@@ -5,7 +5,7 @@
  * below it knows about DDB's DOM. Swapping content types (spells, items) later
  * means adding another adapter, not touching the editor or preview.
  */
-import type { Ability, Monster, Ruleset, SectionKey } from "../statblock/model.js";
+import type { Ability, HitPoints, Monster, Ruleset, SectionKey } from "../statblock/model.js";
 
 export type HomebrewKind = "monster" | "item" | "spell" | "unknown";
 
@@ -46,6 +46,14 @@ export interface PageAdapter {
 
   /** Writes a single ability score (1–30) back to the form. */
   setAbility(ability: Ability, score: number): void;
+
+  /** The Hit Die options ("d4".."d20") from the form's hit-points select. */
+  hitDieOptions(): SelectOption[];
+  /**
+   * Writes all four hit-point controls. Like the ability scores these are plain
+   * form fields, so this is synchronous and autosave persists it.
+   */
+  setHitPoints(hitPoints: HitPoints): void;
 
   /**
    * Writes an edited description section back to the form. `editorHtml` is the

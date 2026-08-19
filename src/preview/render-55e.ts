@@ -26,6 +26,7 @@ import { sectionBody } from "./sections.js";
 import { metaContent } from "./meta.js";
 import { skillsChips } from "./skills-line.js";
 import { speedChips } from "./speed-line.js";
+import { hitPointsChip } from "./hit-points-line.js";
 
 function inline(text: string): DocumentFragment {
   return expandInline(text, el, "roll");
@@ -168,7 +169,7 @@ export function render55e(monster: Monster): HTMLElement {
   initValue.textContent = initiativeText(monster);
   acLine.append("  ", initLabel, " ", initValue);
   attrs.append(acLine);
-  const hpLine = labeled("HP", monster.hitPoints);
+  const hpLine = labeled("HP", hitPointsChip(monster));
   hpLine.dataset.dep = "con";
   attrs.append(hpLine);
   attrs.append(labeled("Speed", speedChips(monster)));
