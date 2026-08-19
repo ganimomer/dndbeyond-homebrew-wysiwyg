@@ -13,6 +13,7 @@ import type { PageAdapter, SelectOption } from "./types.js";
 import {
   emptyMonster,
   type Ability,
+  type ArmorClass,
   type HitPoints,
   type Monster,
   type Movement,
@@ -252,10 +253,9 @@ function composeInitiative(): string | undefined {
   return `${signed(n)} (${10 + n})`;
 }
 
-function composeArmorClass(): string {
-  const ac = val(SELECTORS.armorClass);
-  const type = val(SELECTORS.armorClassType);
-  return type ? `${ac} (${type})` : ac;
+/** The armor-class number and its free-text qualifier (both plain inputs). */
+function readArmorClass(): ArmorClass {
+  return { value: intVal(SELECTORS.armorClass), type: val(SELECTORS.armorClassType) };
 }
 
 /** Movement rows as `[Type, Speed, Note, actions]`. */
@@ -525,7 +525,7 @@ export class DdbMonsterAdapter implements PageAdapter {
     m.subTypes = selTexts(SELECTORS.subType); // multi-select tag field
     m.alignment = selText(SELECTORS.alignment);
 
-    m.armorClass = composeArmorClass();
+    m.armorClass = readArmorClass();
     m.initiative = composeInitiative();
     m.hitPoints = readHitPoints();
     m.movements = readMovements();
@@ -562,6 +562,12 @@ export class DdbMonsterAdapter implements PageAdapter {
 
   setAbility(ability: Ability, score: number): void {
     setInput(`field-${ABILITY_FIELD[ability]}`, String(score));
+  }
+
+  /** Writes both armor-class controls; autosave persists them. */
+  setArmorClass(ac: ArmorClass): void {
+    setInput(SELECTORS.armorClass, String(ac.value));
+    setInput(SELECTORS.armorClassType, ac.type);
   }
 
   hitDieOptions(): SelectOption[] {

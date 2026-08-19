@@ -27,6 +27,7 @@ import { metaContent } from "./meta.js";
 import { skillsChips } from "./skills-line.js";
 import { speedChips } from "./speed-line.js";
 import { hitPointsChip } from "./hit-points-line.js";
+import { armorClassChip } from "./armor-class-line.js";
 
 function inline(text: string): DocumentFragment {
   return expandInline(text, el, "roll");
@@ -160,7 +161,7 @@ export function render55e(monster: Monster): HTMLElement {
   acLabel.textContent = "AC";
   const acValue = el("span", "value");
   acValue.dataset.dep = "dex";
-  acValue.textContent = monster.armorClass;
+  acValue.append(armorClassChip(monster));
   acLine.append(acLabel, " ", acValue);
   const initLabel = el("span", "label");
   initLabel.textContent = "Initiative";

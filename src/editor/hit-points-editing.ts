@@ -23,7 +23,7 @@ import type { HitPoints, Monster } from "../statblock/model.js";
 import { abilityModifier } from "../statblock/compute.js";
 import { expectedAverage, expectedModifier } from "../statblock/hit-points.js";
 import { el } from "../preview/dom.js";
-import { makeIcon } from "../preview/icons.js";
+import { hintChip, iconButton, toInt } from "./mini-form.js";
 
 /** The open form's state, owned by the panel so it survives a re-render. */
 export interface HitPointsEditing {
@@ -129,7 +129,7 @@ function buildForm(
       ["average", average],
       ["modifier", modifier],
     ] as const) {
-      field.wrap.querySelector(".hp-hint")?.remove();
+      field.wrap.querySelector(".sb-hint")?.remove();
       const value = hints[name];
       if (value === undefined) continue;
       field.wrap.append(
@@ -149,7 +149,7 @@ function buildForm(
   form.addEventListener("keydown", (event) => {
     const key = (event as KeyboardEvent).key;
     // Enter on a hint chip is the browser activating that button; leave it be.
-    if (key === "Enter" && !(event.target as HTMLElement).closest(".hp-hint")) {
+    if (key === "Enter" && !(event.target as HTMLElement).closest(".sb-hint")) {
       event.preventDefault();
       handlers.onCommit(read());
     } else if (key === "Escape") {
@@ -202,40 +202,4 @@ function selectedFaces(select: HTMLSelectElement): number | undefined {
   const text = select.options[select.selectedIndex]?.text ?? "";
   const faces = parseInt(text.replace(/^d/i, ""), 10);
   return Number.isFinite(faces) ? faces : undefined;
-}
-
-/**
- * The "←218" a field grows when another edit has left it behind. A real button,
- * so it's a tab stop that Enter and Space activate without help from us.
- */
-function hintChip(name: string, value: number, onTake: () => void): HTMLButtonElement {
-  const button = el("button", "hp-hint");
-  button.type = "button";
-  button.dataset.hpHint = name;
-  button.dataset.focusKey = `hp:hint:${name}`;
-  button.textContent = `←${value}`;
-  button.setAttribute("aria-label", `Set ${name} to ${value}`);
-  button.addEventListener("click", onTake);
-  return button;
-}
-
-function iconButton(
-  action: string,
-  icon: "close" | "check",
-  label: string,
-  onClick: () => void,
-): HTMLButtonElement {
-  const button = el("button", "hp-action");
-  button.type = "button";
-  button.dataset.hpAction = action;
-  button.setAttribute("aria-label", label);
-  button.append(makeIcon(icon, 16));
-  button.addEventListener("click", onClick);
-  return button;
-}
-
-/** The field's text as a whole number, or `fallback` when it's blank or junk. */
-function toInt(raw: string, fallback: number): number {
-  const n = Math.round(Number(raw));
-  return raw.trim() !== "" && Number.isFinite(n) ? n : fallback;
 }

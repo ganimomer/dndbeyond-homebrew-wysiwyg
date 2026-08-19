@@ -9,10 +9,12 @@
 import type { PageAdapter } from "../adapter/types.js";
 import type { Ability, Monster } from "../statblock/model.js";
 import { renderStatBlock } from "../preview/statblock-view.js";
+import { unarmoredAc } from "../statblock/armor-class.js";
 import { saveSlot } from "../preview/dom.js";
 import { ContextMenu, makeIcon } from "./context-menu.js";
 import { applyDependencyHighlights, wireAbilityInputs } from "./ability-editing.js";
 import { wireHitPoints, type HitPointsEditing } from "./hit-points-editing.js";
+import { wireArmorClass, type ArmorClassEditing } from "./armor-class-editing.js";
 import { wireMetaControls } from "./meta-editing.js";
 import { wireSkills } from "./skills-editing.js";
 import { wireSavingThrows } from "./saves-editing.js";
@@ -54,6 +56,15 @@ export class EditorPanel {
    * held here and handed back to `wireHitPoints` on each render.
    */
   private hpEditing: HitPointsEditing | null = null;
+  /** The open armor-class form, or null while it's a chip. */
+  private acEditing: ArmorClassEditing | null = null;
+  /**
+   * What the creature's armor is worth over its unarmored class. Read once from
+   * the pristine form and re-read whenever the user sets an armor class, so it
+   * always holds the last figure they actually stood behind — which is what a
+   * Dexterity change is measured against.
+   */
+  private armorBonus: number | null = null;
   /**
    * The live editor for the Traits section (the first prose section wired for
    * editing). Persists across re-renders — its host is re-parented into each
@@ -200,6 +211,36 @@ export class EditorPanel {
       this.autosave.request(HEADER_ORIGIN);
     });
     applyDependencyHighlights(block, this.changedAbilities);
+
+    // Armor class is one stored number the form splits into "what Dexterity
+    // gives you" and "what your armor adds". Remember the armor's worth from
+    // the pristine form so a later DEX edit has something to preserve.
+    this.armorBonus ??= monster.armorClass.value - unarmoredAc(monster);
+    wireArmorClass(block, monster, {
+      state: this.acEditing,
+      dexChanged: this.changedAbilities.has("dex"),
+      armorBonus: this.armorBonus,
+      onOpen: () => {
+        this.acEditing = { draft: { ...monster.armorClass } };
+        this.pendingFocus = "ac:bonus";
+        this.render();
+      },
+      onChange: (draft) => {
+        if (this.acEditing) this.acEditing.draft = draft;
+      },
+      onCommit: (armorClass) => {
+        this.acEditing = null;
+        // Re-anchor against the Dexterity in force now: the user has reconciled
+        // the two, so this is the bonus a *future* DEX edit should preserve.
+        this.armorBonus = armorClass.value - unarmoredAc(monster);
+        this.adapter.setArmorClass(armorClass);
+        this.autosave.request(HEADER_ORIGIN);
+      },
+      onCancel: () => {
+        this.acEditing = null;
+        this.render();
+      },
+    });
 
     // Hit points are four fields behind one chip. Opening and cancelling only
     // change our own state — nothing writes to the form, so `observe()` won't

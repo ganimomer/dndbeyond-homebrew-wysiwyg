@@ -62,9 +62,9 @@ function setup(monster: Monster, { open = true, draft, conChanged = false }: Wir
 const field = (scope: ParentNode, name: string) =>
   scope.querySelector<HTMLInputElement>(`[data-hp="${name}"]`)!;
 const hint = (scope: ParentNode, name: string) =>
-  scope.querySelector<HTMLElement>(`[data-hp-hint="${name}"]`);
+  scope.querySelector<HTMLElement>(`[data-hint="${name}"]`);
 const action = (scope: ParentNode, name: string) =>
-  scope.querySelector<HTMLButtonElement>(`[data-hp-action="${name}"]`)!;
+  scope.querySelector<HTMLButtonElement>(`[data-form-action="${name}"]`)!;
 const click = (node: Element) => node.dispatchEvent(new jsdom.window.Event("click"));
 const type = (input: HTMLInputElement, value: string) => {
   input.value = value;

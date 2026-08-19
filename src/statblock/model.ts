@@ -70,6 +70,17 @@ export interface Movement {
 }
 
 /**
+ * Armor class as D&D Beyond stores it: a number plus a free-text qualifier.
+ * The split into "unarmored + armor" that the editor shows is derived, not
+ * stored — see statblock/armor-class.ts.
+ */
+export interface ArmorClass {
+  value: number;
+  /** DDB's qualifier, e.g. "natural armor". Often empty. */
+  type: string;
+}
+
+/**
  * Hit points as D&D Beyond stores them: four separate controls, not a sentence.
  * The average is kept rather than derived because DDB's field is the author's
  * to set — plenty of stat blocks carry a deliberately hand-tuned number.
@@ -108,8 +119,8 @@ export interface Monster {
   subTypes: string[];
   alignment: string;
 
-  /** Free text so we can preserve the parenthetical, e.g. "15 (natural armor)". */
-  armorClass: string;
+  /** The number and its parenthetical, e.g. 15 "(natural armor)". */
+  armorClass: ArmorClass;
   /**
    * 5.5e only: the Initiative value shown beside AC, e.g. "+14 (24)". When
    * omitted the preview derives it from the Dexterity modifier.
@@ -165,7 +176,7 @@ export function emptyMonster(): Monster {
     type: "humanoid",
     subTypes: [],
     alignment: "unaligned",
-    armorClass: "10",
+    armorClass: { value: 10, type: "" },
     hitPoints: { average: 1, dieCount: 1, dieValue: 4, modifier: -1 },
     movements: [],
     abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
