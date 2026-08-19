@@ -56,6 +56,19 @@ export type Size =
 
 export type AbilityScores = Record<Ability, number>;
 
+/** One row of D&D Beyond's movement table. */
+export interface Movement {
+  /** Display name as DDB lists it: "Walk", "Burrow", "Climb", "Fly", "Swim". */
+  type: string;
+  /** Speed in feet. */
+  speed: number;
+  /**
+   * DDB's free-text note, e.g. "hover". Rendered but not editable here — and
+   * always posted back on an edit, so it can't be lost.
+   */
+  note?: string;
+}
+
 /** A named block of prose: traits, actions, reactions, etc. */
 export interface NamedEntry {
   name: string;
@@ -90,8 +103,8 @@ export interface Monster {
   initiative?: string;
   /** Free text, e.g. "45 (6d8 + 18)". */
   hitPoints: string;
-  /** Free text, e.g. "30 ft., fly 60 ft.". */
-  speed: string;
+  /** One entry per movement type, Walk first (see statblock/movement.ts). */
+  movements: Movement[];
 
   abilities: AbilityScores;
 
@@ -140,7 +153,7 @@ export function emptyMonster(): Monster {
     alignment: "unaligned",
     armorClass: "10",
     hitPoints: "1 (1d4 - 1)",
-    speed: "30 ft.",
+    movements: [],
     abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
     savingThrows: {},
     skills: {},

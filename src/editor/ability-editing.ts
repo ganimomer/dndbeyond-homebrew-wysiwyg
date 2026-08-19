@@ -16,6 +16,7 @@ import {
   formatModifier,
   proficiencyBonus,
 } from "../statblock/compute.js";
+import { commitOnEnter } from "./inline-input.js";
 
 /** Coerces raw input text to a positive integer, or null when unusable. */
 function toScore(raw: string): number | null {
@@ -61,6 +62,7 @@ export function wireAbilityInputs(
       }
     });
 
+    commitOnEnter(input);
     input.addEventListener("change", () => {
       const score = toScore(input.value) ?? current;
       input.value = String(score); // normalize what the user sees

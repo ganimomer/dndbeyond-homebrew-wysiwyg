@@ -15,6 +15,7 @@ import { applyDependencyHighlights, wireAbilityInputs } from "./ability-editing.
 import { wireMetaControls } from "./meta-editing.js";
 import { wireSkills } from "./skills-editing.js";
 import { wireSavingThrows } from "./saves-editing.js";
+import { wireMovements } from "./speed-editing.js";
 import { ProseEditor } from "./prose-editor.js";
 import { AutosaveController } from "./autosave.js";
 import { applySaveState, HEADER_ORIGIN } from "./save-indicator.js";
@@ -36,8 +37,14 @@ export class EditorPanel {
   private stage!: HTMLElement;
   private unobserve: (() => void) | null = null;
   private rafToken = 0;
-  /** Menus mounted into the current block (name-row kebab, skills "＋"). */
+  /** Menus mounted into the current block (name-row kebab, the chip "＋"s). */
   private menus: ContextMenu[] = [];
+  /**
+   * A `data-focus-key` to focus once, on the next render — set when we add a
+   * field the user is expected to type into straight away (a new movement's
+   * speed), since the write-back re-renders the whole block underneath them.
+   */
+  private pendingFocus: string | null = null;
   /** Abilities the user has edited this session; drives dependency highlights. */
   private changedAbilities = new Set<Ability>();
   /**
@@ -213,20 +220,31 @@ export class EditorPanel {
       }),
     );
 
-    // Skills are the one edit that doesn't go through autosave: DDB keeps them
-    // as separate records, so the adapter persists each add/remove itself and
-    // updates the listing table, which re-renders us through observe().
+    // Skills and movements are the edits that don't go through autosave: DDB
+    // keeps them as separate records, so the adapter persists each change
+    // itself and updates the listing table, which re-renders us via observe().
     this.menus.push(
       ...wireSkills(block, monster, this.adapter, (error) => {
         console.error("[microbrewery] skill update failed", error);
       }),
+      ...wireMovements(block, monster, this.adapter, {
+        // The chip doesn't exist yet — queue its input for the render that the
+        // write-back triggers, so the default is selected and ready to type over.
+        onAdd: (type) => {
+          this.pendingFocus = `speed:${type}`;
+        },
+        onError: (error) => console.error("[microbrewery] movement update failed", error),
+      }),
     );
 
-    // Preserve caret focus across the blur→re-render so tabbing between ability
-    // inputs stays usable.
-    const focusedAbility = this.focusedAbility();
+    // Preserve caret focus across the blur→re-render so tabbing between inputs
+    // stays usable. A field we just added (pendingFocus) wins, and gets its
+    // default value selected so the user can type straight over it.
+    const pending = this.pendingFocus;
+    this.pendingFocus = null;
+    const focusKey = pending ?? this.focusedKey();
     this.stage.replaceChildren(block);
-    this.restoreFocus(block, focusedAbility);
+    this.restoreFocus(block, focusKey, pending !== null);
 
     // Mount after the block is attached so Lexical binds to a connected node.
     this.mountTraitsEditor(block, monster);
@@ -278,19 +296,21 @@ export class EditorPanel {
     this.menus = [];
   }
 
-  /** The ability whose score input currently holds focus, if any. */
-  private focusedAbility(): string | null {
+  /** The `data-focus-key` of the field that currently holds focus, if any. */
+  private focusedKey(): string | null {
     const active = this.root.activeElement as HTMLElement | null;
-    return active?.classList.contains("score-input")
-      ? (active.dataset.ability ?? null)
-      : null;
+    return active?.dataset.focusKey ?? null;
   }
 
-  private restoreFocus(scope: ParentNode, ability: string | null): void {
-    if (!ability) return;
-    const input = scope.querySelector<HTMLInputElement>(
-      `.score-input[data-ability="${ability}"]`,
-    );
-    input?.focus();
+  /**
+   * Puts the caret back on `key` in the freshly rendered block. `select` is for
+   * a field we just created with a default in it, so typing replaces it.
+   */
+  private restoreFocus(scope: ParentNode, key: string | null, select = false): void {
+    if (!key) return;
+    const input = scope.querySelector<HTMLInputElement>(`[data-focus-key="${key}"]`);
+    if (!input) return;
+    input.focus();
+    if (select) input.select();
   }
 }

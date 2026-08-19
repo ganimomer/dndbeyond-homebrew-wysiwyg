@@ -11,8 +11,8 @@ with a thin per-browser layer for each extension format.
 
 > **Status.** The launcher, the full read of the monster editor form, and the
 > faithful 2014/2024 preview are working end-to-end against the live page.
-> Ability scores, the ruleset, creature type/subtype, **skills** and **saving
-> throw proficiencies** are editable. The **Traits** section is the
+> Ability scores, the ruleset, creature type/subtype, **skills**, **saving
+> throw proficiencies** and **movement types** are editable. The **Traits** section is the
 > first editable prose block: it mounts a [Lexical](https://lexical.dev) rich-text
 > editor and writes edits back to DDB's form (the foundation for editing every
 > section). **Autosave** persists those edits without a page reload. This pulls
@@ -53,6 +53,7 @@ src/                     shared, browser-agnostic core (all the real logic)
 │   ├── model.ts         Monster model (`ruleset` discriminator, per-section `descriptionHtml`)
 │   ├── compute.ts       ability modifiers, saves, proficiency, CR → XP, meta line
 │   ├── skills.ts        the 18 skills → governing ability, and the derived bonus
+│   ├── movement.ts      movement types, print order, and the smart speed defaults
 │   └── sample.ts        era-accurate sample vampires (5e + 5.5e)
 ├── editor/              the injected UI
 │   ├── fab.ts / fab.css                 the "Open in Microbrewery" launcher
@@ -61,6 +62,8 @@ src/                     shared, browser-agnostic core (all the real logic)
 │   ├── meta-editing.ts                  creature type dropdown + subtype tag editor
 │   ├── skills-editing.ts                skill chips + the "＋" menu (computes the bonus)
 │   ├── saves-editing.ts                 save chips (5e) / proficiency dots (5.5e)
+│   ├── speed-editing.ts                 movement chips with inline, defaulted distances
+│   ├── inline-input.ts                  shared commit-on-Enter for the inline number fields
 │   ├── autosave.ts                      debounced, single-flight save controller + retry
 │   ├── save-indicator.ts                paints save state into the renderers' slots
 │   ├── prose-editor.ts                  a section's Lexical editor (mount, edit, commit)
@@ -73,9 +76,10 @@ src/                     shared, browser-agnostic core (all the real logic)
     ├── statblock-55e.css   5.5e styling (scoped .statblock.v55e)
     ├── statblock-5e.css    5e styling (scoped .statblock.v5e)
     ├── meta.ts             the size/type/subtype/alignment line
-    ├── tags.ts             chip primitives shared by subtypes, skills and saves
+    ├── tags.ts             chip primitives shared by subtypes, skills, saves and speed
     ├── skills-line.ts      the Skills row's chips + "＋" host
     ├── saves-line.ts       the 5e Saving Throws row's chips + "＋" host
+    ├── speed-line.ts       the Speed row's chips, each with an editable distance
     ├── icons.ts            inlined Material icon paths (menu, save indicator, proficiency dots)
     ├── sections.ts         section body: DDB HTML (preferred) or structured entries
     ├── sanitize-html.ts    allowlist sanitizer for DDB's description HTML
@@ -148,15 +152,17 @@ The editor is a server-rendered form (`form#monster-form`) with stable
 `input`+`change`, leaving autosave to persist them. Broader field editing is a
 later feature.
 
-**Skills are the exception.** They aren't form fields at all: each is a separate
-server record, which is why D&D Beyond's own "Add a Skill" navigates away and
-saves. So `addSkill`/`removeSkill` are async and persist themselves — a POST to
-`/monster/skills/create/<monsterId>` (reusing the edit page's anti-forgery
-tokens) and to `/monster/skills/<id>/delete` (which instead needs the
-`RequestVerificationToken` cookie, as DDB's own `ajax-post` links send). Both
-patch the listing table in place, so the preview re-renders through `observe()`
-without a reload. Note that a rejected request comes back as **200 redirected to
-`/error`**, so success is tested on the URL, not the status.
+**Skills and movements are the exception.** They aren't form fields at all: each
+row is a separate server record, which is why D&D Beyond's own "Add a Skill" /
+"Add a Movement" navigates away and saves. So those methods are async and persist
+themselves — a POST to `/monster/skills/create/<monsterId>` or
+`/monster/movement/<id>/edit` (reusing the edit page's anti-forgery tokens), and
+to `…/delete` (which instead needs the `RequestVerificationToken` cookie, as
+DDB's own `ajax-post` links send). All of them patch the listing table in place,
+so the preview re-renders through `observe()` without a reload. Note that a
+rejected request comes back as **200 redirected to `/error`**, so success is
+tested on the URL, not the status. Editing a movement posts its existing note
+back untouched, since the form would otherwise clear it.
 
 Saving throws, by contrast, are one ordinary multi-select
 (`#field-monster-saving-throw`), and DDB derives a proficient save as

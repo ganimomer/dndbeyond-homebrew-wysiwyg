@@ -68,6 +68,15 @@ export interface PageAdapter {
   /** Removes the named skill. Persists immediately, like `addSkill`. */
   removeSkill(name: string): Promise<void>;
 
+  /** Every movement type, with `selected` marking those the creature has. */
+  movementOptions(): SelectOption[];
+  /** Adds a movement type at `speed` feet. Async for the same reason as skills. */
+  addMovement(value: string, speed: number): Promise<void>;
+  /** Changes an existing movement's distance, preserving its note. */
+  setMovementSpeed(type: string, speed: number): Promise<void>;
+  /** Removes a movement type. */
+  removeMovement(type: string): Promise<void>;
+
   /** The six abilities as options, with the proficient saves marked selected. */
   savingThrowOptions(): SelectOption[];
   /**

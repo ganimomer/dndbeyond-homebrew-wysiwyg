@@ -14,6 +14,7 @@ import {
   emptyMonster,
   type Ability,
   type Monster,
+  type Movement,
   type Ruleset,
   type SectionKey,
 } from "../statblock/model.js";
@@ -88,6 +89,15 @@ const SKILL_ID: Record<string, string> = {
   Intimidation: "17",
   Performance: "18",
   Persuasion: "19",
+};
+
+/** DDB's movement ids, from `#field-movement-type` on the create page. */
+const MOVEMENT_ID: Record<string, string> = {
+  Walk: "1",
+  Burrow: "2",
+  Climb: "3",
+  Fly: "4",
+  Swim: "5",
 };
 
 const ABBREV_TO_ABILITY: Record<string, Ability> = {
@@ -228,13 +238,15 @@ function composeArmorClass(): string {
   return type ? `${ac} (${type})` : ac;
 }
 
-function composeSpeed(): string {
+/** Movement rows as `[Type, Speed, Note, actions]`. */
+function readMovements(): Movement[] {
   return tableRows(SELECTORS.movementTable)
-    .map(([type = "", value = ""]) => {
-      const v = /ft/i.test(value) ? value : `${value} ft.`;
-      return /^walk$/i.test(type) ? v : `${type} ${v}`;
-    })
-    .join(", ");
+    .map(([type = "", speed = "", note = ""]) => ({
+      type,
+      speed: parseInt(speed, 10),
+      ...(note ? { note } : {}),
+    }))
+    .filter((m) => m.type && Number.isFinite(m.speed));
 }
 
 function composeSenses(): string {
@@ -258,30 +270,48 @@ function readSkills(): Record<string, number> {
   return skills;
 }
 
+/** One row of a listing table, with the links its actions cell exposes. */
+interface ListingRow {
+  /** The first cell — the skill's or movement type's name. */
+  name: string;
+  /** Remaining cell texts, so callers can read e.g. a movement's note. */
+  cells: string[];
+  editUrl: string;
+  deleteUrl: string;
+}
+
 /**
- * Skill rows as `{ name, deleteUrl }`. Skills aren't form fields — each is its
- * own server record, reachable only through the links in its row.
+ * Rows of a listing table. Skills and movements aren't form fields — each is
+ * its own server record, reachable only through the links in its row.
  */
-function skillRows(): Array<{ name: string; deleteUrl: string }> {
-  const table = document.querySelector(SELECTORS.skillTable);
+function listingRows(tableSelector: string): ListingRow[] {
+  const table = document.querySelector(tableSelector);
   if (!table) return [];
   return Array.from(table.querySelectorAll("tbody tr")).flatMap((tr) => {
-    const name = (tr.querySelector("td")?.textContent ?? "").trim();
-    const deleteUrl =
-      Array.from(tr.querySelectorAll("a")).find((a) => /\/delete$/.test(a.getAttribute("href") ?? ""))
-        ?.getAttribute("href") ?? "";
-    return name && deleteUrl ? [{ name, deleteUrl }] : [];
+    const cells = Array.from(tr.querySelectorAll("td")).map((td) => (td.textContent ?? "").trim());
+    const href = (suffix: string) =>
+      Array.from(tr.querySelectorAll("a")).find((a) =>
+        new RegExp(`/${suffix}$`).test(a.getAttribute("href") ?? ""),
+      )?.getAttribute("href") ?? "";
+    const name = cells[0] ?? "";
+    const deleteUrl = href("delete");
+    return name && deleteUrl
+      ? [{ name, cells, editUrl: href("edit"), deleteUrl }]
+      : [];
   });
 }
 
-/** The "Add a Skill" link's target, which carries the monster id we POST to. */
-function skillCreateUrl(): string {
-  const anchor = document.querySelector<HTMLAnchorElement>('a[href*="/monster/skills/create/"]');
+/**
+ * The "Add a …" link's target, which carries the monster id we POST to.
+ * `path` is DDB's segment for the record type ("skills", "movement").
+ */
+function createUrl(path: string): string {
+  const anchor = document.querySelector<HTMLAnchorElement>(`a[href*="/monster/${path}/create/"]`);
   const href = anchor?.getAttribute("href");
   if (href) return href;
   // Fall back to the id in our own URL if DDB ever drops the link.
   const id = /\/monsters\/(\d+)/.exec(location.pathname)?.[1];
-  return id ? `/monster/skills/create/${id}` : "";
+  return id ? `/monster/${path}/create/${id}` : "";
 }
 
 function cookie(name: string): string {
@@ -321,6 +351,64 @@ async function postForm(url: string, body: URLSearchParams): Promise<string> {
     throw new Error("request rejected by D&D Beyond");
   }
   return text;
+}
+
+/**
+ * Submits a listing record's create or edit form and syncs the live table from
+ * the response.
+ *
+ * DDB's own flow navigates to a separate page per row (which is why adding a
+ * skill or movement there saves and reloads the monster); we post the same form
+ * in place, reusing the edit page's anti-forgery tokens — those are accepted on
+ * these endpoints, so no preliminary GET is needed.
+ *
+ * The response is the whole edit page with the listing already updated, so the
+ * fresh `<tbody>` is lifted straight out of it. That's what gives a new row its
+ * real id (needed to edit or delete it later) and, because these tables live
+ * inside the observed form, what re-renders the stat block. Parsing a ~530 KB
+ * response is banned in `save()` — that runs every few seconds — but this is
+ * one deliberate click.
+ */
+async function submitListingForm(
+  url: string,
+  tableSelector: string,
+  fields: Record<string, string>,
+): Promise<void> {
+  const html = await postForm(
+    url,
+    new URLSearchParams({
+      "security-token": val("field-security-token"),
+      "authenticity-token": val("field-authenticity-token"),
+      ...fields,
+    }),
+  );
+
+  const fresh = new DOMParser()
+    .parseFromString(html, "text/html")
+    .querySelector(`${tableSelector} tbody`);
+  const live = document.querySelector(`${tableSelector} tbody`);
+  if (fresh && live) live.replaceWith(live.ownerDocument.importNode(fresh, true));
+}
+
+/**
+ * Deletes the named listing row via its own Delete link. The response is a few
+ * dozen bytes of JSON rather than a page, so the row is dropped from the live
+ * table by hand — which, the table being inside the form, re-renders.
+ */
+async function deleteListingRow(tableSelector: string, name: string): Promise<void> {
+  const row = listingRows(tableSelector).find((r) => r.name === name);
+  if (!row) return;
+
+  await postForm(
+    row.deleteUrl,
+    new URLSearchParams({ "request-verification-token": await requestVerificationToken() }),
+  );
+
+  document
+    .querySelector(`${tableSelector} tbody`)
+    ?.querySelector(`a[href="${row.deleteUrl}"]`)
+    ?.closest("tr")
+    ?.remove();
 }
 
 /** Splits the combined "X - Resistance/Immunity/Vulnerability" multi-select. */
@@ -420,7 +508,7 @@ export class DdbMonsterAdapter implements PageAdapter {
     m.armorClass = composeArmorClass();
     m.initiative = composeInitiative();
     m.hitPoints = composeHitPoints() || m.hitPoints;
-    m.speed = composeSpeed();
+    m.movements = readMovements();
     m.savingThrows = readSavingThrows(abilities, pb);
     m.skills = readSkills();
 
@@ -527,7 +615,7 @@ export class DdbMonsterAdapter implements PageAdapter {
   }
 
   skillOptions(): SelectOption[] {
-    const taken = new Set(skillRows().map((r) => r.name));
+    const taken = new Set(listingRows(SELECTORS.skillTable).map((r) => r.name));
     return Object.entries(SKILL_ID).map(([text, value]) => ({
       value,
       text,
@@ -535,60 +623,59 @@ export class DdbMonsterAdapter implements PageAdapter {
     }));
   }
 
-  /**
-   * Creates a skill record. DDB's own flow navigates to a separate create page
-   * (which is why adding a skill there saves and reloads the monster); we POST
-   * the same form in place, reusing the edit page's anti-forgery tokens — those
-   * are accepted here, so no preliminary GET is needed.
-   *
-   * The response is the edit page with the skill listing already updated, so
-   * the fresh `<tbody>` is lifted straight out of it. That's what gives the new
-   * row its real id (needed to delete it later) and, because the table lives
-   * inside the observed form, what re-renders the stat block. Parsing a ~530 KB
-   * response is banned in `save()` — it runs every few seconds — but this is one
-   * deliberate click.
-   */
   async addSkill(value: string, bonus: number): Promise<void> {
-    const url = skillCreateUrl();
+    const url = createUrl("skills");
     if (!url) throw new Error("skill create URL not found");
+    await submitListingForm(url, SELECTORS.skillTable, {
+      skill: value,
+      value: String(bonus),
+      "additional-bonus": "",
+    });
+  }
 
-    const html = await postForm(
-      url,
-      new URLSearchParams({
-        "security-token": val("field-security-token"),
-        "authenticity-token": val("field-authenticity-token"),
-        skill: value,
-        value: String(bonus),
-        "additional-bonus": "",
-      }),
-    );
+  async removeSkill(name: string): Promise<void> {
+    await deleteListingRow(SELECTORS.skillTable, name);
+  }
 
-    const fresh = new DOMParser()
-      .parseFromString(html, "text/html")
-      .querySelector(`${SELECTORS.skillTable} tbody`);
-    const live = document.querySelector(`${SELECTORS.skillTable} tbody`);
-    if (fresh && live) live.replaceWith(live.ownerDocument.importNode(fresh, true));
+  movementOptions(): SelectOption[] {
+    const taken = new Set(listingRows(SELECTORS.movementTable).map((r) => r.name));
+    return Object.entries(MOVEMENT_ID).map(([text, value]) => ({
+      value,
+      text,
+      selected: taken.has(text),
+    }));
+  }
+
+  async addMovement(value: string, speed: number): Promise<void> {
+    const url = createUrl("movement"); // singular, unlike skills
+    if (!url) throw new Error("movement create URL not found");
+    await submitListingForm(url, SELECTORS.movementTable, {
+      "movement-type": value,
+      speed: String(speed),
+      note: "",
+    });
   }
 
   /**
-   * Deletes a skill record via the row's own Delete link. The response is a
-   * few dozen bytes of JSON rather than a page, so the row is dropped from the
-   * live table by hand — which, the table being inside the form, re-renders.
+   * Changes an existing movement's speed. The row's own note rides along
+   * unchanged — the edit form posts all three fields, so omitting it would
+   * quietly erase things like "hover".
    */
-  async removeSkill(name: string): Promise<void> {
-    const row = skillRows().find((r) => r.name === name);
-    if (!row) return;
+  async setMovementSpeed(type: string, speed: number): Promise<void> {
+    const row = listingRows(SELECTORS.movementTable).find((r) => r.name === type);
+    if (!row?.editUrl) return;
+    const value = MOVEMENT_ID[type];
+    if (!value) return;
 
-    await postForm(
-      row.deleteUrl,
-      new URLSearchParams({ "request-verification-token": await requestVerificationToken() }),
-    );
+    await submitListingForm(row.editUrl, SELECTORS.movementTable, {
+      "movement-type": value,
+      speed: String(speed),
+      note: row.cells[2] ?? "",
+    });
+  }
 
-    document
-      .querySelector(`${SELECTORS.skillTable} tbody`)
-      ?.querySelector(`a[href="${row.deleteUrl}"]`)
-      ?.closest("tr")
-      ?.remove();
+  async removeMovement(type: string): Promise<void> {
+    await deleteListingRow(SELECTORS.movementTable, type);
   }
 
   typeOptions(): SelectOption[] {

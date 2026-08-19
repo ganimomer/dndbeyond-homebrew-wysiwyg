@@ -13,28 +13,39 @@ import { el } from "./dom.js";
 export interface ChipOptions {
   /** The token the editor commits (an option value, or the label itself). */
   value: string;
+  /** Shown before the detail. Empty renders no label at all (a walk speed). */
   label: string;
-  /** Trailing detail shown after the label, e.g. a skill's "+7". */
-  detail?: string;
+  /**
+   * Trailing detail: a skill's "+7", or a whole node when the value is itself
+   * editable (a movement's speed input).
+   */
+  detail?: string | Node;
+  /** Overrides the ✕'s label when `label` is empty or too terse to name it. */
+  removeLabel?: string;
 }
 
-export function chip({ value, label, detail }: ChipOptions): HTMLElement {
+export function chip({ value, label, detail, removeLabel }: ChipOptions): HTMLElement {
   const tag = el("span", "sb-chip");
   tag.dataset.value = value;
 
-  const text = el("span", "sb-chip-label");
-  text.textContent = label;
-  tag.append(text);
+  if (label) {
+    const text = el("span", "sb-chip-label");
+    text.textContent = label;
+    tag.append(text);
+  }
 
-  if (detail) {
+  if (detail !== undefined) {
     const extra = el("span", "sb-chip-detail");
-    extra.textContent = detail;
-    tag.append(" ", extra);
+    extra.append(detail);
+    // Separator for copied text only — the flex `gap` is what spaces them
+    // visually — and pointless when there's no label to separate from.
+    if (label) tag.append(" ");
+    tag.append(extra);
   }
 
   const remove = el("button", "sb-chip-remove");
   remove.type = "button";
-  remove.setAttribute("aria-label", `Remove ${label}`);
+  remove.setAttribute("aria-label", `Remove ${removeLabel ?? label}`);
   remove.textContent = "×";
   tag.append(remove);
   return tag;

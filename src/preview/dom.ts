@@ -25,6 +25,8 @@ export function scoreInput(
   input.step = "1";
   input.value = String(score);
   input.dataset.ability = ability;
+  // Lets the panel put the caret back after a re-render (see restoreFocus).
+  input.dataset.focusKey = `score:${ability}`;
   input.setAttribute("aria-label", label);
   return input;
 }
