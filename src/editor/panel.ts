@@ -9,6 +9,7 @@
 import type { PageAdapter } from "../adapter/types.js";
 import type { Ability, Monster } from "../statblock/model.js";
 import { renderStatBlock } from "../preview/statblock-view.js";
+import { basicsFields, hiddenFields, type OptionalField } from "../preview/optional-fields.js";
 import { unarmoredAc } from "../statblock/armor-class.js";
 import { saveSlot } from "../preview/dom.js";
 import { ContextMenu, makeIcon } from "./context-menu.js";
@@ -19,10 +20,14 @@ import { wireMetaControls } from "./meta-editing.js";
 import { wireSkills } from "./skills-editing.js";
 import { wireSavingThrows } from "./saves-editing.js";
 import { wireMovements } from "./speed-editing.js";
+import { wireAdjustments } from "./adjustments-editing.js";
+import { wireSenses } from "./senses-editing.js";
+import { wireTextFields } from "./text-field-editing.js";
 import { ProseEditor } from "./prose-editor.js";
 import { AutosaveController } from "./autosave.js";
 import { applySaveState, HEADER_ORIGIN } from "./save-indicator.js";
 import { wireName } from "./name-editing.js";
+import { revealFocusKey, wireAddField } from "./field-visibility.js";
 import { NAME_FOCUS_KEY } from "../preview/name-row.js";
 import panelCss from "./panel.css";
 import contextMenuCss from "./context-menu.css";
@@ -52,6 +57,14 @@ export class EditorPanel {
   private pendingFocus: string | null = null;
   /** Abilities the user has edited this session; drives dependency highlights. */
   private changedAbilities = new Set<Ability>();
+  /**
+   * Optional fields the user added from the "Add…" menu that have nothing in
+   * them yet — the stat block prints only the rows a creature actually has, so
+   * these are the exception that keeps an empty row on screen to be filled in.
+   * Session-only: nothing about it reaches D&D Beyond, and a field drops out of
+   * the set the moment it has a value of its own (see `pruneRevealed`).
+   */
+  private revealed = new Set<OptionalField>();
   /**
    * The open hit-points form, or null while it's a chip. The block is rebuilt on
    * every form mutation, so the half-typed draft can't live in the DOM — it's
@@ -177,8 +190,9 @@ export class EditorPanel {
     const monster = this.adapter.read();
     if (!monster) return;
 
+    this.pruneRevealed(monster);
     this.destroyMenus();
-    const block = renderStatBlock(monster);
+    const block = renderStatBlock(monster, { revealed: this.revealed });
 
     const slot = block.querySelector<HTMLElement>(".name-menu");
     if (slot) {
@@ -320,6 +334,34 @@ export class EditorPanel {
       }),
     );
 
+    // Damage adjustments and condition immunities are multi-selects on the form,
+    // so they commit whole and ride autosave like the saving throws.
+    this.menus.push(
+      ...wireAdjustments(block, this.adapter, () => this.autosave.request(HEADER_ORIGIN)),
+    );
+
+    // Gear and the languages note are plain form fields. Clearing one empties
+    // the field *and* takes the row off the block.
+    wireTextFields(block, monster, {
+      onCommit: (field, value) => {
+        if (field === "gear") this.adapter.setGear(value);
+        else this.adapter.setLanguages(value);
+        this.autosave.request(HEADER_ORIGIN);
+      },
+      onClear: (field) => {
+        this.revealed.delete(field);
+        if (monster[field] === "") {
+          // Nothing to write — it was an empty row the user changed their mind
+          // about, so no form mutation will come back to re-render us.
+          this.render();
+          return;
+        }
+        if (field === "gear") this.adapter.setGear("");
+        else this.adapter.setLanguages("");
+        this.autosave.request(HEADER_ORIGIN);
+      },
+    });
+
     // Skills and movements are the edits that don't go through autosave: DDB
     // keeps them as separate records, so the adapter persists each change
     // itself and updates the listing table, which re-renders us via observe().
@@ -334,6 +376,25 @@ export class EditorPanel {
           this.pendingFocus = `speed:${type}`;
         },
         onError: (error) => console.error("[microbrewery] movement update failed", error),
+      }),
+      // Senses are listing records too; passive Perception, sharing the row, is
+      // an ordinary field and rides autosave instead.
+      ...wireSenses(block, monster, this.adapter, {
+        onAdd: (type) => {
+          this.pendingFocus = `sense:${type}`;
+        },
+        onPassivePerception: () => this.autosave.request(HEADER_ORIGIN),
+        onError: (error) => console.error("[microbrewery] sense update failed", error),
+      }),
+    );
+
+    // The "Add…" menu at the foot of the section. Revealing a field changes
+    // nothing in the form, so `observe()` won't fire — re-render by hand.
+    this.menus.push(
+      ...wireAddField(block, hiddenFields(monster, this.revealed, monster.ruleset), (key) => {
+        this.revealed.add(key);
+        this.pendingFocus = revealFocusKey(key);
+        this.render();
       }),
     );
 
@@ -389,6 +450,17 @@ export class EditorPanel {
     // early while focused).
     holder.replaceChildren(this.traitsHost);
     this.traitsEditor.setContent(initialHtml);
+  }
+
+  /**
+   * Forgets the reveal of any field that now has a value: it renders on its own
+   * merit from here on, so when its last value is removed the row goes away
+   * rather than lingering as an empty one.
+   */
+  private pruneRevealed(monster: Monster): void {
+    for (const spec of basicsFields(monster.ruleset)) {
+      if (spec.hasValue(monster)) this.revealed.delete(spec.key);
+    }
   }
 
   private destroyMenus(): void {

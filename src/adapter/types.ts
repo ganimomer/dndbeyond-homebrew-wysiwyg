@@ -106,6 +106,43 @@ export interface PageAdapter {
    */
   setSavingThrows(values: string[]): void;
 
+  /**
+   * Every damage adjustment DDB offers, as "Acid - Resistance" option text with
+   * `selected` marking the creature's. All three adjustments (vulnerability,
+   * resistance, immunity) come from this one multi-select.
+   */
+  damageAdjustmentOptions(): SelectOption[];
+  /**
+   * Writes the full set of chosen damage adjustments (option values) across all
+   * three kinds. An ordinary form field, so autosave persists it.
+   */
+  setDamageAdjustments(values: string[]): void;
+
+  /** Every condition DDB offers, with the creature's immunities marked. */
+  conditionImmunityOptions(): SelectOption[];
+  /** Writes the full set of condition immunities. Rides autosave. */
+  setConditionImmunities(values: string[]): void;
+
+  /** Every sense type, with `selected` marking those the creature has. */
+  senseOptions(): SelectOption[];
+  /**
+   * Adds a sense with its free-text range. Async for the same reason as skills
+   * and movements: senses are separate records, not form fields.
+   */
+  addSense(value: string, note: string): Promise<void>;
+  /** Changes an existing sense's range note. */
+  setSenseNote(type: string, note: string): Promise<void>;
+  /** Removes a sense. */
+  removeSense(type: string): Promise<void>;
+
+  /** Writes the passive Perception that closes the Senses row. Rides autosave. */
+  setPassivePerception(value: number): void;
+
+  /** Writes the 5.5e Gear note (a plain form field). */
+  setGear(text: string): void;
+  /** Writes the free-text languages note (a plain form field). */
+  setLanguages(text: string): void;
+
   /** Writes the creature name back to the form. */
   setName(name: string): void;
 

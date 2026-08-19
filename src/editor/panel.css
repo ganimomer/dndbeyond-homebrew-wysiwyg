@@ -504,6 +504,137 @@
 .statblock .sb-chip-add:hover {
   opacity: 1;
 }
+
+/* Senses: the range reads as part of the sentence, like a movement's distance,
+ * but it's free text ("60 ft. (blind beyond this radius)"), so it auto-sizes
+ * rather than sitting in a fixed numeric well. */
+.statblock .sense-input {
+  field-sizing: content;
+  min-width: 4ch;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0 1px;
+  border-radius: 3px;
+}
+.statblock .sense-input:hover {
+  background: rgba(91, 22, 12, 0.08);
+}
+.statblock .sense-input:focus {
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}
+
+/* Passive Perception closes the Senses row: plain text with an editable number,
+ * not a chip — it's a property of the creature, not one of its senses. */
+.statblock .sb-passive {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+}
+.statblock .passive-input {
+  field-sizing: content;
+  min-width: 2ch;
+  width: 3ch; /* fallback where field-sizing isn't supported */
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  border-radius: 3px;
+  text-align: left;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.statblock .passive-input::-webkit-outer-spin-button,
+.statblock .passive-input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.statblock .passive-input:hover {
+  background: rgba(91, 22, 12, 0.08);
+}
+.statblock .passive-input:focus {
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}
+
+/* Gear and the languages note: one free-text field each, so the row *is* the
+ * input. The ✕ clears it, which is also what takes the row off the block. */
+.statblock .sb-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.statblock .sb-text-input {
+  field-sizing: content;
+  min-width: 12ch;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0 2px;
+  border-radius: 3px;
+}
+.statblock .sb-text-input::placeholder {
+  opacity: 0.5;
+  font-style: italic;
+}
+.statblock .sb-text-input:hover {
+  background: rgba(91, 22, 12, 0.08);
+}
+.statblock .sb-text-input:focus {
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}
+.statblock .sb-text-clear {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.55;
+}
+.statblock .sb-text-clear:hover {
+  opacity: 1;
+}
+
+/* The foot of the basics section: what a stat block *could* say but doesn't.
+ * Quiet by default — it's an author's tool, not part of the creature. */
+.statblock .add-field {
+  margin: 8px 0 2px;
+}
+.statblock .sb-add-field,
+.statblock .cm-trigger.add-field-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  appearance: none;
+  border: none;
+  width: auto;
+  height: auto;
+  padding: 2px 8px 2px 5px;
+  border-radius: 4px;
+  background: rgba(91, 22, 12, 0.08);
+  color: inherit;
+  font: inherit;
+  font-size: 0.85em;
+  cursor: pointer;
+  opacity: 0.6;
+}
+.statblock .sb-add-field:hover,
+.statblock .cm-trigger.add-field-trigger:hover {
+  opacity: 1;
+  background: rgba(91, 22, 12, 0.16);
+}
+.statblock .sb-add-field svg,
+.statblock .cm-trigger.add-field-trigger svg {
+  display: block;
+}
 .statblock .meta-add {
   /* Auto-size to the placeholder/typed text so nothing is cropped (the `size`
    * attribute only approximates width). Falls back to `size` where unsupported. */

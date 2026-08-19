@@ -24,8 +24,15 @@ import { makeIcon } from "./icons.js";
 import { expandInline } from "./inline.js";
 import { sectionBody } from "./sections.js";
 import { metaContent } from "./meta.js";
+import {
+  hiddenFields,
+  isVisible,
+  tidbitFields,
+  visibleMeta,
+  type RenderOptions,
+} from "./optional-fields.js";
 import { nameRow } from "./name-row.js";
-import { skillsChips } from "./skills-line.js";
+import { addFieldButton } from "./tags.js";
 import { speedChips } from "./speed-line.js";
 import { hitPointsChip } from "./hit-points-line.js";
 import { armorClassChip } from "./armor-class-line.js";
@@ -111,12 +118,6 @@ function crText(monster: Monster): string {
   return `${monster.challengeRating} (${xpPart}PB ${pb})`;
 }
 
-function immunitiesText(monster: Monster): string {
-  return [monster.damageImmunities, monster.conditionImmunities]
-    .filter(Boolean)
-    .join("; ");
-}
-
 function descriptionBlock(
   monster: Monster,
   heading: string,
@@ -141,17 +142,22 @@ function descriptionBlock(
   return block;
 }
 
-export function render55e(monster: Monster): HTMLElement {
+export function render55e(monster: Monster, options: RenderOptions = {}): HTMLElement {
+  const { revealed } = options;
   const root = el("div", "statblock v55e");
 
-  const header = el("div", "header");
-  const meta = el("div", "meta");
-  meta.append(...metaContent(monster));
-  header.append(nameRow(monster), meta);
-  root.append(header);
+  // Name through tidbits is one section: a reader sees a single block of basic
+  // information, not a header plus attributes plus stats plus tidbits.
+  const basics = el("section", "basics");
+  basics.append(nameRow(monster));
+  const metaNodes = metaContent(monster, visibleMeta(monster, revealed));
+  if (metaNodes.length) {
+    const meta = el("div", "meta");
+    meta.append(...metaNodes);
+    basics.append(meta);
+  }
 
   // Attributes: AC (+ Initiative), HP, Speed.
-  const attrs = el("div", "attributes");
   const acLine = el("div", "line");
   const acLabel = el("span", "label");
   acLabel.textContent = "AC";
@@ -165,12 +171,11 @@ export function render55e(monster: Monster): HTMLElement {
   initValue.dataset.dep = "dex";
   initValue.textContent = initiativeText(monster);
   acLine.append("  ", initLabel, " ", initValue);
-  attrs.append(acLine);
+  basics.append(acLine);
   const hpLine = labeled("HP", hitPointsChip(monster));
   hpLine.dataset.dep = "con";
-  attrs.append(hpLine);
-  attrs.append(labeled("Speed", speedChips(monster)));
-  root.append(attrs);
+  basics.append(hpLine);
+  basics.append(labeled("Speed", speedChips(monster)));
 
   // Ability tables.
   const stats = el("div", "stats");
@@ -178,23 +183,21 @@ export function render55e(monster: Monster): HTMLElement {
     abilityTable("physical", ["str", "dex", "con"], monster),
     abilityTable("mental", ["int", "wis", "cha"], monster),
   );
-  root.append(stats);
+  basics.append(stats);
 
-  // Tidbits (short labels, canonical 5.5e order, empties skipped).
-  const tidbits = el("div", "tidbits");
-  // Always rendered, even with no skills: the "＋" needs somewhere to live.
-  const skillsLine = labeled("Skills", skillsChips(monster));
-  skillsLine.dataset.dep = "all";
-  tidbits.append(skillsLine);
-  if (monster.damageVulnerabilities) tidbits.append(labeled("Vulnerabilities", monster.damageVulnerabilities));
-  if (monster.damageResistances) tidbits.append(labeled("Resistances", monster.damageResistances));
-  const immunities = immunitiesText(monster);
-  if (immunities) tidbits.append(labeled("Immunities", immunities));
-  if (monster.gear) tidbits.append(labeled("Gear", monster.gear));
-  if (monster.senses) tidbits.append(labeled("Senses", monster.senses));
-  if (monster.languages) tidbits.append(labeled("Languages", monster.languages));
-  tidbits.append(labeled("CR", crText(monster)));
-  root.append(tidbits);
+  // Tidbits (short labels, canonical 5.5e order). A field the creature has no
+  // value for isn't printed at all — the "Add…" menu below brings it back.
+  for (const spec of tidbitFields("5.5e")) {
+    if (!isVisible(spec, monster, revealed)) continue;
+    const line = labeled(spec.label ?? "", spec.render(monster));
+    line.dataset.row = spec.key;
+    if (spec.dep) line.dataset.dep = spec.dep;
+    basics.append(line);
+  }
+  basics.append(labeled("CR", crText(monster)));
+
+  if (hiddenFields(monster, revealed, "5.5e").length) basics.append(addFieldButton());
+  root.append(basics);
 
   // Description blocks.
   const blocks = el("div", "description-blocks");

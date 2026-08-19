@@ -32,7 +32,9 @@
   box-sizing: border-box;
 }
 
-.statblock.v55e .header {
+/* The basics — name through tidbits — are one section. */
+.statblock.v55e .basics .name-row,
+.statblock.v55e .basics .meta {
   line-height: 1.1;
 }
 
@@ -56,15 +58,13 @@
   margin: 0.188rem 0 0.938rem;
 }
 
-.statblock.v55e .attributes .line,
-.statblock.v55e .tidbits .line {
+.statblock.v55e .basics .line {
   margin: 5px 0;
   color: var(--accent);
   line-height: 1.2;
 }
 
-.statblock.v55e .attributes .label,
-.statblock.v55e .tidbits .label {
+.statblock.v55e .basics .label {
   font-weight: bold;
 }
 

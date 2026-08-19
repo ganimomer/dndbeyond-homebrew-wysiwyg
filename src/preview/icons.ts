@@ -12,7 +12,8 @@ export type IconName =
   | "settings"
   | "syncProblem"
   | "circle"
-  | "radioButtonUnchecked";
+  | "radioButtonUnchecked"
+  | "add";
 
 /** Material UI icon name → its 24×24 path data. */
 const ICON_PATHS: Record<IconName, string> = {
@@ -30,6 +31,8 @@ const ICON_PATHS: Record<IconName, string> = {
   // radio_button_unchecked — the same dot, not proficient.
   radioButtonUnchecked:
     "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z",
+  // add — the "Add…" menu at the foot of the basics section.
+  add: "M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z",
 };
 
 const SVG_NS = "http://www.w3.org/2000/svg";

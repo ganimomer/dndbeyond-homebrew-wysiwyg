@@ -22,8 +22,10 @@ export interface MenuItem {
 }
 
 export interface ContextMenuOptions {
-  /** Trigger glyph; defaults to the kebab "⋮". */
+  /** Trigger glyph; defaults to the kebab "⋮" when there's no icon either. */
   triggerText?: string;
+  /** Material icon shown before the trigger's text, e.g. the "Add…" plus. */
+  triggerIcon?: IconName;
   triggerLabel?: string;
   /** Extra class on the trigger, e.g. to reuse the chip "＋" styling. */
   triggerClass?: string;
@@ -49,7 +51,9 @@ export class ContextMenu {
     if (options.triggerClass) trigger.classList.add(options.triggerClass);
     trigger.type = "button";
     trigger.setAttribute("aria-label", options.triggerLabel ?? "Options");
-    trigger.textContent = options.triggerText ?? "⋮";
+    const label = options.triggerText ?? (options.triggerIcon ? "" : "⋮");
+    if (options.triggerIcon) trigger.append(makeIcon(options.triggerIcon, 16));
+    if (label) trigger.append(label);
     trigger.addEventListener("click", (e) => {
       e.stopPropagation();
       this.toggle();

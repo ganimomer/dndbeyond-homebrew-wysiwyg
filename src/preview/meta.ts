@@ -5,8 +5,13 @@
  * (removable chips + a searchable "add" box) because DDB's sub-type is a
  * multi-select. All four are filled + committed by the panel's
  * `wireMetaControls`.
+ *
+ * All four are also optional (see optional-fields.ts): the line is assembled
+ * from whichever slots are showing, so a creature with no alignment prints
+ * "Medium humanoid" rather than a dangling comma.
  */
 import type { Monster } from "../statblock/model.js";
+import type { OptionalField } from "./optional-fields.js";
 import { el, metaSelect } from "./dom.js";
 import { chip } from "./tags.js";
 
@@ -26,7 +31,7 @@ function addInput(placeholder: string): HTMLInputElement {
 }
 
 /** The multi-tag subtype editor: chips for each subtype + a searchable add box. */
-function subTypeEditor(subTypes: string[]): HTMLElement {
+export function subTypeEditor(subTypes: string[]): HTMLElement {
   const wrap = el("span", "meta-subtypes");
   wrap.dataset.meta = "subTypes";
 
@@ -48,17 +53,34 @@ function subTypeEditor(subTypes: string[]): HTMLElement {
   return wrap;
 }
 
-export function metaContent(monster: Monster): Node[] {
+/**
+ * The meta line's nodes, holding only the slots in `shown` (see `visibleMeta`).
+ * A slot that's showing but empty renders dimmed prompt text, because it was
+ * added deliberately and is waiting to be filled in.
+ *
+ * Separators follow the sentence rather than the slots: size and type are
+ * spaced, the subtype's parenthetical hugs the type it qualifies, and the
+ * alignment's comma only appears when something precedes it.
+ */
+export function metaContent(monster: Monster, shown: ReadonlySet<OptionalField>): Node[] {
   const text = (s: string) => document.createTextNode(s);
-  // Every slot holds a control, blank or not — a missing value must still be
-  // settable from the preview, so it shows dimmed prompt text instead of
-  // vanishing. That makes the separators unconditional too.
-  return [
-    metaSelect("size", monster.size || "Size…", !monster.size),
-    text(" "),
-    metaSelect("type", monster.type || "Type…", !monster.type),
-    subTypeEditor(monster.subTypes),
-    text(", "),
-    metaSelect("alignment", monster.alignment || "Alignment…", !monster.alignment),
-  ];
+
+  const groups: Node[][] = [];
+  if (shown.has("size")) {
+    groups.push([metaSelect("size", monster.size || "Size…", !monster.size)]);
+  }
+  const typeGroup: Node[] = [];
+  if (shown.has("type")) {
+    typeGroup.push(metaSelect("type", monster.type || "Type…", !monster.type));
+  }
+  if (shown.has("subTypes")) typeGroup.push(subTypeEditor(monster.subTypes));
+  if (typeGroup.length) groups.push(typeGroup);
+
+  const nodes = groups.flatMap((group, i) => (i ? [text(" "), ...group] : group));
+
+  if (shown.has("alignment")) {
+    if (nodes.length) nodes.push(text(", "));
+    nodes.push(metaSelect("alignment", monster.alignment || "Alignment…", !monster.alignment));
+  }
+  return nodes;
 }

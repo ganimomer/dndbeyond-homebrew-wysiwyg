@@ -9,6 +9,7 @@
  *                               skills editor swaps it for a dropdown trigger)
  */
 import { el } from "./dom.js";
+import { makeIcon } from "./icons.js";
 
 export interface ChipOptions {
   /** The token the editor commits (an option value, or the label itself). */
@@ -49,6 +50,20 @@ export function chip({ value, label, detail, removeLabel }: ChipOptions): HTMLEl
   remove.textContent = "×";
   tag.append(remove);
   return tag;
+}
+
+/**
+ * The foot of the basics section: the button that offers every field the
+ * creature hasn't got. Inert here — `wireAddField` swaps it for the menu — and
+ * rendered only when something is actually missing.
+ */
+export function addFieldButton(): HTMLElement {
+  const wrap = el("div", "add-field");
+  const button = el("button", "sb-add-field");
+  button.type = "button";
+  button.append(makeIcon("add", 16), "Add…");
+  wrap.append(button);
+  return wrap;
 }
 
 /** The "＋" button that opens a field's add affordance. */

@@ -35,6 +35,15 @@ licensed fonts (`Scala Sans`, `MrsEavesSmallCaps`) are named so the shadow root
 inherits them from DDB's document-scoped `@font-face` at runtime. Ability
 modifiers, saves, proficiency bonus, and XP are all derived.
 
+Everything from the name down to the last tidbit is **one section** (`.basics`),
+because that's how it reads — not a header plus attributes plus stats plus
+tidbits. Within it, **optional rows print only when the creature has them**, the
+way a real stat block does: no Skills row on a creature with no skills, no
+dangling comma where an alignment isn't set. An **"Add…" menu** at the foot of
+the section lists whatever is missing and puts it back, empty and ready to fill
+in; a field added that way sticks around for the session, and drops off again
+the moment its last value is removed.
+
 A kebab **context menu** on the name row (styled after the Encounters tool)
 switches ruleset — **Use 5e / Use 5.5e stat block**, which writes back to the
 form's Stat Block Type field — or **Close** to restore the editor.
@@ -54,6 +63,8 @@ src/                     shared, browser-agnostic core (all the real logic)
 │   ├── compute.ts       ability modifiers, saves, proficiency, CR → XP, meta line
 │   ├── skills.ts        the 18 skills → governing ability, and the derived bonus
 │   ├── movement.ts      movement types, print order, and the smart speed defaults
+│   ├── senses.ts        sense types and the range each one usually arrives with
+│   ├── adjustments.ts   splits DDB's "Acid - Resistance" option labels
 │   └── sample.ts        era-accurate sample vampires (5e + 5.5e)
 ├── editor/              the injected UI
 │   ├── fab.ts / fab.css                 the "Open in Microbrewery" launcher
@@ -63,6 +74,10 @@ src/                     shared, browser-agnostic core (all the real logic)
 │   ├── skills-editing.ts                skill chips + the "＋" menu (computes the bonus)
 │   ├── saves-editing.ts                 save chips (5e) / proficiency dots (5.5e)
 │   ├── speed-editing.ts                 movement chips with inline, defaulted distances
+│   ├── adjustments-editing.ts           damage-adjustment + condition-immunity chips
+│   ├── senses-editing.ts                sense chips, inline ranges, passive Perception
+│   ├── text-field-editing.ts            the one-input rows (Gear, Languages) and their ✕
+│   ├── field-visibility.ts              the "Add…" menu of fields not on the block
 │   ├── inline-input.ts                  shared commit-on-Enter for the inline number fields
 │   ├── autosave.ts                      debounced, single-flight save controller + retry
 │   ├── save-indicator.ts                paints save state into the renderers' slots
@@ -76,10 +91,14 @@ src/                     shared, browser-agnostic core (all the real logic)
     ├── statblock-55e.css   5.5e styling (scoped .statblock.v55e)
     ├── statblock-5e.css    5e styling (scoped .statblock.v5e)
     ├── meta.ts             the size/type/subtype/alignment line
-    ├── tags.ts             chip primitives shared by subtypes, skills, saves and speed
+    ├── optional-fields.ts  which basics rows are optional, and what each one renders
+    ├── tags.ts             chip primitives + the "Add…" footer
     ├── skills-line.ts      the Skills row's chips + "＋" host
     ├── saves-line.ts       the 5e Saving Throws row's chips + "＋" host
     ├── speed-line.ts       the Speed row's chips, each with an editable distance
+    ├── adjustments-line.ts the vulnerability/resistance/immunity rows' chips
+    ├── senses-line.ts      the Senses row: chips, ranges, passive Perception
+    ├── text-line.ts        the rows that are a single free-text field
     ├── icons.ts            inlined Material icon paths (menu, save indicator, proficiency dots)
     ├── sections.ts         section body: DDB HTML (preferred) or structured entries
     ├── sanitize-html.ts    allowlist sanitizer for DDB's description HTML

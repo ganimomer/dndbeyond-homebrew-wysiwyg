@@ -10,6 +10,7 @@ const jsdom = new JSDOM("<!doctype html><html><body></body></html>");
 (globalThis as Record<string, unknown>).window = jsdom.window;
 
 const { metaContent } = await import("../preview/meta.js");
+const { visibleMeta } = await import("../preview/optional-fields.js");
 const { wireMetaControls } = await import("./meta-editing.js");
 const { emptyMonster } = await import("../statblock/model.js");
 
@@ -48,9 +49,15 @@ function stubAdapter(subSelected: string[]) {
   return { adapter, calls };
 }
 
+/**
+ * The meta line for a monster, with every slot showing. Blank slots are only on
+ * the block when the user has added them, so the tests reveal them explicitly.
+ */
 function scopeFor(subTypes: string[], overrides: Partial<Monster> = {}): HTMLElement {
+  const monster = { ...emptyMonster(), type: "Undead", subTypes, ...overrides };
+  const revealed = new Set(["size", "type", "subTypes", "alignment"] as const);
   const root = jsdom.window.document.createElement("div");
-  root.append(...metaContent({ ...emptyMonster(), type: "Undead", subTypes, ...overrides }));
+  root.append(...metaContent(monster, visibleMeta(monster, revealed)));
   return root;
 }
 
@@ -100,6 +107,25 @@ test("a blank size or alignment still renders a placeholder dropdown", () => {
   size.value = "3";
   size.dispatchEvent(new jsdom.window.Event("change"));
   assert.deepEqual(calls.size, ["3"]);
+});
+
+test("picking the em-dash option clears the slot, taking it off the block", () => {
+  // How a single-select field is dismissed: DDB's own "nothing chosen" option
+  // commits "", and a slot with no value isn't rendered next time round.
+  const scope = scopeFor([]);
+  const { adapter, calls } = stubAdapter([]);
+  wireMetaControls(scope, {
+    ...adapter,
+    sizeOptions: () => [
+      { value: "", text: "—", selected: false },
+      { value: "4", text: "Medium", selected: true },
+    ],
+  });
+
+  const size = scope.querySelector<HTMLSelectElement>('select[data-meta="size"]')!;
+  size.value = "";
+  size.dispatchEvent(new jsdom.window.Event("change"));
+  assert.deepEqual(calls.size, [""]);
 });
 
 test("a blank field keeps its prompt wording on DDB's em-dash option", () => {

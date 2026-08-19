@@ -69,14 +69,14 @@
   clip-path: polygon(0 50%, 1% 0, 99% 0, 100% 50%, 99% 100%, 1% 100%);
 }
 
-.statblock.v5e .attributes {
+/* The basics — name through tidbits — are one section; the accent belongs to
+ * its labelled lines, not to the meta line above them. */
+.statblock.v5e .basics .line {
   color: var(--accent);
-}
-.statblock.v5e .attributes .line {
   margin: 2px 0;
   line-height: 1.2;
 }
-.statblock.v5e .attributes .label {
+.statblock.v5e .basics .label {
   font-weight: bold;
 }
 

@@ -94,6 +94,17 @@ export interface HitPoints {
   modifier: number;
 }
 
+/**
+ * One row of D&D Beyond's sense table: a sense and its free-text qualifier.
+ * DDB keeps the qualifier as text ("120 ft."), not a number, so we do too.
+ */
+export interface Sense {
+  /** Display name as DDB lists it: "Blindsight", "Darkvision", "Tremorsense". */
+  type: string;
+  /** DDB's note, e.g. "120 ft." or "60 ft. (blind beyond this radius)". */
+  note: string;
+}
+
 /** A named block of prose: traits, actions, reactions, etc. */
 export interface NamedEntry {
   name: string;
@@ -136,13 +147,23 @@ export interface Monster {
   savingThrows: Partial<Record<Ability, number>>;
   skills: Record<string, number>;
 
-  damageVulnerabilities: string;
-  damageResistances: string;
-  damageImmunities: string;
-  conditionImmunities: string;
-  /** 5.5e only: carried equipment shown as a "Gear" tidbit. */
+  /**
+   * The three damage adjustments. DDB stores all of them in one multi-select
+   * whose options read "Acid - Resistance", so they're lists of damage-type
+   * names here rather than one prose string (see the adapter).
+   */
+  damageVulnerabilities: string[];
+  damageResistances: string[];
+  damageImmunities: string[];
+  /** DDB's own multi-select, separate from the damage adjustments above. */
+  conditionImmunities: string[];
+  /** 5.5e only: carried equipment shown as a "Gear" tidbit. A plain DDB input. */
   gear: string;
-  senses: string;
+  /** One entry per sense row; passive Perception is its own field below. */
+  senses: Sense[];
+  /** The passive Perception printed at the end of the Senses line. */
+  passivePerception?: number;
+  /** DDB's free-text languages note, e.g. "Common plus two other languages". */
   languages: string;
 
   /** Challenge rating as authored, e.g. "3" or "1/2". */
@@ -182,13 +203,13 @@ export function emptyMonster(): Monster {
     abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
     savingThrows: {},
     skills: {},
-    damageVulnerabilities: "",
-    damageResistances: "",
-    damageImmunities: "",
-    conditionImmunities: "",
+    damageVulnerabilities: [],
+    damageResistances: [],
+    damageImmunities: [],
+    conditionImmunities: [],
     gear: "",
-    senses: "passive Perception 10",
-    languages: "—",
+    senses: [],
+    languages: "",
     challengeRating: "0",
     traits: [],
     actions: [],

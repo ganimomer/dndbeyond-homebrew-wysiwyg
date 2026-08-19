@@ -15,10 +15,20 @@ for (const [name, render] of [
   ["5e", render5e],
   ["5.5e", render55e],
 ] as const) {
-  // Unlike the other tidbits, the Skills row can't be dropped when empty: the
-  // "＋" that adds the creature's first skill has to live somewhere.
-  test(`${name} renders the Skills row even with no skills`, () => {
+  // A skill-less creature prints no Skills row at all, the way a real stat
+  // block does; the "Add…" menu at the foot of the section is what brings it
+  // back (see optional-fields.test.ts).
+  test(`${name} drops the Skills row when there are no skills`, () => {
     const block = render({ ...emptyMonster(), skills: {} });
+
+    assert.equal(block.querySelector('.sb-chips[data-field="skills"]'), null);
+  });
+
+  test(`${name} renders the Skills row with its "+" once revealed`, () => {
+    const block = render(
+      { ...emptyMonster(), skills: {} },
+      { revealed: new Set(["skills" as const]) },
+    );
     const chips = block.querySelector('.sb-chips[data-field="skills"]');
 
     assert.ok(chips, "skills chip container is present");

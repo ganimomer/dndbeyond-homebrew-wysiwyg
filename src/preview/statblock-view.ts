@@ -4,6 +4,7 @@
  */
 import type { Monster } from "../statblock/model.js";
 import { parseChallengeRating } from "../statblock/compute.js";
+import type { RenderOptions } from "./optional-fields.js";
 import { el, saveSlot } from "./dom.js";
 import { sectionBody } from "./sections.js";
 import { defaultImageUrl } from "./default-image.js";
@@ -48,10 +49,12 @@ function renderDescription(monster: Monster): HTMLElement | null {
 /**
  * Builds the full stat-block document for a monster: the framed block with its
  * artwork alongside (top-right), plus the Description section beneath when
- * present.
+ * present. `options.revealed` carries the optional fields the user has added
+ * this session (see optional-fields.ts).
  */
-export function renderStatBlock(monster: Monster): HTMLElement {
-  const block = monster.ruleset === "5e" ? render5e(monster) : render55e(monster);
+export function renderStatBlock(monster: Monster, options: RenderOptions = {}): HTMLElement {
+  const block =
+    monster.ruleset === "5e" ? render5e(monster, options) : render55e(monster, options);
 
   // Stat block and artwork sit side by side; the image wraps below on narrow
   // viewports (see .sb-layout).

@@ -19,8 +19,10 @@ import {
   type Movement,
   type Ruleset,
   type SectionKey,
+  type Sense,
 } from "../statblock/model.js";
 import { abilityModifier, proficiencyForCr } from "../statblock/compute.js";
+import { parseAdjustment } from "../statblock/adjustments.js";
 import { ddbToEditorHtml, editorHtmlToDdb } from "../preview/ddb-markup.js";
 
 /** Every DOM hook the monster adapter needs, in one place. */
@@ -91,6 +93,14 @@ const SKILL_ID: Record<string, string> = {
   Intimidation: "17",
   Performance: "18",
   Persuasion: "19",
+};
+
+/** DDB's sense ids, from `#field-sense` on `/monster/senses/create/<id>`. */
+const SENSE_ID: Record<string, string> = {
+  Blindsight: "1",
+  Darkvision: "2",
+  Tremorsense: "3",
+  Truesight: "4",
 };
 
 /** DDB's movement ids, from `#field-movement-type` on the create page. */
@@ -274,13 +284,11 @@ function readMovements(): Movement[] {
     .filter((m) => m.type && Number.isFinite(m.speed));
 }
 
-function composeSenses(): string {
-  const senses = tableRows(SELECTORS.senseTable)
-    .map(([name = "", value = ""]) => `${name} ${value}`.trim())
-    .filter(Boolean)
-    .join(", ");
-  const pp = val(SELECTORS.passivePerception);
-  return [senses, pp ? `Passive Perception ${pp}` : ""].filter(Boolean).join("; ");
+/** Sense rows as `[Name, Note, actions]` — the note is free text ("120 ft."). */
+function readSenses(): Sense[] {
+  return tableRows(SELECTORS.senseTable)
+    .map(([type = "", note = ""]) => ({ type, note }))
+    .filter((s) => s.type);
 }
 
 function readSkills(): Record<string, number> {
@@ -438,21 +446,20 @@ async function deleteListingRow(tableSelector: string, name: string): Promise<vo
 
 /** Splits the combined "X - Resistance/Immunity/Vulnerability" multi-select. */
 function readDamageAdjustments(): {
-  resistances: string;
-  immunities: string;
-  vulnerabilities: string;
+  resistances: string[];
+  immunities: string[];
+  vulnerabilities: string[];
 } {
   const res: string[] = [];
   const imm: string[] = [];
   const vul: string[] = [];
   for (const entry of selTexts(SELECTORS.damageAdjustment)) {
-    const [name = "", kind = ""] = entry.split(" - ");
-    const k = kind.toLowerCase();
-    if (k.includes("immun")) imm.push(name.trim());
-    else if (k.includes("vulner")) vul.push(name.trim());
-    else res.push(name.trim());
+    const { name, kind } = parseAdjustment(entry);
+    if (kind === "immunity") imm.push(name);
+    else if (kind === "vulnerability") vul.push(name);
+    else res.push(name);
   }
-  return { resistances: res.join(", "), immunities: imm.join(", "), vulnerabilities: vul.join(", ") };
+  return { resistances: res, immunities: imm, vulnerabilities: vul };
 }
 
 function readSavingThrows(
@@ -544,9 +551,11 @@ export class DdbMonsterAdapter implements PageAdapter {
     m.damageResistances = dmg.resistances;
     m.damageImmunities = dmg.immunities;
     m.damageVulnerabilities = dmg.vulnerabilities;
-    m.conditionImmunities = selTexts(SELECTORS.conditionImmunity).join(", ");
+    m.conditionImmunities = selTexts(SELECTORS.conditionImmunity);
 
-    m.senses = composeSenses();
+    m.senses = readSenses();
+    const passive = parseInt(val(SELECTORS.passivePerception), 10);
+    if (Number.isFinite(passive)) m.passivePerception = passive;
     m.languages = val(SELECTORS.languages);
     m.gear = val(SELECTORS.gear);
 
@@ -721,6 +730,67 @@ export class DdbMonsterAdapter implements PageAdapter {
 
   async removeMovement(type: string): Promise<void> {
     await deleteListingRow(SELECTORS.movementTable, type);
+  }
+
+  damageAdjustmentOptions(): SelectOption[] {
+    return selOptions(SELECTORS.damageAdjustment);
+  }
+
+  setDamageAdjustments(values: string[]): void {
+    setMultiSelect(SELECTORS.damageAdjustment, values);
+  }
+
+  conditionImmunityOptions(): SelectOption[] {
+    return selOptions(SELECTORS.conditionImmunity);
+  }
+
+  setConditionImmunities(values: string[]): void {
+    setMultiSelect(SELECTORS.conditionImmunity, values);
+  }
+
+  senseOptions(): SelectOption[] {
+    const taken = new Set(listingRows(SELECTORS.senseTable).map((r) => r.name));
+    return Object.entries(SENSE_ID).map(([text, value]) => ({
+      value,
+      text,
+      selected: taken.has(text),
+    }));
+  }
+
+  async addSense(value: string, note: string): Promise<void> {
+    const url = createUrl("senses");
+    if (!url) throw new Error("sense create URL not found");
+    await submitListingForm(url, SELECTORS.senseTable, {
+      sense: value,
+      "sense-note": note,
+    });
+  }
+
+  async setSenseNote(type: string, note: string): Promise<void> {
+    const row = listingRows(SELECTORS.senseTable).find((r) => r.name === type);
+    if (!row?.editUrl) return;
+    const value = SENSE_ID[type];
+    if (!value) return;
+    await submitListingForm(row.editUrl, SELECTORS.senseTable, {
+      sense: value,
+      "sense-note": note,
+    });
+  }
+
+  async removeSense(type: string): Promise<void> {
+    await deleteListingRow(SELECTORS.senseTable, type);
+  }
+
+  setPassivePerception(value: number): void {
+    setInput(SELECTORS.passivePerception, String(value));
+  }
+
+  setGear(text: string): void {
+    setInput(SELECTORS.gear, text);
+  }
+
+  setLanguages(text: string): void {
+    setInput(SELECTORS.languages, text);
   }
 
   setName(name: string): void {

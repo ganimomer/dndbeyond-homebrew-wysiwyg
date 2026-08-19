@@ -131,7 +131,8 @@ test("5e removing a chip commits the set without that ability", () => {
 
 test("5e renders the row with just the ＋ when nothing is proficient", () => {
   const monster = vampire();
-  const block = render5e(monster);
+  // No proficient saves means no row at all until it's asked for.
+  const block = render5e(monster, { revealed: new Set(["savingThrows"]) });
   wireSavingThrows(block, monster, stubAdapter([]).adapter);
   const saves = block.querySelector('.sb-chips[data-field="saves"]')!;
 

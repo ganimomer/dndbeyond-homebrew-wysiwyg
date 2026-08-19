@@ -22,8 +22,14 @@ import { nameRow } from "./name-row.js";
 import { expandInline } from "./inline.js";
 import { sectionBody } from "./sections.js";
 import { metaContent } from "./meta.js";
-import { skillsChips } from "./skills-line.js";
-import { savingThrowChips } from "./saves-line.js";
+import {
+  hiddenFields,
+  isVisible,
+  tidbitFields,
+  visibleMeta,
+  type RenderOptions,
+} from "./optional-fields.js";
+import { addFieldButton } from "./tags.js";
 import { speedChips } from "./speed-line.js";
 import { hitPointsChip } from "./hit-points-line.js";
 import { armorClassChip } from "./armor-class-line.js";
@@ -79,51 +85,55 @@ function headedSection(
   root.append(h, body);
 }
 
-export function render5e(monster: Monster): HTMLElement {
+export function render5e(monster: Monster, options: RenderOptions = {}): HTMLElement {
+  const { revealed } = options;
   const root = el("div", "statblock v5e");
 
-  root.append(nameRow(monster));
+  // Name through tidbits is one section: a reader sees a single block of basic
+  // information, not a header plus attributes plus abilities plus tidbits. The
+  // tapered rules are separators *within* it, so they stay inline.
+  const basics = el("section", "basics");
+  basics.append(nameRow(monster));
 
-  const meta = el("div", "meta");
-  meta.append(...metaContent(monster));
-  root.append(meta);
+  const metaNodes = metaContent(monster, visibleMeta(monster, revealed));
+  if (metaNodes.length) {
+    const meta = el("div", "meta");
+    meta.append(...metaNodes);
+    basics.append(meta);
+  }
 
-  root.append(el("hr", "rule"));
+  basics.append(el("hr", "rule"));
 
-  const attrs = el("div", "attributes");
   const acLine = labeled("Armor Class", armorClassChip(monster));
   acLine.dataset.dep = "dex";
-  attrs.append(acLine);
+  basics.append(acLine);
   const hpLine = labeled("Hit Points", hitPointsChip(monster));
   hpLine.dataset.dep = "con";
-  attrs.append(hpLine);
-  attrs.append(labeled("Speed", speedChips(monster)));
-  root.append(attrs);
+  basics.append(hpLine);
+  basics.append(labeled("Speed", speedChips(monster)));
 
-  root.append(el("hr", "rule"));
+  basics.append(el("hr", "rule"));
 
   const abilityBlock = el("div", "ability-block");
   for (const a of ABILITIES) abilityBlock.append(abilityCell(a, monster));
-  root.append(abilityBlock);
+  basics.append(abilityBlock);
 
-  root.append(el("hr", "rule"));
+  basics.append(el("hr", "rule"));
 
-  const details = el("div", "attributes");
-  // Saves and skills always render, even when empty: the "＋" needs a home.
-  details.append(labeled("Saving Throws", savingThrowChips(monster)));
+  // Tidbits, in the 2014 block's order and under its longer labels. A field the
+  // creature has no value for isn't printed — the "Add…" menu below brings it back.
+  for (const spec of tidbitFields("5e")) {
+    if (!isVisible(spec, monster, revealed)) continue;
+    const line = labeled(spec.label ?? "", spec.render(monster));
+    line.dataset.row = spec.key;
+    if (spec.dep) line.dataset.dep = spec.dep;
+    basics.append(line);
+  }
+  basics.append(labeled("Challenge", challengeText(monster)));
+  basics.append(labeled("Proficiency Bonus", formatModifier(proficiencyBonus(monster))));
 
-  const skillsLine = labeled("Skills", skillsChips(monster));
-  skillsLine.dataset.dep = "all";
-  details.append(skillsLine);
-  if (monster.damageVulnerabilities) details.append(labeled("Damage Vulnerabilities", monster.damageVulnerabilities));
-  if (monster.damageResistances) details.append(labeled("Damage Resistances", monster.damageResistances));
-  if (monster.damageImmunities) details.append(labeled("Damage Immunities", monster.damageImmunities));
-  if (monster.conditionImmunities) details.append(labeled("Condition Immunities", monster.conditionImmunities));
-  if (monster.senses) details.append(labeled("Senses", monster.senses));
-  if (monster.languages) details.append(labeled("Languages", monster.languages));
-  details.append(labeled("Challenge", challengeText(monster)));
-  details.append(labeled("Proficiency Bonus", formatModifier(proficiencyBonus(monster))));
-  root.append(details);
+  if (hiddenFields(monster, revealed, "5e").length) basics.append(addFieldButton());
+  root.append(basics);
 
   const traitsBody = sectionBody(monster, "traits", monster.traits);
   if (traitsBody) {
