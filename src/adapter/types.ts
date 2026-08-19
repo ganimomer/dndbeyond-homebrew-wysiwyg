@@ -106,14 +106,22 @@ export interface PageAdapter {
    */
   setSavingThrows(values: string[]): void;
 
+  /** The size options from the form's size `<select>`. */
+  sizeOptions(): SelectOption[];
   /** The creature-type options from the form's type `<select>`. */
   typeOptions(): SelectOption[];
   /** The full sub-type tag options (value + label + selected). */
   subTypeOptions(): SelectOption[];
+  /** The alignment options from the form's alignment `<select>`. */
+  alignmentOptions(): SelectOption[];
+  /** Writes the size (an option value) back to the form. */
+  setSize(value: string): void;
   /** Writes the creature type (an option value) back to the form. */
   setType(value: string): void;
   /** Writes the full set of chosen subtype tags (option values) back to the form. */
   setSubTypes(values: string[]): void;
+  /** Writes the alignment (an option value) back to the form. */
+  setAlignment(value: string): void;
 
   /**
    * Watches DDB's own fields for user edits and invokes `onChange`. Returns an

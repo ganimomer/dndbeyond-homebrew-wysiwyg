@@ -268,16 +268,27 @@ export class EditorPanel {
       },
     });
 
-    // Type dropdown + subtype tag editor in the meta line write back to the form.
+    // Size/type/alignment dropdowns + the subtype tag editor in the meta line all
+    // write back to ordinary form fields, so they ride autosave.
     wireMetaControls(block, {
+      sizeOptions: () => this.adapter.sizeOptions(),
       typeOptions: () => this.adapter.typeOptions(),
       subTypeOptions: () => this.adapter.subTypeOptions(),
+      alignmentOptions: () => this.adapter.alignmentOptions(),
+      setSize: (value) => {
+        this.adapter.setSize(value);
+        this.autosave.request(HEADER_ORIGIN);
+      },
       setType: (value) => {
         this.adapter.setType(value);
         this.autosave.request(HEADER_ORIGIN);
       },
       setSubTypes: (values) => {
         this.adapter.setSubTypes(values);
+        this.autosave.request(HEADER_ORIGIN);
+      },
+      setAlignment: (value) => {
+        this.adapter.setAlignment(value);
         this.autosave.request(HEADER_ORIGIN);
       },
     });

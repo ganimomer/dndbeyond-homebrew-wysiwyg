@@ -1,9 +1,10 @@
 /**
  * Builds the stat-block meta line ("Medium humanoid (elf), lawful evil") as DOM,
- * shared by both renderers. Size and alignment are plain text; the creature type
- * is an editable `<select>` dropdown, and the subtype is an editable multi-tag
- * editor (removable chips + a searchable "add" box) because DDB's sub-type is a
- * multi-select. Both are filled + committed by the panel's `wireMetaControls`.
+ * shared by both renderers. Size, creature type and alignment are each an
+ * editable `<select>` dropdown; the subtype is an editable multi-tag editor
+ * (removable chips + a searchable "add" box) because DDB's sub-type is a
+ * multi-select. All four are filled + committed by the panel's
+ * `wireMetaControls`.
  */
 import type { Monster } from "../statblock/model.js";
 import { el, metaSelect } from "./dom.js";
@@ -48,12 +49,16 @@ function subTypeEditor(subTypes: string[]): HTMLElement {
 }
 
 export function metaContent(monster: Monster): Node[] {
-  const nodes: Node[] = [];
   const text = (s: string) => document.createTextNode(s);
-
-  if (monster.size) nodes.push(text(`${monster.size} `));
-  nodes.push(metaSelect("type", monster.type || "—"));
-  nodes.push(subTypeEditor(monster.subTypes));
-  if (monster.alignment) nodes.push(text(`, ${monster.alignment}`));
-  return nodes;
+  // Every slot holds a control, blank or not — a missing value must still be
+  // settable from the preview, so it shows dimmed prompt text instead of
+  // vanishing. That makes the separators unconditional too.
+  return [
+    metaSelect("size", monster.size || "Size…", !monster.size),
+    text(" "),
+    metaSelect("type", monster.type || "Type…", !monster.type),
+    subTypeEditor(monster.subTypes),
+    text(", "),
+    metaSelect("alignment", monster.alignment || "Alignment…", !monster.alignment),
+  ];
 }

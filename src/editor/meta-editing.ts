@@ -2,7 +2,8 @@
  * Turns the meta line's editable controls (emitted by `metaContent`) into live
  * editors that write straight back to the form, mirroring `wireAbilityInputs`:
  *
- *   - the type `<select>` — fill options, preselect the current one, commit on change;
+ *   - the size, type and alignment `<select>`s — fill options, preselect the
+ *     current one, commit on change;
  *   - the subtype multi-tag editor — fill the search `<datalist>`, remove a tag on
  *     its ✕, add a tag when one is typed/picked; each edit writes the whole new
  *     set back (DDB's sub-type is a multi-select).
@@ -10,35 +11,62 @@
  * Re-reading options every render keeps things correct after a write-back re-render.
  */
 import type { SelectOption } from "../adapter/types.js";
+import type { MetaKind } from "../preview/dom.js";
 
 /** The adapter surface the meta controls need (satisfied by PageAdapter). */
 export interface MetaControlsAdapter {
+  sizeOptions(): SelectOption[];
   typeOptions(): SelectOption[];
   subTypeOptions(): SelectOption[];
+  alignmentOptions(): SelectOption[];
+  setSize(value: string): void;
   setType(value: string): void;
   setSubTypes(values: string[]): void;
+  setAlignment(value: string): void;
 }
 
 export function wireMetaControls(scope: ParentNode, adapter: MetaControlsAdapter): void {
-  wireTypeSelect(scope, adapter);
+  wireSelect(scope, "size", () => adapter.sizeOptions(), (v) => adapter.setSize(v));
+  wireSelect(scope, "type", () => adapter.typeOptions(), (v) => adapter.setType(v));
+  wireSelect(
+    scope,
+    "alignment",
+    () => adapter.alignmentOptions(),
+    (v) => adapter.setAlignment(v),
+  );
   wireSubTypes(scope, adapter);
 }
 
-function wireTypeSelect(scope: ParentNode, adapter: MetaControlsAdapter): void {
-  const select = scope.querySelector<HTMLSelectElement>('select.meta-select[data-meta="type"]');
+/** Fills one single-value meta dropdown and commits the picked option's value. */
+function wireSelect(
+  scope: ParentNode,
+  kind: MetaKind,
+  options: () => SelectOption[],
+  commit: (value: string) => void,
+): void {
+  const select = scope.querySelector<HTMLSelectElement>(
+    `select.meta-select[data-meta="${kind}"]`,
+  );
   if (!select) return;
+
+  // DDB labels its "nothing chosen" option with a bare em-dash. Where the field
+  // is blank the renderer seeded a prompt ("Alignment…") instead, so keep that
+  // wording on the empty option rather than letting the dash win.
+  const prompt = select.classList.contains("is-placeholder")
+    ? (select.options[0]?.text ?? "")
+    : "";
 
   // Replace the seeded option with the full list, keeping the customizable
   // <button><selectedcontent> trigger (only <option>s are removed).
   select.querySelectorAll("option").forEach((o) => o.remove());
-  for (const o of adapter.typeOptions()) {
+  for (const o of options()) {
     const option = document.createElement("option");
     option.value = o.value;
-    option.textContent = o.text;
+    option.textContent = prompt && o.value === "" ? prompt : o.text;
     if (o.selected) option.selected = true;
     select.appendChild(option);
   }
-  select.addEventListener("change", () => adapter.setType(select.value));
+  select.addEventListener("change", () => commit(select.value));
 }
 
 function wireSubTypes(scope: ParentNode, adapter: MetaControlsAdapter): void {

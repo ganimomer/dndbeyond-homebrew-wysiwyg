@@ -160,7 +160,12 @@ function checked(id: string): boolean {
 function selText(id: string): string {
   const e = byId<HTMLSelectElement>(id);
   if (!e || e.selectedIndex < 0) return "";
-  return (e.options[e.selectedIndex]?.text ?? "").trim();
+  const option = e.options[e.selectedIndex];
+  // DDB's "nothing chosen" option carries an em-dash label with an empty value.
+  // That dash is chrome, not data — report it as blank so callers can render
+  // their own placeholder rather than a stray "—".
+  if (!option || option.value === "") return "";
+  return (option.text ?? "").trim();
 }
 function selTexts(id: string): string[] {
   const e = byId<HTMLSelectElement>(id);
@@ -715,6 +720,10 @@ export class DdbMonsterAdapter implements PageAdapter {
     await deleteListingRow(SELECTORS.movementTable, type);
   }
 
+  sizeOptions(): SelectOption[] {
+    return selOptions(SELECTORS.size);
+  }
+
   typeOptions(): SelectOption[] {
     return selOptions(SELECTORS.monsterType);
   }
@@ -724,12 +733,24 @@ export class DdbMonsterAdapter implements PageAdapter {
     return selOptions(SELECTORS.subType);
   }
 
+  alignmentOptions(): SelectOption[] {
+    return selOptions(SELECTORS.alignment);
+  }
+
+  setSize(value: string): void {
+    setSelect(SELECTORS.size, value);
+  }
+
   setType(value: string): void {
     setSelect(SELECTORS.monsterType, value);
   }
 
   setSubTypes(values: string[]): void {
     setMultiSelect(SELECTORS.subType, values);
+  }
+
+  setAlignment(value: string): void {
+    setSelect(SELECTORS.alignment, value);
   }
 
   observe(onChange: () => void): () => void {

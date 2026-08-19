@@ -44,7 +44,14 @@ export function saveSlot(origin: string): HTMLElement {
 }
 
 /** Which meta-line control a `<select>` drives. */
-export type MetaKind = "type" | "subType";
+export type MetaKind = "size" | "type" | "subType" | "alignment";
+
+const META_LABEL: Record<MetaKind, string> = {
+  size: "Size",
+  type: "Creature type",
+  subType: "Creature subtype",
+  alignment: "Alignment",
+};
 
 /** True where the browser supports the customizable-select feature (Chrome 135+). */
 const SUPPORTS_BASE_SELECT =
@@ -52,11 +59,13 @@ const SUPPORTS_BASE_SELECT =
   CSS.supports("appearance", "base-select");
 
 /**
- * An editable creature type/subtype control for the meta line: a real `<select>`
- * tagged for `wireMetaSelects` to fill with options. Where the customizable-
- * select feature exists it gets the `<button><selectedcontent>` trigger so it
- * can be styled to read as inline text; elsewhere it stays a plain native select
- * (Firefox). Seeded with the current label as a lone option until wired.
+ * An editable meta-line control (size, creature type, alignment): a real
+ * `<select>` tagged for `wireMetaControls` to fill with options. Where the
+ * customizable-select feature exists it gets the `<button><selectedcontent>`
+ * trigger so it can be styled to read as inline text; elsewhere it stays a plain
+ * native select (Firefox). Seeded with the current label as a lone option until
+ * wired. Pass `isPlaceholder` when `currentText` is prompt text rather than a
+ * real value, so it renders dimmed.
  */
 export function metaSelect(
   kind: MetaKind,
@@ -65,7 +74,7 @@ export function metaSelect(
 ): HTMLSelectElement {
   const select = el("select", "meta-select");
   select.dataset.meta = kind;
-  select.setAttribute("aria-label", kind === "type" ? "Creature type" : "Creature subtype");
+  select.setAttribute("aria-label", META_LABEL[kind]);
   if (isPlaceholder) select.classList.add("is-placeholder");
 
   if (SUPPORTS_BASE_SELECT) {
