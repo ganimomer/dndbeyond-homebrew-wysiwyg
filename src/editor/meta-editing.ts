@@ -61,10 +61,10 @@ function wireSubTypes(scope: ParentNode, adapter: MetaControlsAdapter): void {
   }
 
   // Removing a chip commits the set without that tag's value.
-  wrap.querySelectorAll<HTMLButtonElement>(".meta-tag-remove").forEach((btn) => {
+  wrap.querySelectorAll<HTMLButtonElement>(".sb-chip-remove").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const tag = btn.closest<HTMLElement>(".meta-tag");
-      const value = labelToValue.get(tag?.dataset.subtype ?? "");
+      const tag = btn.closest<HTMLElement>(".sb-chip");
+      const value = labelToValue.get(tag?.dataset.value ?? "");
       if (value === undefined) return;
       adapter.setSubTypes(current.filter((v) => v !== value));
     });

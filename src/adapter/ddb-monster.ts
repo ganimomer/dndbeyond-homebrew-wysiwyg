@@ -63,6 +63,33 @@ const ABILITY_FIELD: Record<Ability, string> = {
   cha: "charisma",
 };
 
+/**
+ * DDB's skill ids, from the `#field-skill` select on `/monster/skills/create/<id>`.
+ * Hardcoded because the *edit* page has no such select — it only renders the
+ * listing table — and the ids are stable. Governing abilities live in
+ * `statblock/skills.ts`; these are DOM knowledge, so they stay here.
+ */
+const SKILL_ID: Record<string, string> = {
+  Athletics: "2",
+  Acrobatics: "3",
+  "Sleight of Hand": "4",
+  Stealth: "5",
+  Arcana: "6",
+  History: "7",
+  Investigation: "8",
+  Nature: "9",
+  Religion: "10",
+  "Animal Handling": "11",
+  Insight: "12",
+  Medicine: "13",
+  Perception: "14",
+  Survival: "15",
+  Deception: "16",
+  Intimidation: "17",
+  Performance: "18",
+  Persuasion: "19",
+};
+
 const ABBREV_TO_ABILITY: Record<string, Ability> = {
   STR: "str",
   DEX: "dex",
@@ -204,12 +231,79 @@ function composeSenses(): string {
 
 function readSkills(): Record<string, number> {
   const skills: Record<string, number> = {};
+  // Columns are [Name, Base Value, Additional Bonus, actions]; the bonus the
+  // stat block shows is the two summed (Additional Bonus is usually blank).
   const rows = tableRows(SELECTORS.skillTable)
-    .map(([name = "", bonus = ""]) => [name, Number(bonus)] as const)
+    .map(([name = "", base = "", extra = ""]) => [name, Number(base) + (Number(extra) || 0)] as const)
     .filter(([name, n]) => name && Number.isFinite(n))
     .sort((a, b) => a[0].localeCompare(b[0])); // DDB lists skills alphabetically
   for (const [name, n] of rows) skills[name] = n;
   return skills;
+}
+
+/**
+ * Skill rows as `{ name, deleteUrl }`. Skills aren't form fields — each is its
+ * own server record, reachable only through the links in its row.
+ */
+function skillRows(): Array<{ name: string; deleteUrl: string }> {
+  const table = document.querySelector(SELECTORS.skillTable);
+  if (!table) return [];
+  return Array.from(table.querySelectorAll("tbody tr")).flatMap((tr) => {
+    const name = (tr.querySelector("td")?.textContent ?? "").trim();
+    const deleteUrl =
+      Array.from(tr.querySelectorAll("a")).find((a) => /\/delete$/.test(a.getAttribute("href") ?? ""))
+        ?.getAttribute("href") ?? "";
+    return name && deleteUrl ? [{ name, deleteUrl }] : [];
+  });
+}
+
+/** The "Add a Skill" link's target, which carries the monster id we POST to. */
+function skillCreateUrl(): string {
+  const anchor = document.querySelector<HTMLAnchorElement>('a[href*="/monster/skills/create/"]');
+  const href = anchor?.getAttribute("href");
+  if (href) return href;
+  // Fall back to the id in our own URL if DDB ever drops the link.
+  const id = /\/monsters\/(\d+)/.exec(location.pathname)?.[1];
+  return id ? `/monster/skills/create/${id}` : "";
+}
+
+function cookie(name: string): string {
+  return document.cookie.split("; ").find((c) => c.startsWith(`${name}=`))?.slice(name.length + 1) ?? "";
+}
+
+/**
+ * The token DDB's own `ajax-post` links send (`Cobalt.Forms.AjaxPostSubmit`):
+ * the `RequestVerificationToken` cookie, refreshed when it's missing. The skill
+ * *delete* endpoint accepts nothing else — not the form's two tokens, not an
+ * XHR header.
+ */
+async function requestVerificationToken(): Promise<string> {
+  const existing = cookie("RequestVerificationToken");
+  if (existing) return existing;
+  await fetch("/refresh-request-verification-token", { method: "POST", credentials: "include" });
+  return cookie("RequestVerificationToken");
+}
+
+/**
+ * POSTs a urlencoded body and returns the response text.
+ *
+ * DDB answers a rejected request with `200` and a redirect to `/error` (the
+ * same shape as the signed-out redirect to `/sign-in`), so status alone would
+ * report a bogus success.
+ */
+async function postForm(url: string, body: URLSearchParams): Promise<string> {
+  const response = await fetch(url, {
+    method: "POST",
+    body,
+    credentials: "include",
+    redirect: "follow",
+  });
+  const text = await response.text();
+  if (!response.ok) throw new Error(`request failed (${response.status})`);
+  if (/\/error|sign-in|login/i.test(new URL(response.url).pathname)) {
+    throw new Error("request rejected by D&D Beyond");
+  }
+  return text;
 }
 
 /** Splits the combined "X - Resistance/Immunity/Vulnerability" multi-select. */
@@ -399,6 +493,71 @@ export class DdbMonsterAdapter implements PageAdapter {
 
     if (!response.ok) throw new Error(`save failed (${response.status})`);
     if (/sign-in|login/i.test(response.url)) throw new Error("save failed (signed out)");
+  }
+
+  skillOptions(): SelectOption[] {
+    const taken = new Set(skillRows().map((r) => r.name));
+    return Object.entries(SKILL_ID).map(([text, value]) => ({
+      value,
+      text,
+      selected: taken.has(text),
+    }));
+  }
+
+  /**
+   * Creates a skill record. DDB's own flow navigates to a separate create page
+   * (which is why adding a skill there saves and reloads the monster); we POST
+   * the same form in place, reusing the edit page's anti-forgery tokens — those
+   * are accepted here, so no preliminary GET is needed.
+   *
+   * The response is the edit page with the skill listing already updated, so
+   * the fresh `<tbody>` is lifted straight out of it. That's what gives the new
+   * row its real id (needed to delete it later) and, because the table lives
+   * inside the observed form, what re-renders the stat block. Parsing a ~530 KB
+   * response is banned in `save()` — it runs every few seconds — but this is one
+   * deliberate click.
+   */
+  async addSkill(value: string, bonus: number): Promise<void> {
+    const url = skillCreateUrl();
+    if (!url) throw new Error("skill create URL not found");
+
+    const html = await postForm(
+      url,
+      new URLSearchParams({
+        "security-token": val("field-security-token"),
+        "authenticity-token": val("field-authenticity-token"),
+        skill: value,
+        value: String(bonus),
+        "additional-bonus": "",
+      }),
+    );
+
+    const fresh = new DOMParser()
+      .parseFromString(html, "text/html")
+      .querySelector(`${SELECTORS.skillTable} tbody`);
+    const live = document.querySelector(`${SELECTORS.skillTable} tbody`);
+    if (fresh && live) live.replaceWith(live.ownerDocument.importNode(fresh, true));
+  }
+
+  /**
+   * Deletes a skill record via the row's own Delete link. The response is a
+   * few dozen bytes of JSON rather than a page, so the row is dropped from the
+   * live table by hand — which, the table being inside the form, re-renders.
+   */
+  async removeSkill(name: string): Promise<void> {
+    const row = skillRows().find((r) => r.name === name);
+    if (!row) return;
+
+    await postForm(
+      row.deleteUrl,
+      new URLSearchParams({ "request-verification-token": await requestVerificationToken() }),
+    );
+
+    document
+      .querySelector(`${SELECTORS.skillTable} tbody`)
+      ?.querySelector(`a[href="${row.deleteUrl}"]`)
+      ?.closest("tr")
+      ?.remove();
   }
 
   typeOptions(): SelectOption[] {

@@ -21,6 +21,7 @@ import { el, saveSlot, scoreInput } from "./dom.js";
 import { expandInline } from "./inline.js";
 import { sectionBody } from "./sections.js";
 import { metaContent } from "./meta.js";
+import { skillsChips } from "./skills-line.js";
 
 const ABILITY_LABEL: Record<Ability, string> = {
   str: "STR",
@@ -35,11 +36,11 @@ function inline(text: string): DocumentFragment {
   return expandInline(text, el, "roll");
 }
 
-function labeled(label: string, value: string): HTMLElement {
+function labeled(label: string, value: string | Node): HTMLElement {
   const line = el("div", "line");
   const labelEl = el("span", "label");
   labelEl.textContent = `${label} `;
-  line.append(labelEl, inline(value));
+  line.append(labelEl, typeof value === "string" ? inline(value) : value);
   return line;
 }
 
@@ -61,12 +62,6 @@ function abilityCell(ability: Ability, monster: Monster): HTMLElement {
 function savingThrowsText(monster: Monster): string {
   return ABILITIES.filter((a) => monster.savingThrows[a] !== undefined)
     .map((a) => `${ABILITY_LABEL[a]} ${formatModifier(saveBonus(monster, a))}`)
-    .join(", ");
-}
-
-function skillsText(monster: Monster): string {
-  return Object.entries(monster.skills)
-    .map(([skill, bonus]) => `${skill} ${formatModifier(bonus)}`)
     .join(", ");
 }
 
@@ -131,12 +126,10 @@ export function render5e(monster: Monster): HTMLElement {
   const details = el("div", "attributes");
   const saves = savingThrowsText(monster);
   if (saves) details.append(labeled("Saving Throws", saves));
-  const skills = skillsText(monster);
-  if (skills) {
-    const skillsLine = labeled("Skills", skills);
-    skillsLine.dataset.dep = "all";
-    details.append(skillsLine);
-  }
+  // Always rendered, even with no skills: the "＋" needs somewhere to live.
+  const skillsLine = labeled("Skills", skillsChips(monster));
+  skillsLine.dataset.dep = "all";
+  details.append(skillsLine);
   if (monster.damageVulnerabilities) details.append(labeled("Damage Vulnerabilities", monster.damageVulnerabilities));
   if (monster.damageResistances) details.append(labeled("Damage Resistances", monster.damageResistances));
   if (monster.damageImmunities) details.append(labeled("Damage Immunities", monster.damageImmunities));

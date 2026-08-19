@@ -17,6 +17,7 @@ import { el, saveSlot, scoreInput } from "./dom.js";
 import { expandInline } from "./inline.js";
 import { sectionBody } from "./sections.js";
 import { metaContent } from "./meta.js";
+import { skillsChips } from "./skills-line.js";
 
 const ABILITY_LABEL: Record<Ability, string> = {
   str: "STR",
@@ -73,12 +74,6 @@ function abilityTable(kind: "physical" | "mental", abilities: Ability[], monster
 
   table.append(thead, tbody);
   return table;
-}
-
-function skillsText(monster: Monster): string {
-  return Object.entries(monster.skills)
-    .map(([skill, bonus]) => `${skill} ${formatModifier(bonus)}`)
-    .join(", ");
 }
 
 function crText(monster: Monster): string {
@@ -164,12 +159,10 @@ export function render55e(monster: Monster): HTMLElement {
 
   // Tidbits (short labels, canonical 5.5e order, empties skipped).
   const tidbits = el("div", "tidbits");
-  const skills = skillsText(monster);
-  if (skills) {
-    const skillsLine = labeled("Skills", skills);
-    skillsLine.dataset.dep = "all";
-    tidbits.append(skillsLine);
-  }
+  // Always rendered, even with no skills: the "＋" needs somewhere to live.
+  const skillsLine = labeled("Skills", skillsChips(monster));
+  skillsLine.dataset.dep = "all";
+  tidbits.append(skillsLine);
   if (monster.damageVulnerabilities) tidbits.append(labeled("Vulnerabilities", monster.damageVulnerabilities));
   if (monster.damageResistances) tidbits.append(labeled("Resistances", monster.damageResistances));
   const immunities = immunitiesText(monster);

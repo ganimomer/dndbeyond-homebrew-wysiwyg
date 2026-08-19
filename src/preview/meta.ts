@@ -7,22 +7,10 @@
  */
 import type { Monster } from "../statblock/model.js";
 import { el, metaSelect } from "./dom.js";
+import { chip } from "./tags.js";
 
 /** id of the shared subtype `<datalist>` (filled by wireMetaControls). */
 export const SUBTYPE_LIST_ID = "meta-subtype-list";
-
-function chip(label: string): HTMLElement {
-  const tag = el("span", "meta-tag");
-  tag.dataset.subtype = label;
-  const text = el("span", "meta-tag-label");
-  text.textContent = label;
-  const remove = el("button", "meta-tag-remove");
-  remove.type = "button";
-  remove.setAttribute("aria-label", `Remove ${label}`);
-  remove.textContent = "×";
-  tag.append(text, remove);
-  return tag;
-}
 
 function addInput(placeholder: string): HTMLInputElement {
   const input = el("input", "meta-add");
@@ -49,7 +37,8 @@ function subTypeEditor(subTypes: string[]): HTMLElement {
     wrap.append(document.createTextNode(" ("));
     subTypes.forEach((s, i) => {
       if (i) wrap.append(document.createTextNode(", "));
-      wrap.append(chip(s));
+      // The subtype's own label is the token the editor resolves to an option value.
+      wrap.append(chip({ value: s, label: s }));
     });
     wrap.append(document.createTextNode(" "), addInput("add…"), document.createTextNode(")"));
   } else {

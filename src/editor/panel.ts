@@ -13,6 +13,7 @@ import { saveSlot } from "../preview/dom.js";
 import { ContextMenu, makeIcon } from "./context-menu.js";
 import { applyDependencyHighlights, wireAbilityInputs } from "./ability-editing.js";
 import { wireMetaControls } from "./meta-editing.js";
+import { wireSkills } from "./skills-editing.js";
 import { ProseEditor } from "./prose-editor.js";
 import { AutosaveController } from "./autosave.js";
 import { applySaveState, HEADER_ORIGIN } from "./save-indicator.js";
@@ -34,7 +35,8 @@ export class EditorPanel {
   private stage!: HTMLElement;
   private unobserve: (() => void) | null = null;
   private rafToken = 0;
-  private menu: ContextMenu | null = null;
+  /** Menus mounted into the current block (name-row kebab, skills "＋"). */
+  private menus: ContextMenu[] = [];
   /** Abilities the user has edited this session; drives dependency highlights. */
   private changedAbilities = new Set<Ability>();
   /**
@@ -95,8 +97,7 @@ export class EditorPanel {
     // form keeps the edits either way, but this is what makes closing the
     // overlay feel like it committed them.
     void this.autosave.flush().then(() => this.autosave.destroy());
-    this.menu?.destroy();
-    this.menu = null;
+    this.destroyMenus();
     this.traitsEditor?.destroy();
     this.traitsEditor = null;
     this.traitsHost = null;
@@ -144,7 +145,7 @@ export class EditorPanel {
     const monster = this.adapter.read();
     if (!monster) return;
 
-    this.menu?.destroy();
+    this.destroyMenus();
     const block = renderStatBlock(monster);
 
     const slot = block.querySelector<HTMLElement>(".name-menu");
@@ -154,7 +155,7 @@ export class EditorPanel {
       slot.append(saveSlot(HEADER_ORIGIN));
       // Offer only the layout we're not currently in.
       const other = monster.ruleset === "5e" ? "5.5e" : "5e";
-      this.menu = new ContextMenu([
+      const menu = new ContextMenu([
         {
           label: `Use ${other} stat block`,
           icon: "loop",
@@ -164,6 +165,7 @@ export class EditorPanel {
           },
         },
       ]);
+      this.menus.push(menu);
       // Close is a standalone icon button, pinned to the far right of the row.
       const closeBtn = document.createElement("button");
       closeBtn.type = "button";
@@ -171,7 +173,7 @@ export class EditorPanel {
       closeBtn.setAttribute("aria-label", "Close");
       closeBtn.append(makeIcon("close"));
       closeBtn.addEventListener("click", () => this.close());
-      slot.append(this.menu.element, closeBtn);
+      slot.append(menu.element, closeBtn);
     }
 
     // Editing an ability writes it back (which re-renders via observe) and
@@ -197,6 +199,15 @@ export class EditorPanel {
         this.autosave.request(HEADER_ORIGIN);
       },
     });
+
+    // Skills are the one edit that doesn't go through autosave: DDB keeps them
+    // as separate records, so the adapter persists each add/remove itself and
+    // updates the listing table, which re-renders us through observe().
+    this.menus.push(
+      ...wireSkills(block, monster, this.adapter, (error) => {
+        console.error("[microbrewery] skill update failed", error);
+      }),
+    );
 
     // Preserve caret focus across the blur→re-render so tabbing between ability
     // inputs stays usable.
@@ -247,6 +258,11 @@ export class EditorPanel {
     // early while focused).
     holder.replaceChildren(this.traitsHost);
     this.traitsEditor.setContent(initialHtml);
+  }
+
+  private destroyMenus(): void {
+    for (const menu of this.menus) menu.destroy();
+    this.menus = [];
   }
 
   /** The ability whose score input currently holds focus, if any. */

@@ -53,6 +53,21 @@ export interface PageAdapter {
    */
   setDescription(section: SectionKey, editorHtml: string): void;
 
+  /**
+   * Every skill the page offers, with `selected` marking the ones the creature
+   * already has. Unlike the other option lists this one isn't read off a
+   * `<select>` — see the adapter.
+   */
+  skillOptions(): SelectOption[];
+  /**
+   * Adds a skill with the given final bonus. Async because skills aren't form
+   * fields: they're separate records with their own endpoint, so this persists
+   * on its own rather than waiting for autosave.
+   */
+  addSkill(value: string, bonus: number): Promise<void>;
+  /** Removes the named skill. Persists immediately, like `addSkill`. */
+  removeSkill(name: string): Promise<void>;
+
   /** The creature-type options from the form's type `<select>`. */
   typeOptions(): SelectOption[];
   /** The full sub-type tag options (value + label + selected). */

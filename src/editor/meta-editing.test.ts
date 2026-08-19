@@ -68,7 +68,7 @@ test("removing a chip commits the set without that tag's value", () => {
   const { adapter, calls } = stubAdapter(["62"]);
   wireMetaControls(scope, adapter);
 
-  scope.querySelector<HTMLButtonElement>(".meta-tag-remove")!.dispatchEvent(
+  scope.querySelector<HTMLButtonElement>(".sb-chip-remove")!.dispatchEvent(
     new jsdom.window.Event("click"),
   );
   assert.deepEqual(calls.sub, [[]]);

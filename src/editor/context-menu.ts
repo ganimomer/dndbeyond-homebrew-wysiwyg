@@ -41,6 +41,16 @@ export interface MenuItem {
   onClick: () => void;
 }
 
+export interface ContextMenuOptions {
+  /** Trigger glyph; defaults to the kebab "⋮". */
+  triggerText?: string;
+  triggerLabel?: string;
+  /** Extra class on the trigger, e.g. to reuse the chip "＋" styling. */
+  triggerClass?: string;
+  /** Extra class on the popover, e.g. "compact" for a long list. */
+  menuClass?: string;
+}
+
 export class ContextMenu {
   readonly element: HTMLElement;
   private isOpen = false;
@@ -52,19 +62,21 @@ export class ContextMenu {
     if (e.key === "Escape") this.close();
   };
 
-  constructor(items: MenuItem[]) {
+  constructor(items: MenuItem[], options: ContextMenuOptions = {}) {
     this.element = el("div", "cm");
 
     const trigger = el("button", "cm-trigger");
+    if (options.triggerClass) trigger.classList.add(options.triggerClass);
     trigger.type = "button";
-    trigger.setAttribute("aria-label", "Options");
-    trigger.textContent = "⋮";
+    trigger.setAttribute("aria-label", options.triggerLabel ?? "Options");
+    trigger.textContent = options.triggerText ?? "⋮";
     trigger.addEventListener("click", (e) => {
       e.stopPropagation();
       this.toggle();
     });
 
     const list = el("ul", "cm-menu");
+    if (options.menuClass) list.classList.add(options.menuClass);
     for (const item of items) {
       const li = el("li", "cm-item");
       if (item.danger) li.classList.add("danger");

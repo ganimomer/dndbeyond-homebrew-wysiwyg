@@ -24,6 +24,26 @@
   background: rgba(0, 0, 0, 0.06);
 }
 
+/* Inline variant: a chip-sized "＋" that sits in a stat-block value row rather
+ * than a 28px kebab in the name row. */
+.cm-trigger.inline {
+  width: auto;
+  height: auto;
+  padding: 0 5px;
+  border-radius: 4px;
+  /* `font` carries line-height, so the trigger takes the same line box as the
+   * chips beside it and the two end up exactly the same height. */
+  font: inherit;
+  color: inherit;
+  background: rgba(91, 22, 12, 0.1);
+  opacity: 0.65;
+}
+
+.cm-trigger.inline:hover {
+  opacity: 1;
+  background: rgba(91, 22, 12, 0.18);
+}
+
 .cm-menu {
   position: absolute;
   top: calc(100% + 6px);
@@ -45,6 +65,24 @@
 
 .cm.open .cm-menu {
   display: block;
+}
+
+/* A long single-column list (all 18 skills) rather than a few actions: no icon
+ * gutter, tighter rows, and scrolling once it outgrows the popover. */
+.cm-menu.compact {
+  width: 200px;
+  max-height: 280px;
+  overflow-y: auto;
+  left: 0;
+  right: auto;
+}
+
+.cm-menu.compact .cm-item {
+  padding: 6px 8px;
+}
+
+.cm-menu.compact .cm-icon {
+  display: none;
 }
 
 .cm-item {
