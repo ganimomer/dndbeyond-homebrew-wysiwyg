@@ -4,20 +4,16 @@
  * names live under `.statblock.v5e` (see statblock-5e.css).
  */
 import {
-  ABILITIES,
-  ABILITY_ABBREV,
-  type Ability,
   type Monster,
   type NamedEntry,
   type SectionKey,
 } from "../statblock/model.js";
 import {
-  abilityModifier,
   formatModifier,
   proficiencyBonus,
   xpForCr,
 } from "../statblock/compute.js";
-import { el, saveSlot, scoreInput } from "./dom.js";
+import { el, saveSlot } from "./dom.js";
 import { nameRow } from "./name-row.js";
 import { expandInline } from "./inline.js";
 import { sectionBody } from "./sections.js";
@@ -43,20 +39,6 @@ function labeled(label: string, value: string | Node): HTMLElement {
   return line;
 }
 
-function abilityCell(ability: Ability, monster: Monster): HTMLElement {
-  const cell = el("div", "stat");
-  const heading = el("span", "heading");
-  heading.textContent = ABILITY_ABBREV[ability];
-  const score = monster.abilities[ability];
-  const input = scoreInput(ability, score, `${ABILITY_ABBREV[ability]} score`);
-  const modifier = el("span", "modifier");
-  const modValue = el("span");
-  modValue.dataset.mod = ability;
-  modValue.textContent = formatModifier(abilityModifier(score));
-  modifier.append("(", modValue, ")");
-  cell.append(heading, el("br"), input, document.createTextNode(" "), modifier);
-  return cell;
-}
 
 function challengeText(monster: Monster): string {
   const xp = xpForCr(monster.challengeRating);
@@ -110,9 +92,7 @@ export function render5e(monster: Monster, options: RenderOptions = {}): HTMLEle
 
   basics.append(el("hr", "rule"));
 
-  const abilityBlock = el("div", "ability-block");
-  for (const a of ABILITIES) abilityBlock.append(abilityCell(a, monster));
-  basics.append(abilityBlock);
+  basics.append(island("abilities"));
 
   basics.append(el("hr", "rule"));
 

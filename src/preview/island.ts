@@ -24,7 +24,8 @@ export type IslandName =
   | "meta"
   | "name"
   | "armorClass"
-  | "hitPoints";
+  | "hitPoints"
+  | "abilities";
 
 export function island(name: IslandName): HTMLElement {
   const slot = document.createElement("span");

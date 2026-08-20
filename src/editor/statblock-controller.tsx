@@ -30,15 +30,15 @@ import { hiddenFields, visibleMeta } from "../preview/optional-fields.js";
 import { unarmoredAc } from "../statblock/armor-class.js";
 import { saveSlot } from "../preview/dom.js";
 import { ContextMenu, makeIcon } from "./context-menu.js";
-import { applyDependencyHighlights, wireAbilityInputs } from "./ability-editing.js";
+import { applyDependencyHighlights } from "./dependency-highlights.js";
 import { OptionPicker } from "./option-picker.js";
-import { wireSaveToggles } from "./saves-editing.js";
 import { ProseEditor } from "./prose-editor.js";
 import { applySaveState, HEADER_ORIGIN } from "./save-indicator.js";
 import { wireAddField } from "./field-visibility.js";
 import { NameField, NAME_FOCUS_KEY } from "../ui/fields/NameField.js";
 import { ArmorClassField } from "../ui/fields/ArmorClassField.js";
 import { HitPointsField } from "../ui/fields/HitPointsField.js";
+import { AbilityScores } from "../ui/fields/AbilityScores.js";
 
 export interface StatBlockControllerOptions {
   /** Called when the user closes the overlay (to restore the launcher). */
@@ -194,18 +194,10 @@ export class StatBlockController {
       slot.append(menu.element, closeBtn);
     }
 
-    // Editing an ability writes it back (which re-renders via observe) and
-    // records it so its dependents stay flagged across renders. Scores commit
-    // on `change`, i.e. on blur — never per keystroke.
-    wireAbilityInputs(block, monster, (ability, score) => {
-      this.editing.setAbility(ability, score);
-      this.store.update({ changedAbilities: markChanged(this.store.getSession(), ability) });
-    });
-    applyDependencyHighlights(block, session.changedAbilities);
+    // Dependency flags span the whole block, not just the tables, so they stay
+    // with whatever is drawing it.
+        applyDependencyHighlights(block, session.changedAbilities);
 
-    // 5.5e prints every save as a dot in the ability tables; those cells belong
-    // to a table that is still drawn by hand. The 5e chip row is a component.
-    wireSaveToggles(block, this.editing);
 
     // The "Add…" menu at the foot of the section. Revealing a field changes
     // nothing in the form, so `observe()` won't fire — re-render by hand.
@@ -304,6 +296,20 @@ export class StatBlockController {
             field={name}
             adapter={this.editing}
             autoOpen={pending === `add:${name}`}
+          />
+        );
+      case "abilities":
+        return (
+          <AbilityScores
+            monster={monster}
+            ruleset={monster.ruleset}
+            adapter={this.editing}
+            onCommit={(ability, score) => {
+              this.editing.setAbility(ability, score);
+              this.store.update({
+                changedAbilities: markChanged(this.store.getSession(), ability),
+              });
+            }}
           />
         );
       case "armorClass":

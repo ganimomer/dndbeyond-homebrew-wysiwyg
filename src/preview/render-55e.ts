@@ -5,22 +5,17 @@
  * (see statblock-55e.css). Structure mirrors the real page's DOM.
  */
 import {
-  ABILITY_ABBREV,
-  type Ability,
   type Monster,
   type NamedEntry,
   type SectionKey,
 } from "../statblock/model.js";
 import {
-  abilityModifier,
   formatModifier,
   initiativeText,
   proficiencyBonus,
-  saveBonus,
   xpForCr,
 } from "../statblock/compute.js";
-import { el, saveSlot, scoreInput } from "./dom.js";
-import { makeIcon } from "./icons.js";
+import { el, saveSlot } from "./dom.js";
 import { expandInline } from "./inline.js";
 import { sectionBody } from "./sections.js";
 import {
@@ -48,65 +43,7 @@ function labeled(label: string, value: string | Node): HTMLElement {
   return line;
 }
 
-/**
- * A Save cell: a character-sheet proficiency dot plus the bonus, the whole thing
- * one button that `wireSavingThrows` toggles.
- *
- * The number lives in its own `[data-save]` span rather than on the cell,
- * because `wireAbilityInputs` live-updates it by assigning `textContent` — on
- * the cell that would wipe the icon out.
- */
-function saveToggle(ability: Ability, monster: Monster): HTMLButtonElement {
-  const proficient = monster.savingThrows[ability] !== undefined;
-  const button = el("button", "save-toggle");
-  button.type = "button";
-  button.dataset.saveToggle = ability;
-  button.setAttribute("aria-pressed", String(proficient));
-  button.setAttribute(
-    "aria-label",
-    `${ABILITY_ABBREV[ability]} saving throw proficiency`,
-  );
 
-  const value = el("span");
-  value.dataset.save = ability;
-  value.textContent = formatModifier(saveBonus(monster, ability));
-
-  button.append(makeIcon(proficient ? "circle" : "radioButtonUnchecked", 13), value);
-  return button;
-}
-
-function abilityTable(kind: "physical" | "mental", abilities: Ability[], monster: Monster): HTMLTableElement {
-  const table = el("table", `stat-table ${kind}`);
-
-  const thead = el("thead");
-  const headRow = el("tr");
-  headRow.append(el("th"), el("th"));
-  const modTh = el("th");
-  modTh.textContent = "Mod";
-  const saveTh = el("th");
-  saveTh.textContent = "Save";
-  headRow.append(modTh, saveTh);
-  thead.append(headRow);
-
-  const tbody = el("tbody");
-  for (const a of abilities) {
-    const row = el("tr");
-    const label = el("th");
-    label.textContent = ABILITY_ABBREV[a];
-    const score = el("td");
-    score.append(scoreInput(a, monster.abilities[a], `${ABILITY_ABBREV[a]} score`));
-    const mod = el("td", "modifier");
-    mod.dataset.mod = a;
-    mod.textContent = formatModifier(abilityModifier(monster.abilities[a]));
-    const save = el("td", "modifier");
-    save.append(saveToggle(a, monster));
-    row.append(label, score, mod, save);
-    tbody.append(row);
-  }
-
-  table.append(thead, tbody);
-  return table;
-}
 
 function crText(monster: Monster): string {
   const xp = xpForCr(monster.challengeRating);
@@ -174,12 +111,7 @@ export function render55e(monster: Monster, options: RenderOptions = {}): HTMLEl
   basics.append(labeled("Speed", island("movements")));
 
   // Ability tables.
-  const stats = el("div", "stats");
-  stats.append(
-    abilityTable("physical", ["str", "dex", "con"], monster),
-    abilityTable("mental", ["int", "wis", "cha"], monster),
-  );
-  basics.append(stats);
+  basics.append(island("abilities"));
 
   // Tidbits (short labels, canonical 5.5e order). A field the creature has no
   // value for isn't printed at all — the "Add…" menu below brings it back.

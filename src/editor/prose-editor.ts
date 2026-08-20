@@ -1,6 +1,6 @@
 /**
  * A single editable description section, backed by a Lexical editor. This is the
- * editable-prose counterpart to the ability `scoreInput`: it mounts into a host
+ * editable-prose counterpart to the field components: it mounts into a host
  * element the view keeps stable across re-renders, owns its own state, and
  * commits edits back through the adapter — never torn down when the form
  * mutates underneath it.
