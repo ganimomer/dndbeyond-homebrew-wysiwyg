@@ -23,11 +23,31 @@ const jsdom = new JSDOM("<!doctype html><html><body></body></html>", {
 const { window } = jsdom;
 
 /**
- * Globals jsdom must win, even though Node defines its own. `navigator` is the
- * one that actually bites (Node ≥21 has a stub); the rest are here so the DOM's
- * view of itself stays self-consistent.
+ * Globals jsdom must win, even though Node defines its own.
+ *
+ * The event classes are the ones that actually bite. Node has had its own
+ * `Event` and `EventTarget` since v15, so without this a test doing
+ * `el.dispatchEvent(new Event("change"))` builds a *Node* Event and jsdom
+ * rejects it: "parameter 1 is not of type 'Event'". Everything DOM-facing has
+ * to come from the same realm as the nodes it is dispatched at.
+ *
+ * jsdom-only classes (KeyboardEvent, MouseEvent, HTMLElement…) need no entry —
+ * Node doesn't define them, so they are copied anyway.
  */
-const OVERRIDE = new Set(["window", "document", "navigator", "location", "history", "self"]);
+const OVERRIDE = new Set([
+  "window",
+  "document",
+  "navigator",
+  "location",
+  "history",
+  "self",
+  "Event",
+  "EventTarget",
+  "CustomEvent",
+  "MessageEvent",
+  "ErrorEvent",
+  "DOMException",
+]);
 
 /**
  * Plain functions that read `this`. Copied bare they'd be called with

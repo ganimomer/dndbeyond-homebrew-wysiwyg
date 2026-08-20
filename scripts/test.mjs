@@ -37,7 +37,7 @@ await esbuild.build({
   // Bundle our own `.ts` (resolving the `.js` specifiers), but load npm packages
   // (lexical, jsdom…) from node_modules at runtime rather than inlining them.
   packages: "external",
-  loader: { ".css": "text" },
+  loader: { ".css": "text", ".html": "text" },
   // Same JSX settings as the real build (see build.mjs).
   jsx: "automatic",
   jsxImportSource: "preact",
