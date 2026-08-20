@@ -24,6 +24,7 @@ import {
 import { abilityModifier, proficiencyForCr } from "../statblock/compute.js";
 import { parseAdjustment } from "../statblock/adjustments.js";
 import { ddbToEditorHtml, editorHtmlToDdb } from "../preview/ddb-markup.js";
+import { renamedEditUrl } from "./edit-url.js";
 
 /** Every DOM hook the monster adapter needs, in one place. */
 export const SELECTORS = {
@@ -347,6 +348,26 @@ function createUrl(path: string): string {
   return id ? `/monster/${path}/create/${id}` : "";
 }
 
+/**
+ * Points the page at the monster's new URL after a save reslugged it — which is
+ * what renaming a creature does, since DDB builds the slug from the name.
+ *
+ * The form's `action` is a hard-coded slugged path (not document-relative), so
+ * it has to be patched alongside the address bar: it, not `location`, is where
+ * the next save posts. Left stale, every later autosave would go to a URL the
+ * monster no longer has.
+ *
+ * `replaceState` rather than `pushState` — the user renamed a creature, they
+ * didn't navigate, and Back should still lead where it did before. DDB's own
+ * router may own `history.state`, so it's carried over untouched.
+ */
+function followSlugChange(form: HTMLFormElement, responseUrl: string): void {
+  const next = renamedEditUrl(location.href, responseUrl);
+  if (!next) return;
+  history.replaceState(history.state, "", next);
+  if (form.getAttribute("action")) form.setAttribute("action", new URL(next).pathname);
+}
+
 function cookie(name: string): string {
   return document.cookie.split("; ").find((c) => c.startsWith(`${name}=`))?.slice(name.length + 1) ?? "";
 }
@@ -629,8 +650,10 @@ export class DdbMonsterAdapter implements PageAdapter {
    * there's nothing to patch back.
    *
    * The response is the whole ~530 KB edit page, and we want none of it, so the
-   * body is discarded unread. A dead session answers 200 with a redirect to
-   * sign-in rather than a 4xx, hence the URL check.
+   * body is discarded unread. Its *URL* earns its keep twice over, though: a
+   * dead session answers 200 with a redirect to sign-in rather than a 4xx,
+   * hence the check; and the redirect lands on the monster's canonical edit
+   * URL, which is how a rename's new slug reaches us (see `followSlugChange`).
    *
    * Serializing DDB's live form (never our model) is what makes this safe: the
    * payload is byte-for-byte what a native submit sends. The flip side is that
@@ -652,6 +675,8 @@ export class DdbMonsterAdapter implements PageAdapter {
 
     if (!response.ok) throw new Error(`save failed (${response.status})`);
     if (/sign-in|login/i.test(response.url)) throw new Error("save failed (signed out)");
+
+    followSlugChange(form, response.url);
   }
 
   savingThrowOptions(): SelectOption[] {
