@@ -50,6 +50,10 @@ export class ProseEditor {
 
   /** Binds the editor to `host` and loads the initial content. */
   mount(host: HTMLElement): void {
+    // The attribute, not just the property: it is the form that survives
+    // environments where contentEditable isn't implemented, and what the CSS
+    // and the tests match on. (Same reasoning as the creature name's field.)
+    host.setAttribute("contenteditable", "true");
     host.contentEditable = "true";
     this.editor.setRootElement(host);
     this.dispose = mergeRegister(

@@ -1,52 +1,75 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { JSDOM } from "jsdom";
-
-// option-picker builds DOM via the global `document`; back it with jsdom.
-const jsdom = new JSDOM("<!doctype html><html><body></body></html>");
-(globalThis as Record<string, unknown>).document = jsdom.window.document;
-(globalThis as Record<string, unknown>).window = jsdom.window;
-// jsdom has no layout, so it leaves scrollIntoView unimplemented; the picker
-// calls it purely to keep the highlight in view.
-jsdom.window.Element.prototype.scrollIntoView = () => {};
-
-const { OptionPicker } = await import("./option-picker.js");
+import { render } from "preact";
+import { useState } from "preact/hooks";
+import "../sync-rendering.js";
+import { OptionPicker, type PickerOption, type PickerTrigger } from "./OptionPicker.js";
 
 const DAMAGE = ["Acid", "Cold", "Fire", "Force", "Lightning", "Necrotic"];
 
-const click = (el: Element) =>
-  el.dispatchEvent(new jsdom.window.MouseEvent("click", { bubbles: true }));
+const click = (el: Element) => el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 const press = (el: Element, key: string) =>
-  el.dispatchEvent(new jsdom.window.KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+  el.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
 
 /**
- * The mounted picker's click-away teardown, kept so the next `setup` can detach
- * it: it lives on `window` rather than in the tree, so it would otherwise
- * outlive the test that opened it and answer the next one's clicks.
+ * A host holding the picker's open state, standing in for whatever field owns
+ * it. `open` is a prop, so somebody has to keep it.
  */
+function Host({
+  options,
+  trigger,
+  focusKey,
+  onPicker,
+}: {
+  options: PickerOption[];
+  trigger: PickerTrigger;
+  focusKey?: string;
+  onPicker: (open: () => void) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  onPicker(() => setOpen(true));
+  return (
+    <OptionPicker
+      options={options}
+      trigger={trigger}
+      focusKey={focusKey}
+      open={open}
+      onOpenChange={setOpen}
+    />
+  );
+}
+
+/** The mounted host, unmounted by the next setup so its listeners go with it. */
 let disposeLast: (() => void) | null = null;
 
 function setup(labels: string[] = DAMAGE, { selected = "", focusKey = "" } = {}) {
   disposeLast?.();
   const taken: string[] = [];
-  const picker = new OptionPicker(
-    labels.map((label) => ({
-      label,
-      selected: label === selected,
-      onClick: () => taken.push(label),
-    })),
-    {
-      trigger: { text: "+", ariaLabel: "Add to damageResistances", variant: "add" },
-      ...(focusKey ? { focusKey } : {}),
-    },
-  );
-  disposeLast = () => picker.destroy();
-
   // Attached, because the click-away listens on `window` — a detached tree has
   // no path leading there.
-  jsdom.window.document.body.replaceChildren(picker.element);
+  const host = document.createElement("div");
+  document.body.replaceChildren(host);
 
-  const root = picker.element;
+  let openPicker = () => {};
+  render(
+    <Host
+      options={labels.map((label) => ({
+        label,
+        selected: label === selected,
+        onClick: () => taken.push(label),
+      }))}
+      trigger={{ text: "+", ariaLabel: "Add to damageResistances", variant: "add" }}
+      focusKey={focusKey || undefined}
+      onPicker={(open) => {
+        openPicker = open;
+      }}
+    />,
+    host,
+  );
+  disposeLast = () => render(null, host);
+
+  const root = host.querySelector<HTMLElement>(".cp")!;
+  const unmount = () => render(null, host);
   const filter = root.querySelector<HTMLInputElement>(".cp-filter")!;
   const trigger = root.querySelector<HTMLButtonElement>(".cp-trigger")!;
   const visible = () =>
@@ -55,19 +78,19 @@ function setup(labels: string[] = DAMAGE, { selected = "", focusKey = "" } = {})
       .map((li) => li.textContent ?? "");
   const active = () => root.querySelector<HTMLElement>(".cp-option.is-active")?.textContent ?? null;
 
-  return { picker, root, filter, trigger, taken, visible, active };
+  return { picker: { open: openPicker }, unmount, root, filter, trigger, taken, visible, active };
 }
 
 /** Types into the filter box the way a keypress would. */
 const type = (input: HTMLInputElement, value: string) => {
   input.value = value;
-  input.dispatchEvent(new jsdom.window.Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("input", { bubbles: true }));
 };
 
 /** A click on the page somewhere the picker isn't. */
 const clickAway = () => {
-  const elsewhere = jsdom.window.document.createElement("div");
-  jsdom.window.document.body.append(elsewhere);
+  const elsewhere = document.createElement("div");
+  document.body.append(elsewhere);
   click(elsewhere);
   elsewhere.remove();
 };
@@ -77,7 +100,7 @@ test("closed, the picker shows a ＋ and nothing else", () => {
 
   assert.equal(root.classList.contains("open"), false);
   assert.equal(filter.getAttribute("aria-expanded"), "false");
-  assert.notEqual(jsdom.window.document.activeElement, filter);
+  assert.notEqual(document.activeElement, filter);
 });
 
 test("the options are in the DOM before it's ever opened", () => {
@@ -92,7 +115,7 @@ test("opening focuses the filter box and highlights the first option", () => {
 
   click(trigger);
 
-  assert.equal(jsdom.window.document.activeElement, filter);
+  assert.equal(document.activeElement, filter);
   assert.equal(filter.getAttribute("aria-expanded"), "true");
   assert.equal(active(), "Acid");
 });
@@ -233,7 +256,7 @@ test("hovering an option moves the highlight to it", () => {
   const fire = [...root.querySelectorAll<HTMLElement>(".cp-option")].find(
     (li) => li.textContent === "Fire",
   )!;
-  fire.dispatchEvent(new jsdom.window.MouseEvent("mouseenter", { bubbles: false }));
+  fire.dispatchEvent(new MouseEvent("mouseenter", { bubbles: false }));
 
   assert.equal(active(), "Fire");
 });
@@ -261,7 +284,7 @@ test("taking an option hands focus back to the ＋", () => {
 
   press(filter, "Enter");
 
-  assert.equal(jsdom.window.document.activeElement, trigger);
+  assert.equal(document.activeElement, trigger);
 });
 
 test("Escape puts focus back on the ＋", () => {
@@ -270,7 +293,7 @@ test("Escape puts focus back on the ＋", () => {
 
   press(filter, "Escape");
 
-  assert.equal(jsdom.window.document.activeElement, trigger);
+  assert.equal(document.activeElement, trigger);
 });
 
 test("the click that opens it is not also a click away from it", () => {
@@ -312,11 +335,11 @@ test("keys do nothing while it's closed", () => {
   assert.equal(active(), null);
 });
 
-test("destroy detaches the click-away, so a discarded picker stops listening", () => {
-  const { picker, trigger, root } = setup();
+test("unmounting detaches the click-away, so a discarded picker stops listening", () => {
+  const { unmount, trigger, root } = setup();
   click(trigger);
 
-  picker.destroy();
+  unmount();
   // Re-open the closed picker's markup by hand: were the listener still
   // attached, this stray click would close it again.
   root.classList.add("open");

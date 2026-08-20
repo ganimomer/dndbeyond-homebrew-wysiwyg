@@ -1,17 +1,24 @@
 /**
- * The editor overlay's root component.
+ * The editor overlay's root.
  *
- * It owns everything above the stat block: the stylesheet the shadow root
- * carries, the overlay backdrop, and the scrolling page the block sits on. The
- * block itself is still drawn by `StatBlockController`, into a container this
- * component owns — the one seam left between the Preact tree and the render
- * loop it is replacing. Fields move across it one at a time; when the last one
- * has, the container and the controller both go.
+ * It owns the shadow root's stylesheet, the backdrop, the scrolling page, and
+ * the one subscription to the store: everything below reads through
+ * `store-context`, so a change re-renders the tree and Preact works out what
+ * actually moved.
+ *
+ * The two kinds of change want different timing, which is why the store says
+ * which it was. Form mutations arrive in bursts — one edit can touch four
+ * fields — so they coalesce into a frame. Session changes must not: a
+ * mini-form's click-away depends on the re-render landing inside the click that
+ * caused it, while that click is still in its capture phase.
  */
-import { useLayoutEffect, useMemo, useRef } from "preact/hooks";
+import { useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { PageAdapter } from "../adapter/types.js";
 import { EditorStore } from "../state/store.js";
-import { StatBlockController } from "../editor/statblock-controller.js";
+import { applyDependencyHighlights } from "../editor/dependency-highlights.js";
+import { applySaveState } from "../editor/save-indicator.js";
+import { StoreContext } from "./store-context.js";
+import { StatBlock } from "./StatBlock.js";
 import panelCss from "../editor/panel.css";
 import contextMenuCss from "../editor/context-menu.css";
 import optionPickerCss from "../editor/option-picker.css";
@@ -34,31 +41,75 @@ export interface AppProps {
 }
 
 export function App({ adapter, onClose }: AppProps) {
+  // Started as it is created, not in the effect below: the very first render
+  // has to have the creature in hand. Reading the form is what the store is
+  // for, and the overlay is never built without one.
+  const store = useMemo(() => {
+    const created = new EditorStore(adapter);
+    created.start();
+    return created;
+  }, [adapter]);
+  const [, repaint] = useState(0);
   const stage = useRef<HTMLDivElement>(null);
-  const store = useMemo(() => new EditorStore(adapter), [adapter]);
+  const frame = useRef(0);
 
-  // A layout effect, not an ordinary one: the block has to be in the DOM by the
-  // time the mounting render returns, the way it was when the panel built it
-  // by hand. `onClose` is stable for the overlay's lifetime, so this runs once
-  // per adapter and is not restarted underneath itself.
   useLayoutEffect(() => {
-    store.start();
-    const controller = new StatBlockController(store, stage.current!, { onClose });
-    controller.start();
+    const unsubscribe = store.subscribe((change) => {
+      if (change === "session") {
+        repaint((n) => n + 1);
+        return;
+      }
+      if (frame.current) return;
+      frame.current = requestAnimationFrame(() => {
+        frame.current = 0;
+        repaint((n) => n + 1);
+      });
+    });
+    // Best-effort flush when the tab goes away mid-debounce. The save is far
+    // too large for `keepalive`, so an immediate unload can still cut it off —
+    // but DDB puts up its own unsaved-changes prompt, which usually buys enough
+    // time.
+    const onBeforeUnload = () => void store.autosave.flush();
+    window.addEventListener("beforeunload", onBeforeUnload);
+
     return () => {
-      controller.stop();
+      unsubscribe();
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      if (frame.current) cancelAnimationFrame(frame.current);
       store.stop();
     };
   }, [store]);
 
+  // Saves land on their own schedule — a request starting or finishing doesn't
+  // touch the form — so the indicators are painted directly rather than through
+  // a re-render.
+  useLayoutEffect(() => {
+    return store.autosave.onStateChange((state) => {
+      if (stage.current) applySaveState(stage.current, state, () => store.autosave.retry());
+    });
+  }, [store]);
+
+  const monster = store.getMonster();
+
+  // Two passes over the finished block that belong to no single field: the
+  // dependency flags a score change leaves across the whole thing, and the
+  // save indicator repainted onto freshly rendered slots.
+  useLayoutEffect(() => {
+    if (!stage.current || !monster) return;
+    applyDependencyHighlights(stage.current, store.getSession().changedAbilities);
+    applySaveState(stage.current, store.autosave.state, () => store.autosave.retry());
+  });
+
   return (
-    <>
+    <StoreContext.Provider value={store}>
       <style dangerouslySetInnerHTML={{ __html: STYLES }} />
       <div class="overlay">
         <div class="page">
-          <div class="stage" ref={stage} />
+          <div class="stage" ref={stage}>
+            {monster ? <StatBlock monster={monster} onClose={onClose} /> : null}
+          </div>
         </div>
       </div>
-    </>
+    </StoreContext.Provider>
   );
 }

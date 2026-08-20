@@ -26,7 +26,7 @@ import { CommandStack } from "./command.js";
 import { EditingAdapter } from "./editing.js";
 // The registry of which rows are optional. It moves under `ui/` when the fields
 // become components; the store only needs it to prune stale reveals.
-import { basicsFields } from "../preview/optional-fields.js";
+import { basicsFields } from "../ui/fields/registry.js";
 import { unarmoredAc } from "../statblock/armor-class.js";
 import { emptySession, type SessionState } from "./session.js";
 

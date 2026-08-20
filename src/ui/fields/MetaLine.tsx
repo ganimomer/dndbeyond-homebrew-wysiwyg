@@ -16,7 +16,7 @@ import type { ComponentChildren } from "preact";
 import { useState } from "preact/hooks";
 import type { SelectOption } from "../../adapter/types.js";
 import type { Monster } from "../../statblock/model.js";
-import type { OptionalField } from "../../preview/optional-fields.js";
+import type { OptionalField } from "./registry.js";
 import { Chip } from "../shared/Chip.js";
 import { OptionPicker } from "../shared/OptionPicker.js";
 

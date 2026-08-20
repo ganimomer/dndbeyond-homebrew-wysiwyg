@@ -12,7 +12,7 @@
  * own caret, so it stops meaning anything once the last hand-drawn field goes.
  */
 import type { Ability } from "../statblock/model.js";
-import type { OptionalField } from "../preview/optional-fields.js";
+import type { OptionalField } from "../ui/fields/registry.js";
 
 export interface SessionState {
   /**

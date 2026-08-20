@@ -1,0 +1,214 @@
+/**
+ * The block as a whole: which rows are printed, in what order, and what the two
+ * layouts disagree about. Each field's own behaviour is its component's test.
+ */
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { emptyMonster, type Monster, type Ruleset } from "../statblock/model.js";
+import { basicsFields, hiddenFields, tidbitFields } from "./fields/registry.js";
+import { fireEvent } from "../test-support/render.js";
+import { renderBlock } from "../test-support/editor.js";
+
+const creature = (ruleset: Ruleset, overrides: Partial<Monster> = {}): Monster => ({
+  ...emptyMonster(),
+  ruleset,
+  ...overrides,
+});
+
+/** The optional rows currently on the block, in print order. */
+const rows = (root: ShadowRoot): string[] =>
+  [...root.querySelectorAll<HTMLElement>(".basics .line[data-row]")].map((l) => l.dataset.row!);
+
+/** A creature with a value for every optional field. */
+const FURNISHED: Partial<Monster> = {
+  subTypes: ["elf"],
+  savingThrows: { dex: 5 },
+  skills: { Stealth: 6 },
+  damageVulnerabilities: ["Fire"],
+  damageResistances: ["Cold"],
+  damageImmunities: ["Poison"],
+  conditionImmunities: ["Charmed"],
+  gear: "Longsword",
+  senses: [{ type: "Darkvision", note: "60 ft." }],
+  languages: "Common",
+};
+
+for (const ruleset of ["5e", "5.5e"] as const) {
+  test(`${ruleset} prints no optional row a blank creature has no value for`, (t) => {
+    const { root } = renderBlock(t, creature(ruleset));
+
+    assert.deepEqual(rows(root), []);
+    // The rows that aren't optional are still there.
+    assert.ok(root.querySelector('.sb-chips[data-field="movements"]'), "Speed");
+    assert.ok(root.querySelector('.sb-chips[data-field="hitPoints"]'), "HP");
+  });
+
+  test(`${ruleset} prints a row once the creature has a value for it`, (t) => {
+    const { root } = renderBlock(t, creature(ruleset, { languages: "Common" }));
+
+    assert.deepEqual(rows(root), ["languages"]);
+    assert.equal(root.querySelector<HTMLInputElement>(".sb-text-input")?.value, "Common");
+  });
+
+  test(`${ruleset} prints a revealed row empty, ready to fill in`, (t) => {
+    const { root } = renderBlock(t, creature(ruleset), { revealed: ["languages"] });
+
+    assert.deepEqual(rows(root), ["languages"]);
+    assert.equal(root.querySelector<HTMLInputElement>(".sb-text-input")?.value, "");
+  });
+
+  test(`${ruleset} keeps every optional row in the layout's print order`, (t) => {
+    const { root } = renderBlock(t, creature(ruleset, FURNISHED));
+
+    assert.deepEqual(
+      rows(root),
+      tidbitFields(ruleset).map((spec) => spec.key),
+    );
+  });
+
+  test(`${ruleset} offers the missing fields, and drops the footer once none are`, (t) => {
+    const blank = renderBlock(t, creature(ruleset));
+    assert.ok(blank.root.querySelector(".add-field"), "the Add… footer is present");
+
+    const hidden = hiddenFields(creature(ruleset), undefined, ruleset);
+    assert.ok(hidden.some((s) => s.key === "skills"));
+    assert.ok(!hidden.some((s) => s.key === "size"), "size has a value");
+
+    const full = renderBlock(t, creature(ruleset, FURNISHED));
+    assert.deepEqual(hiddenFields(creature(ruleset, FURNISHED), undefined, ruleset), []);
+    assert.equal(full.root.querySelector(".add-field"), null, "nothing left to add");
+  });
+
+  test(`${ruleset} prints the meta line only when a slot has something to say`, (t) => {
+    const shown = renderBlock(t, creature(ruleset, { alignment: "" }));
+    assert.ok(shown.root.querySelector(".meta"), "size and type still show");
+
+    // Nothing at all rather than an empty italic line of stray separators.
+    const bare = renderBlock(t, creature(ruleset, { size: "", type: "", alignment: "" }));
+    assert.equal(bare.root.querySelector(".meta"), null);
+  });
+
+  test(`${ruleset} flags the armor class and hit points as derived`, (t) => {
+    // The highlight that warns a score edit may have invalidated them — the
+    // only signal while the chips are closed. In 5.5e the AC flag sits on the
+    // value span rather than the line, which also carries Initiative.
+    const { root } = renderBlock(t, creature(ruleset));
+
+    assert.ok(
+      root.querySelector('.sb-chips[data-field="armorClass"]')?.closest('[data-dep~="dex"]'),
+      "armor class is inside a dex-dependent element",
+    );
+    assert.equal(
+      root.querySelector('.sb-chips[data-field="hitPoints"]')?.closest(".line")?.dataset.dep,
+      "con",
+    );
+  });
+
+  test(`${ruleset} lands the caret somewhere real for every field it offers`, (t) => {
+    // Adding a row is always a prelude to filling it in, so each spec names the
+    // control the caret should go to. If the two ever disagreed the caret would
+    // silently land nowhere.
+    const monster = creature(ruleset);
+    const { root } = renderBlock(t, monster, {
+      revealed: basicsFields(ruleset).map((spec) => spec.key),
+    });
+
+    for (const spec of basicsFields(ruleset)) {
+      assert.ok(
+        root.querySelector(`[data-focus-key="${spec.focusKey}"]`),
+        `${spec.key} names ${spec.focusKey}, which is on nothing`,
+      );
+    }
+  });
+}
+
+test("5.5e prints damage and condition immunities as one row", (t) => {
+  const { root } = renderBlock(
+    t,
+    creature("5.5e", { damageImmunities: ["Poison"], conditionImmunities: ["Charmed"] }),
+  );
+
+  assert.deepEqual(rows(root), ["immunities"]);
+});
+
+test("5e prints damage and condition immunities as two rows", (t) => {
+  const { root } = renderBlock(
+    t,
+    creature("5e", { damageImmunities: ["Poison"], conditionImmunities: ["Charmed"] }),
+  );
+
+  assert.deepEqual(rows(root), ["damageImmunities", "conditionImmunities"]);
+});
+
+test("the Add… menu names every field the creature hasn't got, meta slots first", (t) => {
+  const { root } = renderBlock(t, creature("5.5e"));
+
+  assert.deepEqual(
+    [...root.querySelectorAll(".add-field .cm-item .cm-label")].map((n) => n.textContent),
+    [
+      "Subtype",
+      "Skills",
+      "Vulnerabilities",
+      "Resistances",
+      "Immunities",
+      "Gear",
+      "Senses",
+      "Languages",
+    ],
+  );
+});
+
+test("picking from the Add… menu reveals that field and names the control to land in", (t) => {
+  const { root, store } = renderBlock(t, creature("5.5e"));
+
+  const item = [...root.querySelectorAll<HTMLElement>(".add-field .cm-item")].find(
+    (li) => li.textContent === "Senses",
+  )!;
+  fireEvent.click(item);
+
+  assert.deepEqual([...store.getSession().revealed], ["senses"]);
+  assert.equal(store.getSession().pendingFocus, "add:senses");
+});
+
+test("a revealed field leaves the menu and appears on the block", (t) => {
+  const { root } = renderBlock(t, creature("5.5e"), { revealed: ["senses"] });
+
+  const offered = [...root.querySelectorAll(".add-field .cm-item .cm-label")].map(
+    (n) => n.textContent,
+  );
+  assert.ok(!offered.includes("Senses"), "already on the block");
+  assert.ok(root.querySelector('.sb-chips[data-field="senses"]'), "and rendered");
+});
+
+test("a section D&D Beyond has text for is editable in place", (t) => {
+  const { root } = renderBlock(
+    t,
+    creature("5.5e", {
+      descriptionHtml: {
+        traits: "<p>Legendary Resistance (3/Day).</p>",
+        actions: "<p>Multiattack.</p>",
+      },
+    }),
+  );
+
+  // Every populated section, not just Traits — which is all the old loop could
+  // manage, because each one cost it another editor to hold and guard.
+  for (const section of ["traits", "actions"]) {
+    const body = root.querySelector(`[data-section="${section}"]`);
+    assert.ok(body, `${section} is on the block`);
+    assert.equal(body!.getAttribute("contenteditable"), "true", `${section} is editable`);
+  }
+});
+
+test("a section that only exists as sample entries stays read-only", (t) => {
+  // Nothing behind it in D&D Beyond's form to write back to.
+  const { root } = renderBlock(
+    t,
+    creature("5.5e", { traits: [{ name: "Spider Climb", text: "The vampire can climb." }] }),
+  );
+
+  const body = root.querySelector('[data-section="traits"]');
+  assert.ok(body);
+  assert.equal(body!.getAttribute("contenteditable"), null);
+  assert.match(body!.textContent ?? "", /Spider Climb/);
+});

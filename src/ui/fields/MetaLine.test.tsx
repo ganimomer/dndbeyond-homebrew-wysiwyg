@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { SelectOption } from "../../adapter/types.js";
 import { emptyMonster, type Monster } from "../../statblock/model.js";
-import { visibleMeta } from "../../preview/optional-fields.js";
+import { visibleMeta } from "./registry.js";
 import { fireEvent, renderInShadowRoot, userEvent } from "../../test-support/render.js";
 import { MetaLine, type MetaControlsAdapter } from "./MetaLine.js";
 

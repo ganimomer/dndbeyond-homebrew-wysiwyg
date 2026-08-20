@@ -1,5 +1,5 @@
 /**
- * Which parts of the basics section are optional, and what each one renders.
+ * Which parts of the basics section are optional.
  *
  * A real stat block prints only the rows a creature actually has, so a field
  * with no value isn't rendered — there's no placeholder row and no stray "+".
@@ -7,12 +7,11 @@
  * is session state (`revealed`), and the moment the user gives it a value it
  * renders on its own merit and the reveal stops mattering.
  *
- * One table drives both the renderers and that menu, so the two can't drift.
+ * One table drives both the layout and that menu, so the two can't drift.
  */
-import type { Monster, Ruleset } from "../statblock/model.js";
-import { hasAdjustments, type AdjustmentField } from "../statblock/adjustments.js";
-import { hasSenses } from "../statblock/senses.js";
-import { island } from "./island.js";
+import type { Monster, Ruleset } from "../../statblock/model.js";
+import { hasAdjustments, type AdjustmentField } from "../../statblock/adjustments.js";
+import { hasSenses } from "../../statblock/senses.js";
 
 export type OptionalField =
   | "size"
@@ -49,12 +48,6 @@ export interface FieldSpec {
   focusKey: string;
   /** True when the creature has a value, i.e. the row renders unprompted. */
   hasValue(monster: Monster): boolean;
-  /**
-   * The row's value (or, for a revealed-but-empty field, its empty form).
-   * Absent for the meta slots: they are not rows, and the meta line assembles
-   * itself from whichever are showing (see `visibleMeta`).
-   */
-  render?(monster: Monster): Node;
 }
 
 /** Options rendered by both layouts, in meta-sentence order. */
@@ -102,7 +95,6 @@ function adjustments(
     menuLabel,
     focusKey: `add:${key}`,
     hasValue: (m) => hasAdjustments(m, key),
-    render: () => island(key),
   };
 }
 
@@ -115,7 +107,6 @@ const SKILLS: FieldSpec = {
   // Every skill bonus moves with its governing ability score.
   dep: "all",
   hasValue: (m) => Object.keys(m.skills).length > 0,
-  render: () => island("skills"),
 };
 
 const SENSES: FieldSpec = {
@@ -125,7 +116,6 @@ const SENSES: FieldSpec = {
   label: "Senses",
   menuLabel: "Senses",
   hasValue: hasSenses,
-  render: () => island("senses"),
 };
 
 const LANGUAGES: FieldSpec = {
@@ -136,7 +126,6 @@ const LANGUAGES: FieldSpec = {
   menuLabel: "Languages",
   hasValue: (m) => m.languages !== "",
   // A component now: the registry only says where it goes (see island.ts).
-  render: () => island("languages"),
 };
 
 const GEAR: FieldSpec = {
@@ -146,7 +135,6 @@ const GEAR: FieldSpec = {
   label: "Gear",
   menuLabel: "Gear",
   hasValue: (m) => m.gear !== "",
-  render: () => island("gear"),
 };
 
 /** 5.5e tidbits, in the order the 2024 stat block prints them. */
@@ -171,7 +159,6 @@ const TIDBITS_5E: FieldSpec[] = [
     menuLabel: "Saving Throws",
     // 5.5e has no such row: it prints all six saves in the ability tables.
     hasValue: (m) => Object.keys(m.savingThrows).length > 0,
-    render: () => island("savingThrows"),
   },
   SKILLS,
   adjustments("damageVulnerabilities", "Damage Vulnerabilities", "Damage Vulnerabilities"),
