@@ -4,6 +4,7 @@
  * because DDB's own field is — creatures carry things like
  * "60 ft. (blind beyond this radius)".
  */
+import type { Monster } from "./model.js";
 
 /** The sense types DDB offers, in the order its select lists them. */
 export const SENSE_TYPES = ["Blindsight", "Darkvision", "Tremorsense", "Truesight"] as const;
@@ -27,4 +28,9 @@ export function defaultSenseNote(type: string): string {
 /** "Darkvision 120 ft." — the sense as the stat block prints it. */
 export function senseText(type: string, note: string): string {
   return note ? `${type} ${note}` : type;
+}
+
+/** True when a creature has anything to print on the Senses line. */
+export function hasSenses(monster: Monster): boolean {
+  return monster.senses.length > 0 || monster.passivePerception !== undefined;
 }

@@ -12,7 +12,7 @@
 import type { Monster, Ruleset } from "../statblock/model.js";
 import { metaSlot, subTypeEditor } from "./meta.js";
 import { hasAdjustments, type AdjustmentField } from "../statblock/adjustments.js";
-import { hasSenses, senseChips } from "./senses-line.js";
+import { hasSenses } from "../statblock/senses.js";
 import { island } from "./island.js";
 
 export type OptionalField =
@@ -126,7 +126,7 @@ const SENSES: FieldSpec = {
   label: "Senses",
   menuLabel: "Senses",
   hasValue: hasSenses,
-  render: (m) => senseChips(m),
+  render: () => island("senses"),
 };
 
 const LANGUAGES: FieldSpec = {

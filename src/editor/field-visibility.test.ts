@@ -67,7 +67,7 @@ test("a revealed field leaves the menu, and the footer goes once it's empty", ()
 
   const offered = [...block.querySelectorAll(".add-field .cm-item .cm-label")].map((n) => n.textContent);
   assert.ok(!offered.includes("Senses"), "already on the block");
-  assert.ok(block.querySelector('.sb-chips[data-field="senses"]'), "and rendered");
+  assert.ok(block.querySelector('[data-island="senses"]'), "and rendered");
 });
 
 test("every optional field names a control to land in, and the block has it", () => {

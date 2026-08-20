@@ -22,6 +22,7 @@ import { TextRow } from "../ui/fields/TextRow.js";
 import { SkillsRow } from "../ui/fields/SkillsRow.js";
 import { SavingThrowsRow } from "../ui/fields/SavingThrowsRow.js";
 import { AdjustmentsRow } from "../ui/fields/AdjustmentsRow.js";
+import { SensesRow } from "../ui/fields/SensesRow.js";
 import { unreveal } from "../state/session.js";
 import { hiddenFields } from "../preview/optional-fields.js";
 import { unarmoredAc } from "../statblock/armor-class.js";
@@ -34,7 +35,6 @@ import { wireMetaControls } from "./meta-editing.js";
 import { OptionPicker } from "./option-picker.js";
 import { wireSaveToggles } from "./saves-editing.js";
 import { wireMovements } from "./speed-editing.js";
-import { wireSenses } from "./senses-editing.js";
 import { ProseEditor } from "./prose-editor.js";
 import { applySaveState, HEADER_ORIGIN } from "./save-indicator.js";
 import { wireName } from "./name-editing.js";
@@ -307,16 +307,6 @@ export class StatBlockController {
         },
         onError: (error) => console.error("[microbrewery] movement update failed", error),
       }),
-      // Senses are listing records too; passive Perception, sharing the row, is
-      // an ordinary field and rides autosave instead.
-      ...wireSenses(block, monster, this.editing, {
-        onAdd: (type) => {
-          this.store.update({ pendingFocus: `sense:${type}` });
-        },
-        // Passive Perception is an ordinary field; its command persists it.
-        onPassivePerception: () => {},
-        onError: (error) => console.error("[microbrewery] sense update failed", error),
-      }),
     );
 
     // The "Add…" menu at the foot of the section. Revealing a field changes
@@ -416,6 +406,15 @@ export class StatBlockController {
             field={name}
             adapter={this.editing}
             autoOpen={pending === `add:${name}`}
+          />
+        );
+      case "senses":
+        return (
+          <SensesRow
+            monster={monster}
+            adapter={this.editing}
+            autoOpen={pending === "add:senses"}
+            onError={(error) => console.error("[microbrewery] sense update failed", error)}
           />
         );
       case "skills":
