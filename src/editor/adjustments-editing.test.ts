@@ -45,7 +45,7 @@ function stubAdapter(damage: string[], conditions: string[]) {
 const click = (el: Element) => el.dispatchEvent(new jsdom.window.MouseEvent("click", { bubbles: true }));
 
 const labels = (scope: ParentNode): string[] =>
-  [...scope.querySelectorAll(".cm-item .cm-label")].map((n) => n.textContent ?? "");
+  [...scope.querySelectorAll(".cp-option")].map((n) => n.textContent ?? "");
 
 test("the menu offers only the row's own kind, minus what's taken", () => {
   const monster: Monster = { ...emptyMonster(), damageResistances: ["Necrotic"] };
@@ -66,7 +66,7 @@ test("adding keeps the other damage kinds' values untouched", () => {
   wireAdjustments(block, adapter, () => {});
 
   const row = block.querySelector<HTMLElement>('.sb-chips[data-field="damageResistances"]')!;
-  const item = [...row.querySelectorAll<HTMLElement>(".cm-item")].find((li) =>
+  const item = [...row.querySelectorAll<HTMLElement>(".cp-option")].find((li) =>
     li.textContent?.startsWith("Necrotic"),
   )!;
   click(item);

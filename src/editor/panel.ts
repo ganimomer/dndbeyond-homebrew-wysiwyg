@@ -31,6 +31,7 @@ import { revealFocusKey, wireAddField } from "./field-visibility.js";
 import { NAME_FOCUS_KEY } from "../preview/name-row.js";
 import panelCss from "./panel.css";
 import contextMenuCss from "./context-menu.css";
+import chipPickerCss from "./chip-picker.css";
 import statblock5eCss from "../preview/statblock-5e.css";
 import statblock55eCss from "../preview/statblock-55e.css";
 
@@ -47,8 +48,12 @@ export class EditorPanel {
   private stage!: HTMLElement;
   private unobserve: (() => void) | null = null;
   private rafToken = 0;
-  /** Menus mounted into the current block (name-row kebab, the chip "＋"s). */
-  private menus: ContextMenu[] = [];
+  /**
+   * Popovers mounted into the current block: the name-row kebab and the "Add…"
+   * footer are `ContextMenu`s, every chip row's "＋" a `ChipPicker`. Only the
+   * teardown is shared, so that is all this holds them by.
+   */
+  private menus: { destroy(): void }[] = [];
   /**
    * Click-away listeners belonging to the mini-forms in the current block. They
    * live on `window`, outside the block that gets thrown away, so each render
@@ -160,7 +165,13 @@ export class EditorPanel {
 
   private build(): void {
     const style = document.createElement("style");
-    style.textContent = [panelCss, contextMenuCss, statblock5eCss, statblock55eCss].join("\n");
+    style.textContent = [
+      panelCss,
+      contextMenuCss,
+      chipPickerCss,
+      statblock5eCss,
+      statblock55eCss,
+    ].join("\n");
     this.root.appendChild(style);
 
     const overlay = document.createElement("div");
@@ -193,6 +204,9 @@ export class EditorPanel {
     // character at a time, and rebuilding the block would drop the caret. The
     // save indicator is unaffected -- it paints from onStateChange, not render().
     if (this.focusedKey() === NAME_FOCUS_KEY) return;
+    // And for an open chip picker: its filter text lives in the block itself, so
+    // rebuilding would swallow the word being typed and shut the picker.
+    if (this.filteringPicker()) return;
 
     const monster = this.adapter.read();
     if (!monster) return;
@@ -488,6 +502,16 @@ export class EditorPanel {
   private destroyForms(): void {
     for (const teardown of this.formTeardowns) teardown();
     this.formTeardowns = [];
+  }
+
+  /**
+   * Whether the caret is in a chip picker's filter box. A class rather than a
+   * `data-focus-key` because several pickers can be in the block at once, which
+   * would leave `restoreFocus` no way to tell which one to go back to.
+   */
+  private filteringPicker(): boolean {
+    const active = this.root.activeElement as HTMLElement | null;
+    return active?.classList.contains("cp-filter") ?? false;
   }
 
   /** The `data-focus-key` of the field that currently holds focus, if any. */

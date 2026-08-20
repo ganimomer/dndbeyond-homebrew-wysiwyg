@@ -1,0 +1,96 @@
+/* The filterable "＋" picker on a chip row. The trigger matches the chips it
+ * sits beside; the popover matches the context menu's white card, so the two
+ * still read as one family. */
+
+.cp {
+  position: relative;
+  display: inline-flex;
+}
+
+.cp-trigger {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  border-radius: 4px;
+  /* `font` carries line-height, so the trigger takes the same line box as the
+   * chips beside it and the two end up exactly the same height. */
+  font: inherit;
+  color: inherit;
+  background: rgba(91, 22, 12, 0.1);
+  opacity: 0.65;
+}
+
+.cp-trigger:hover {
+  opacity: 1;
+  background: rgba(91, 22, 12, 0.18);
+}
+
+.cp-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 10;
+  width: 200px;
+  padding: 4px;
+  background: #ffffff;
+  border: 1px solid #d8e1e8;
+  border-radius: 3px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
+  font-family: Roboto, "Open Sans", Helvetica, sans-serif;
+  font-size: 13px;
+  color: #242527;
+  display: none;
+}
+
+.cp.open .cp-panel {
+  display: block;
+}
+
+.cp-filter {
+  box-sizing: border-box;
+  display: block;
+  /* Lines up with the options, which carry the same 2px side margin. */
+  width: calc(100% - 4px);
+  margin: 2px 2px 4px;
+  padding: 5px 7px;
+  border: 1px solid #d8e1e8;
+  border-radius: 3px;
+  font: inherit;
+  color: inherit;
+  background: #ffffff;
+}
+
+.cp-filter:focus {
+  outline: none;
+  border-color: #1579bc;
+}
+
+/* Only the options scroll, so the filter box stays put while the list moves. */
+.cp-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.cp-option {
+  padding: 6px 8px;
+  margin: 2px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.cp-option.is-active {
+  background: #f2f5f7;
+}
+
+.cp-empty {
+  padding: 6px 8px;
+  margin: 2px;
+  color: #6f7478;
+  font-style: italic;
+}

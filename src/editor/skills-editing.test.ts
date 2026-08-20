@@ -52,7 +52,7 @@ function scopeFor(monster: Monster): HTMLElement {
 }
 
 const labels = (scope: ParentNode) =>
-  [...scope.querySelectorAll(".cm-item .cm-label")].map((n) => n.textContent);
+  [...scope.querySelectorAll(".cp-option")].map((n) => n.textContent);
 
 test("renders a chip per skill, showing the bonus D&D Beyond has stored", () => {
   const scope = scopeFor(monsterWith({ Perception: 9, Stealth: 2 }));
@@ -87,7 +87,7 @@ test("picking a skill adds it with the computed bonus", () => {
   const { adapter, calls } = stubAdapter([]);
   wireSkills(scope, monster, adapter);
 
-  const perception = [...scope.querySelectorAll<HTMLElement>(".cm-item")].find((li) =>
+  const perception = [...scope.querySelectorAll<HTMLElement>(".cp-option")].find((li) =>
     li.textContent?.startsWith("Perception"),
   )!;
   perception.dispatchEvent(new jsdom.window.Event("click"));

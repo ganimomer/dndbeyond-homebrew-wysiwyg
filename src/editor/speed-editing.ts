@@ -14,7 +14,7 @@
 import type { SelectOption } from "../adapter/types.js";
 import type { Monster } from "../statblock/model.js";
 import { defaultSpeed, movementText } from "../statblock/movement.js";
-import { ContextMenu } from "./context-menu.js";
+import { ChipPicker } from "./chip-picker.js";
 import { commitOnEnter } from "./inline-input.js";
 
 /** The adapter surface the Speed row needs (satisfied by PageAdapter). */
@@ -37,7 +37,7 @@ export function wireMovements(
   monster: Monster,
   adapter: MovementAdapter,
   { onAdd = () => {}, onError = () => {} }: MovementHandlers = {},
-): ContextMenu[] {
+): ChipPicker[] {
   const wrap = scope.querySelector<HTMLElement>('.sb-chips[data-field="movements"]');
   if (!wrap) return [];
 
@@ -96,12 +96,7 @@ export function wireMovements(
     return [];
   }
 
-  const menu = new ContextMenu(items, {
-    triggerText: "+",
-    triggerLabel: "Add movement type",
-    triggerClass: "inline",
-    menuClass: "compact",
-  });
+  const menu = new ChipPicker(items, { label: "Add movement type", placeholder: "Filter movement…" });
   host.replaceChildren(menu.element);
   return [menu];
 }

@@ -98,7 +98,7 @@ test("5e renders a chip per proficient save and offers the rest in the menu", ()
     ["DEX +9×", "CON +9×"],
   );
   assert.deepEqual(
-    [...saves.querySelectorAll(".cm-item .cm-label")].map((n) => n.textContent),
+    [...saves.querySelectorAll(".cp-option")].map((n) => n.textContent),
     ["STR +10", "INT +8", "WIS +7", "CHA +9"],
   );
 });
@@ -109,7 +109,7 @@ test("5e picking from the menu commits the set plus that ability", () => {
   const { adapter, calls } = stubAdapter([VALUE.DEX]);
   wireSavingThrows(block, monster, adapter);
 
-  const item = [...block.querySelectorAll<HTMLElement>(".cm-item")].find((li) =>
+  const item = [...block.querySelectorAll<HTMLElement>(".cp-option")].find((li) =>
     li.textContent?.startsWith("WIS"),
   )!;
   click(item);
@@ -137,7 +137,7 @@ test("5e renders the row with just the ＋ when nothing is proficient", () => {
   const saves = block.querySelector('.sb-chips[data-field="saves"]')!;
 
   assert.equal(saves.querySelectorAll(".sb-chip").length, 0);
-  assert.equal(saves.querySelectorAll(".cm-item").length, 6);
+  assert.equal(saves.querySelectorAll(".cp-option").length, 6);
 });
 
 // ------------------------------------------------------------------ regression

@@ -48,7 +48,7 @@ const scopeFor = (monster: Monster) => {
   return root;
 };
 const labels = (scope: ParentNode) =>
-  [...scope.querySelectorAll(".cm-item .cm-label")].map((n) => n.textContent);
+  [...scope.querySelectorAll(".cp-option")].map((n) => n.textContent);
 const speedInput = (scope: ParentNode, type: string) =>
   scope.querySelector<HTMLInputElement>(`.speed-input[data-movement="${type}"]`)!;
 
@@ -113,7 +113,7 @@ test("picking a type adds it with that default", () => {
   const added: string[] = [];
   wireMovements(scope, monster, adapter, { onAdd: (t) => added.push(t) });
 
-  const fly = [...scope.querySelectorAll<HTMLElement>(".cm-item")].find((li) =>
+  const fly = [...scope.querySelectorAll<HTMLElement>(".cp-option")].find((li) =>
     li.textContent?.startsWith("Fly"),
   )!;
   fly.dispatchEvent(new jsdom.window.Event("click"));

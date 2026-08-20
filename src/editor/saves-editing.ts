@@ -18,7 +18,7 @@ import {
   type Monster,
 } from "../statblock/model.js";
 import { abilityModifier, formatModifier, proficiencyBonus } from "../statblock/compute.js";
-import { ContextMenu } from "./context-menu.js";
+import { ChipPicker } from "./chip-picker.js";
 
 /** The adapter surface the saving throws need (satisfied by PageAdapter). */
 export interface SavesAdapter {
@@ -30,7 +30,7 @@ export function wireSavingThrows(
   scope: ParentNode,
   monster: Monster,
   adapter: SavesAdapter,
-): ContextMenu[] {
+): ChipPicker[] {
   const options = adapter.savingThrowOptions();
   // DDB labels the options with the same abbreviations we render, which is what
   // ties an ability in the stat block to an option value in the form.
@@ -71,7 +71,7 @@ function wireChips(
   monster: Monster,
   valueOf: (ability: Ability) => string | undefined,
   commit: (ability: Ability, proficient: boolean) => void,
-): ContextMenu[] {
+): ChipPicker[] {
   const wrap = scope.querySelector<HTMLElement>('.sb-chips[data-field="saves"]');
   if (!wrap) return [];
 
@@ -100,12 +100,7 @@ function wireChips(
     return [];
   }
 
-  const menu = new ContextMenu(items, {
-    triggerText: "+",
-    triggerLabel: "Add saving throw",
-    triggerClass: "inline",
-    menuClass: "compact",
-  });
+  const menu = new ChipPicker(items, { label: "Add saving throw" });
   host.replaceChildren(menu.element);
   return [menu];
 }

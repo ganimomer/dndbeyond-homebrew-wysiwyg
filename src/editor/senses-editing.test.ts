@@ -55,7 +55,7 @@ test("the menu offers the senses the creature hasn't got, with their usual range
 
   const row = block.querySelector<HTMLElement>('.sb-chips[data-field="senses"]')!;
   assert.deepEqual(
-    [...row.querySelectorAll(".cm-item .cm-label")].map((n) => n.textContent),
+    [...row.querySelectorAll(".cp-option")].map((n) => n.textContent),
     ["Blindsight 30 ft.", "Tremorsense 60 ft.", "Truesight 120 ft."],
   );
 });
@@ -66,7 +66,7 @@ test("adding a sense sends its id and default range, and queues focus for it", (
   const focused: string[] = [];
   wireSenses(block, withSense, adapter, { onAdd: (type) => focused.push(type) });
 
-  const item = [...block.querySelectorAll<HTMLElement>(".cm-item")].find((li) =>
+  const item = [...block.querySelectorAll<HTMLElement>(".cp-option")].find((li) =>
     li.textContent?.startsWith("Truesight"),
   )!;
   click(item);
