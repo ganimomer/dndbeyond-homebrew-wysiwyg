@@ -26,7 +26,7 @@ for (const [name, render, ruleset] of [
 
     assert.deepEqual(rows(block), []);
     // The rows that aren't optional are still there.
-    assert.ok(block.querySelector('.sb-chips[data-field="movements"]'), "Speed");
+    assert.ok(block.querySelector('[data-island="movements"]'), "Speed");
     assert.ok(block.querySelector('.sb-chips[data-field="hitPoints"]'), "HP");
   });
 

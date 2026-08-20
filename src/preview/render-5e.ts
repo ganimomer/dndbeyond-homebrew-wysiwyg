@@ -30,7 +30,7 @@ import {
   type RenderOptions,
 } from "./optional-fields.js";
 import { addFieldButton } from "./tags.js";
-import { speedChips } from "./speed-line.js";
+import { island } from "./island.js";
 import { hitPointsChip } from "./hit-points-line.js";
 import { armorClassChip } from "./armor-class-line.js";
 
@@ -110,7 +110,7 @@ export function render5e(monster: Monster, options: RenderOptions = {}): HTMLEle
   const hpLine = labeled("Hit Points", hitPointsChip(monster));
   hpLine.dataset.dep = "con";
   basics.append(hpLine);
-  basics.append(labeled("Speed", speedChips(monster)));
+  basics.append(labeled("Speed", island("movements")));
 
   basics.append(el("hr", "rule"));
 

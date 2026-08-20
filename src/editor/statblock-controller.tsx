@@ -23,6 +23,7 @@ import { SkillsRow } from "../ui/fields/SkillsRow.js";
 import { SavingThrowsRow } from "../ui/fields/SavingThrowsRow.js";
 import { AdjustmentsRow } from "../ui/fields/AdjustmentsRow.js";
 import { SensesRow } from "../ui/fields/SensesRow.js";
+import { SpeedRow } from "../ui/fields/SpeedRow.js";
 import { unreveal } from "../state/session.js";
 import { hiddenFields } from "../preview/optional-fields.js";
 import { unarmoredAc } from "../statblock/armor-class.js";
@@ -34,7 +35,6 @@ import { wireArmorClass } from "./armor-class-editing.js";
 import { wireMetaControls } from "./meta-editing.js";
 import { OptionPicker } from "./option-picker.js";
 import { wireSaveToggles } from "./saves-editing.js";
-import { wireMovements } from "./speed-editing.js";
 import { ProseEditor } from "./prose-editor.js";
 import { applySaveState, HEADER_ORIGIN } from "./save-indicator.js";
 import { wireName } from "./name-editing.js";
@@ -295,20 +295,6 @@ export class StatBlockController {
     // to a table that is still drawn by hand. The 5e chip row is a component.
     wireSaveToggles(block, this.editing);
 
-    // Skills and movements are the edits that don't go through autosave: DDB
-    // keeps them as separate records, so the adapter persists each change
-    // itself and updates the listing table, which re-renders us via observe().
-    this.menus.push(
-      ...wireMovements(block, monster, this.editing, {
-        // The chip doesn't exist yet — queue its input for the render that the
-        // write-back triggers, so the default is selected and ready to type over.
-        onAdd: (type) => {
-          this.store.update({ pendingFocus: `speed:${type}` });
-        },
-        onError: (error) => console.error("[microbrewery] movement update failed", error),
-      }),
-    );
-
     // The "Add…" menu at the foot of the section. Revealing a field changes
     // nothing in the form, so `observe()` won't fire — re-render by hand.
     this.menus.push(
@@ -406,6 +392,14 @@ export class StatBlockController {
             field={name}
             adapter={this.editing}
             autoOpen={pending === `add:${name}`}
+          />
+        );
+      case "movements":
+        return (
+          <SpeedRow
+            monster={monster}
+            adapter={this.editing}
+            onError={(error) => console.error("[microbrewery] movement update failed", error)}
           />
         );
       case "senses":

@@ -33,7 +33,7 @@ import {
 } from "./optional-fields.js";
 import { nameRow } from "./name-row.js";
 import { addFieldButton } from "./tags.js";
-import { speedChips } from "./speed-line.js";
+import { island } from "./island.js";
 import { hitPointsChip } from "./hit-points-line.js";
 import { armorClassChip } from "./armor-class-line.js";
 
@@ -175,7 +175,7 @@ export function render55e(monster: Monster, options: RenderOptions = {}): HTMLEl
   const hpLine = labeled("HP", hitPointsChip(monster));
   hpLine.dataset.dep = "con";
   basics.append(hpLine);
-  basics.append(labeled("Speed", speedChips(monster)));
+  basics.append(labeled("Speed", island("movements")));
 
   // Ability tables.
   const stats = el("div", "stats");
