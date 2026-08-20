@@ -8,6 +8,7 @@
  * again.
  */
 import { render } from "preact";
+import "../ui/sync-rendering.js";
 import type { PageAdapter } from "../adapter/types.js";
 import { App } from "../ui/App.js";
 
