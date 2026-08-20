@@ -50,6 +50,12 @@ export class EditorPanel {
   /** Menus mounted into the current block (name-row kebab, the chip "＋"s). */
   private menus: ContextMenu[] = [];
   /**
+   * Click-away listeners belonging to the mini-forms in the current block. They
+   * live on `window`, outside the block that gets thrown away, so each render
+   * detaches the last one's before the fresh form registers its own.
+   */
+  private formTeardowns: (() => void)[] = [];
+  /**
    * A `data-focus-key` to focus once, on the next render — set when we add a
    * field the user is expected to type into straight away (a new movement's
    * speed), since the write-back re-renders the whole block underneath them.
@@ -139,6 +145,7 @@ export class EditorPanel {
     // overlay feel like it committed them.
     void this.autosave.flush().then(() => this.autosave.destroy());
     this.destroyMenus();
+    this.destroyForms();
     this.traitsEditor?.destroy();
     this.traitsEditor = null;
     this.traitsHost = null;
@@ -192,6 +199,7 @@ export class EditorPanel {
 
     this.pruneRevealed(monster);
     this.destroyMenus();
+    this.destroyForms();
     const block = renderStatBlock(monster, { revealed: this.revealed });
 
     const slot = block.querySelector<HTMLElement>(".name-menu");
@@ -236,57 +244,61 @@ export class EditorPanel {
     // gives you" and "what your armor adds". Remember the armor's worth from
     // the pristine form so a later DEX edit has something to preserve.
     this.armorBonus ??= monster.armorClass.value - unarmoredAc(monster);
-    wireArmorClass(block, monster, {
-      state: this.acEditing,
-      dexChanged: this.changedAbilities.has("dex"),
-      armorBonus: this.armorBonus,
-      onOpen: () => {
-        this.acEditing = { draft: { ...monster.armorClass } };
-        this.pendingFocus = "ac:bonus";
-        this.render();
-      },
-      onChange: (draft) => {
-        if (this.acEditing) this.acEditing.draft = draft;
-      },
-      onCommit: (armorClass) => {
-        this.acEditing = null;
-        // Re-anchor against the Dexterity in force now: the user has reconciled
-        // the two, so this is the bonus a *future* DEX edit should preserve.
-        this.armorBonus = armorClass.value - unarmoredAc(monster);
-        this.adapter.setArmorClass(armorClass);
-        this.autosave.request(HEADER_ORIGIN);
-      },
-      onCancel: () => {
-        this.acEditing = null;
-        this.render();
-      },
-    });
+    this.keepForm(
+      wireArmorClass(block, monster, {
+        state: this.acEditing,
+        dexChanged: this.changedAbilities.has("dex"),
+        armorBonus: this.armorBonus,
+        onOpen: () => {
+          this.acEditing = { draft: { ...monster.armorClass } };
+          this.pendingFocus = "ac:bonus";
+          this.render();
+        },
+        onChange: (draft) => {
+          if (this.acEditing) this.acEditing.draft = draft;
+        },
+        onCommit: (armorClass) => {
+          this.acEditing = null;
+          // Re-anchor against the Dexterity in force now: the user has reconciled
+          // the two, so this is the bonus a *future* DEX edit should preserve.
+          this.armorBonus = armorClass.value - unarmoredAc(monster);
+          this.adapter.setArmorClass(armorClass);
+          this.autosave.request(HEADER_ORIGIN);
+        },
+        onCancel: () => {
+          this.acEditing = null;
+          this.render();
+        },
+      }),
+    );
 
     // Hit points are four fields behind one chip. Opening and cancelling only
     // change our own state — nothing writes to the form, so `observe()` won't
     // fire and we re-render by hand; committing writes and rides autosave.
-    wireHitPoints(block, monster, {
-      state: this.hpEditing,
-      conChanged: this.changedAbilities.has("con"),
-      dieOptions: () => this.adapter.hitDieOptions(),
-      onOpen: () => {
-        this.hpEditing = { draft: { ...monster.hitPoints }, baseline: { ...monster.hitPoints } };
-        this.pendingFocus = "hp:average";
-        this.render();
-      },
-      onChange: (draft) => {
-        if (this.hpEditing) this.hpEditing.draft = draft;
-      },
-      onCommit: (hitPoints) => {
-        this.hpEditing = null;
-        this.adapter.setHitPoints(hitPoints);
-        this.autosave.request(HEADER_ORIGIN);
-      },
-      onCancel: () => {
-        this.hpEditing = null;
-        this.render();
-      },
-    });
+    this.keepForm(
+      wireHitPoints(block, monster, {
+        state: this.hpEditing,
+        conChanged: this.changedAbilities.has("con"),
+        dieOptions: () => this.adapter.hitDieOptions(),
+        onOpen: () => {
+          this.hpEditing = { draft: { ...monster.hitPoints }, baseline: { ...monster.hitPoints } };
+          this.pendingFocus = "hp:average";
+          this.render();
+        },
+        onChange: (draft) => {
+          if (this.hpEditing) this.hpEditing.draft = draft;
+        },
+        onCommit: (hitPoints) => {
+          this.hpEditing = null;
+          this.adapter.setHitPoints(hitPoints);
+          this.autosave.request(HEADER_ORIGIN);
+        },
+        onCancel: () => {
+          this.hpEditing = null;
+          this.render();
+        },
+      }),
+    );
 
     // The creature name is a contenteditable in the header row; it commits on
     // blur or Enter, and rides autosave like the rest of the header.
@@ -466,6 +478,16 @@ export class EditorPanel {
   private destroyMenus(): void {
     for (const menu of this.menus) menu.destroy();
     this.menus = [];
+  }
+
+  /** Holds on to a mini-form's teardown; the closed chips return nothing. */
+  private keepForm(teardown: (() => void) | void): void {
+    if (teardown) this.formTeardowns.push(teardown);
+  }
+
+  private destroyForms(): void {
+    for (const teardown of this.formTeardowns) teardown();
+    this.formTeardowns = [];
   }
 
   /** The `data-focus-key` of the field that currently holds focus, if any. */

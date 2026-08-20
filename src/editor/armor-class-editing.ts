@@ -22,7 +22,7 @@
 import type { ArmorClass, Monster } from "../statblock/model.js";
 import { armorBonus, unarmoredAc } from "../statblock/armor-class.js";
 import { el } from "../preview/dom.js";
-import { hintChip, iconButton, toInt } from "./mini-form.js";
+import { closeOnOutsideClick, hintChip, iconButton, toInt } from "./mini-form.js";
 
 /** The open form's state, owned by the panel so it survives a re-render. */
 export interface ArmorClassEditing {
@@ -50,11 +50,12 @@ export interface ArmorClassHandlers {
 /** The name the hint chip announces itself under. */
 const HINT = "armor class";
 
+/** Returns the teardown for the open form's click-away, if one was mounted. */
 export function wireArmorClass(
   scope: ParentNode,
   monster: Monster,
   handlers: ArmorClassHandlers,
-): void {
+): (() => void) | void {
   const wrap = scope.querySelector<HTMLElement>('.sb-chips[data-field="armorClass"]');
   if (!wrap) return;
 
@@ -63,7 +64,9 @@ export function wireArmorClass(
       ?.addEventListener("click", () => handlers.onOpen());
     return;
   }
-  wrap.replaceChildren(buildForm(monster, handlers, handlers.state));
+  const form = buildForm(monster, handlers, handlers.state);
+  wrap.replaceChildren(form);
+  return closeOnOutsideClick(form, () => handlers.onCancel());
 }
 
 function buildForm(

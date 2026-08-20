@@ -35,8 +35,20 @@ interface WireOptions {
   conChanged?: boolean;
 }
 
+/**
+ * The open form's click-away teardown, kept so the next `setup` can detach it:
+ * it lives on `window` rather than in the block, so it would otherwise outlive
+ * the test that mounted it and answer the next one's clicks.
+ */
+let disposeLast: (() => void) | null = null;
+
 function setup(monster: Monster, { open = true, draft, conChanged = false }: WireOptions = {}) {
+  disposeLast?.();
+  disposeLast = null;
+  // Attached, because the click-away listens on `window` — a detached tree has
+  // no path leading there.
   const scope = jsdom.window.document.createElement("div");
+  jsdom.window.document.body.replaceChildren(scope);
   scope.append(hitPointsChip(monster));
 
   const calls = {
@@ -45,7 +57,7 @@ function setup(monster: Monster, { open = true, draft, conChanged = false }: Wir
     committed: [] as HitPoints[],
     cancelled: 0,
   };
-  wireHitPoints(scope, monster, {
+  const teardown = wireHitPoints(scope, monster, {
     state: open
       ? { draft: { ...monster.hitPoints, ...draft }, baseline: monster.hitPoints }
       : null,
@@ -56,7 +68,8 @@ function setup(monster: Monster, { open = true, draft, conChanged = false }: Wir
     onCommit: (hp) => calls.committed.push(hp),
     onCancel: () => calls.cancelled++,
   });
-  return { scope, calls };
+  disposeLast = teardown ?? null;
+  return { scope, calls, teardown };
 }
 
 const field = (scope: ParentNode, name: string) =>
@@ -66,6 +79,13 @@ const hint = (scope: ParentNode, name: string) =>
 const action = (scope: ParentNode, name: string) =>
   scope.querySelector<HTMLButtonElement>(`[data-form-action="${name}"]`)!;
 const click = (node: Element) => node.dispatchEvent(new jsdom.window.Event("click"));
+/** A click on the page somewhere the form isn't. */
+const clickAway = () => {
+  const elsewhere = jsdom.window.document.createElement("div");
+  jsdom.window.document.body.append(elsewhere);
+  click(elsewhere);
+  elsewhere.remove();
+};
 const type = (input: HTMLInputElement, value: string) => {
   input.value = value;
   input.dispatchEvent(new jsdom.window.Event("input", { bubbles: true }));
@@ -175,13 +195,14 @@ test("Enter in a field commits the whole form", () => {
   assert.deepEqual(calls.committed, [{ average: 195, dieCount: 23, dieValue: 8, modifier: 100 }]);
 });
 
-test("✕ and Escape abandon the edit", () => {
+test("✕, Escape and a click away all abandon the edit", () => {
   for (const abandon of [
     (scope: ParentNode) => click(action(scope, "cancel")),
     (scope: ParentNode) =>
       field(scope, "average").dispatchEvent(
         new jsdom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
       ),
+    () => clickAway(),
   ]) {
     const { scope, calls } = setup(monsterWith(VAMPIRE));
     type(field(scope, "average"), "999");
@@ -190,6 +211,34 @@ test("✕ and Escape abandon the edit", () => {
     assert.equal(calls.cancelled, 1);
     assert.deepEqual(calls.committed, []);
   }
+});
+
+test("a click inside the form is not a click away from it", () => {
+  const { scope, calls } = setup(monsterWith(VAMPIRE, 20), { conChanged: true });
+
+  for (const inside of [field(scope, "average"), hint(scope, "modifier")!, action(scope, "commit")]) {
+    click(inside);
+  }
+
+  assert.equal(calls.cancelled, 0);
+});
+
+test("the teardown detaches the click-away, so a discarded form stops listening", () => {
+  const { calls, teardown } = setup(monsterWith(VAMPIRE));
+
+  teardown!();
+  clickAway();
+
+  assert.equal(calls.cancelled, 0);
+});
+
+test("closed, there is no form to click away from", () => {
+  const { calls, teardown } = setup(monsterWith(VAMPIRE), { open: false });
+
+  assert.equal(teardown, undefined);
+  clickAway();
+
+  assert.equal(calls.cancelled, 0);
 });
 
 test("every edit is reported so the panel can hold the draft across re-renders", () => {

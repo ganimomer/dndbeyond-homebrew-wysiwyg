@@ -23,7 +23,7 @@ import type { HitPoints, Monster } from "../statblock/model.js";
 import { abilityModifier } from "../statblock/compute.js";
 import { expectedAverage, expectedModifier } from "../statblock/hit-points.js";
 import { el } from "../preview/dom.js";
-import { hintChip, iconButton, toInt } from "./mini-form.js";
+import { closeOnOutsideClick, hintChip, iconButton, toInt } from "./mini-form.js";
 
 /** The open form's state, owned by the panel so it survives a re-render. */
 export interface HitPointsEditing {
@@ -76,11 +76,12 @@ export function hitPointsHints(
   return hints;
 }
 
+/** Returns the teardown for the open form's click-away, if one was mounted. */
 export function wireHitPoints(
   scope: ParentNode,
   monster: Monster,
   handlers: HitPointsHandlers,
-): void {
+): (() => void) | void {
   const wrap = scope.querySelector<HTMLElement>('.sb-chips[data-field="hitPoints"]');
   if (!wrap) return;
 
@@ -89,7 +90,9 @@ export function wireHitPoints(
     chip?.addEventListener("click", () => handlers.onOpen());
     return;
   }
-  wrap.replaceChildren(buildForm(monster, handlers, handlers.state));
+  const form = buildForm(monster, handlers, handlers.state);
+  wrap.replaceChildren(form);
+  return closeOnOutsideClick(form, () => handlers.onCancel());
 }
 
 function buildForm(

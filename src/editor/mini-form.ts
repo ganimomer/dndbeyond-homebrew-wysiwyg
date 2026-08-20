@@ -3,10 +3,10 @@
  * armor-class editors.
  *
  * These forms open in place of a chip, over fields D&D Beyond keeps apart, and
- * they all want the same three things: a chip offering a value a related edit
- * has invalidated, the ✕/✓ pair that abandons or applies the edit, and a
- * coercion for the numeric fields. Keeping them here is what stops the second
- * form from being a copy of the first.
+ * they all want the same things: a chip offering a value a related edit has
+ * invalidated, the ✕/✓ pair that abandons or applies the edit, a coercion for
+ * the numeric fields, and the click-away that abandons it. Keeping them here is
+ * what stops the second form from being a copy of the first.
  */
 import { el } from "../preview/dom.js";
 import { makeIcon } from "../preview/icons.js";
@@ -44,6 +44,31 @@ export function iconButton(
   button.append(makeIcon(icon, 16));
   button.addEventListener("click", onClick);
   return button;
+}
+
+/**
+ * Abandons the form when the click lands anywhere but inside it, and hands back
+ * the teardown — the block is rebuilt on every render, so whoever mounts the
+ * form owns detaching this with it.
+ *
+ * Three choices worth spelling out, all of them the ones `ContextMenu` already
+ * made: the path is read with `composedPath()` because the panel lives in a
+ * shadow root, where a listener out here would otherwise only ever see the host;
+ * it listens on `window` in the capture phase, so a click on D&D Beyond's own
+ * page underneath the overlay counts as outside too; and it listens for `click`
+ * rather than `pointerdown`, so the click still reaches whatever it landed on —
+ * which is what lets one click close this form and open the next chip's.
+ *
+ * The click that *opened* the form can't close it again: the panel re-renders
+ * synchronously from the chip's own click handler, by which point the capture
+ * phase for that click is long past.
+ */
+export function closeOnOutsideClick(form: HTMLElement, onOutside: () => void): () => void {
+  const handler = (event: Event) => {
+    if (!event.composedPath().includes(form)) onOutside();
+  };
+  window.addEventListener("click", handler, true);
+  return () => window.removeEventListener("click", handler, true);
 }
 
 /** A field's text as a whole number, or `fallback` when it's blank or junk. */
