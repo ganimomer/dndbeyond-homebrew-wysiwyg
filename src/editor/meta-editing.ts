@@ -90,6 +90,10 @@ function wirePicker(
       focusKey: `meta:${kind}`,
     },
   );
+  // The renderer dims the slot while it holds prompt text. The picker's popover
+  // hangs inside that slot, and `opacity` takes a whole subtree down with it, so
+  // the mark moves to the trigger — which is what shows the prompt now.
+  slot.classList.remove("is-placeholder");
   slot.replaceChildren(picker.element);
   return picker;
 }

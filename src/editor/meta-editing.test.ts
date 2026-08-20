@@ -184,6 +184,20 @@ test("a blank size or alignment still renders a placeholder control", () => {
   assert.deepEqual(calls.size, ["3"]);
 });
 
+test("wiring hands the dimming to the trigger, off the slot around the popover", () => {
+  // The slot's `opacity` would take its whole subtree down with it, and the
+  // popover hangs inside the slot — so a menu opened from a prompting field
+  // rendered at 60%.
+  const scope = scopeFor([], { size: "" });
+  const { adapter } = stubAdapter([]);
+  wireMetaControls(scope, adapter);
+
+  const slot = scope.querySelector('.meta-slot[data-meta="size"]')!;
+  assert.equal(slot.classList.contains("is-placeholder"), false);
+  assert.ok(slot.querySelector(".cp-trigger.is-placeholder"), "the trigger carries it instead");
+  assert.equal(slot.querySelector(".cp-panel")?.closest(".is-placeholder"), null);
+});
+
 test("picking the em-dash option clears the slot, taking it off the block", () => {
   // How a single-select field is dismissed: DDB's own "nothing chosen" option
   // commits "", and a slot with no value isn't rendered next time round.
