@@ -11,7 +11,6 @@
  */
 import type { Monster, Ruleset } from "../statblock/model.js";
 import { metaSlot, subTypeEditor } from "./meta.js";
-import { skillsChips } from "./skills-line.js";
 import { savingThrowChips } from "./saves-line.js";
 import { adjustmentChips, hasAdjustments, type AdjustmentField } from "./adjustments-line.js";
 import { hasSenses, senseChips } from "./senses-line.js";
@@ -118,7 +117,7 @@ const SKILLS: FieldSpec = {
   // Every skill bonus moves with its governing ability score.
   dep: "all",
   hasValue: (m) => Object.keys(m.skills).length > 0,
-  render: (m) => skillsChips(m),
+  render: () => island("skills"),
 };
 
 const SENSES: FieldSpec = {

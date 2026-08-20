@@ -16,27 +16,26 @@ for (const [name, render] of [
   test(`${name} drops the Skills row when there are no skills`, () => {
     const block = render({ ...emptyMonster(), skills: {} });
 
-    assert.equal(block.querySelector('.sb-chips[data-field="skills"]'), null);
+    assert.equal(block.querySelector('[data-island="skills"]'), null);
   });
 
-  test(`${name} renders the Skills row with its "+" once revealed`, () => {
+  // Skills is a component now, so what the renderer owes is the hole it goes in
+  // and the row it hangs off; the chips are SkillsRow.test.tsx's business.
+  test(`${name} renders the Skills row once revealed`, () => {
     const block = render(
       { ...emptyMonster(), skills: {} },
       { revealed: new Set(["skills" as const]) },
     );
-    const chips = block.querySelector('.sb-chips[data-field="skills"]');
+    const slot = block.querySelector('[data-island="skills"]');
 
-    assert.ok(chips, "skills chip container is present");
-    assert.equal(chips!.querySelectorAll(".sb-chip").length, 0);
-    assert.ok(chips!.querySelector(".sb-chip-add"), "add affordance is present");
-    assert.equal(chips!.closest(".line")?.dataset.dep, "all");
+    assert.ok(slot, "leaves the field a place");
+    // Every skill bonus moves with its governing ability score.
+    assert.equal(slot!.closest(".line")?.dataset.dep, "all");
   });
 
-  test(`${name} renders a chip per skill`, () => {
+  test(`${name} makes room for the row when the creature has skills`, () => {
     const block = render({ ...emptyMonster(), skills: { Perception: 7, Stealth: -1 } });
-    const row = block.querySelector('.sb-chips[data-field="skills"]')!;
-    const chips = [...row.querySelectorAll(".sb-chip")].map((c) => c.textContent);
 
-    assert.deepEqual(chips, ["Perception +7×", "Stealth −1×"]);
+    assert.ok(block.querySelector('[data-island="skills"]'));
   });
 }

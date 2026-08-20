@@ -82,9 +82,11 @@ test("every optional field names a control to land in, and the block has it", ()
     assert.ok(spec.focusKey, `${spec.key} has no focusKey`);
     if (spec.focusKey.startsWith("add:")) {
       // A picker's trigger is stamped by the editor, not the renderer; what the
-      // renderer owes is the host it mounts into.
+      // renderer owes is the host it mounts into — a chip row's menu slot, or
+      // the hole a field that has become a component goes in.
       assert.ok(
-        block.querySelector(`.sb-chips[data-field="${spec.key}"] .sb-chip-menu`),
+        block.querySelector(`.sb-chips[data-field="${spec.key}"] .sb-chip-menu`) ??
+          block.querySelector(`[data-island="${spec.key}"]`),
         `${spec.key} renders no picker host`,
       );
     } else {

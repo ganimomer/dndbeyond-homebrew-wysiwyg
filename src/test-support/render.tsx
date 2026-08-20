@@ -18,6 +18,9 @@
 import type { TestContext } from "node:test";
 import type { ComponentChild } from "preact";
 import { render as preactRender } from "preact";
+// Components under test render the way they do in the overlay: eagerly. See
+// ui/sync-rendering.ts for why the app needs that, and when it stops needing it.
+import "../ui/sync-rendering.js";
 import { cleanup, render, type RenderResult } from "@testing-library/preact";
 import { getQueriesForElement, type BoundFunctions, type queries } from "@testing-library/dom";
 

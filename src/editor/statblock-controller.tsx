@@ -19,6 +19,7 @@ import { render } from "preact";
 import { renderStatBlock } from "../preview/statblock-view.js";
 import type { IslandName } from "../preview/island.js";
 import { TextRow } from "../ui/fields/TextRow.js";
+import { SkillsRow } from "../ui/fields/SkillsRow.js";
 import { unreveal } from "../state/session.js";
 import { hiddenFields } from "../preview/optional-fields.js";
 import { unarmoredAc } from "../statblock/armor-class.js";
@@ -29,7 +30,6 @@ import { wireHitPoints } from "./hit-points-editing.js";
 import { wireArmorClass } from "./armor-class-editing.js";
 import { wireMetaControls } from "./meta-editing.js";
 import { OptionPicker } from "./option-picker.js";
-import { wireSkills } from "./skills-editing.js";
 import { wireSavingThrows } from "./saves-editing.js";
 import { wireMovements } from "./speed-editing.js";
 import { wireAdjustments } from "./adjustments-editing.js";
@@ -308,9 +308,6 @@ export class StatBlockController {
     // keeps them as separate records, so the adapter persists each change
     // itself and updates the listing table, which re-renders us via observe().
     this.menus.push(
-      ...wireSkills(block, monster, this.editing, (error) => {
-        console.error("[microbrewery] skill update failed", error);
-      }),
       ...wireMovements(block, monster, this.editing, {
         // The chip doesn't exist yet — queue its input for the render that the
         // write-back triggers, so the default is selected and ready to type over.
@@ -352,7 +349,7 @@ export class StatBlockController {
 
     // Mount after the block is attached: the fields that have become components
     // live in hosts that are moved into the new block, not rebuilt with it.
-    this.mountIslands(block, monster);
+    this.mountIslands(block, monster, pending);
     this.mountTraitsEditor(block, monster);
 
     // The block is brand new, so any in-progress save needs re-painting onto it.
@@ -371,7 +368,7 @@ export class StatBlockController {
    *
    * The same trick as the Traits editor below, which needed it first.
    */
-  private mountIslands(block: ParentNode, monster: Monster): void {
+  private mountIslands(block: ParentNode, monster: Monster, pending: string | null): void {
     const wanted = new Set<string>();
     for (const slot of block.querySelectorAll<HTMLElement>("[data-island]")) {
       const name = slot.dataset.island as IslandName;
@@ -382,7 +379,7 @@ export class StatBlockController {
         this.islands.set(name, host);
       }
       slot.replaceWith(host);
-      render(this.island(name, monster), host);
+      render(this.island(name, monster, pending), host);
     }
     // A field the creature no longer shows: unmount it and forget the host.
     for (const [name, host] of this.islands) {
@@ -393,7 +390,7 @@ export class StatBlockController {
   }
 
   /** What each island holds. */
-  private island(name: IslandName, monster: Monster) {
+  private island(name: IslandName, monster: Monster, pending: string | null) {
     switch (name) {
       case "gear":
       case "languages":
@@ -407,6 +404,15 @@ export class StatBlockController {
               field === "gear" ? this.editing.setGear(value) : this.editing.setLanguages(value)
             }
             onClear={(field) => this.clearTextField(field, monster)}
+          />
+        );
+      case "skills":
+        return (
+          <SkillsRow
+            monster={monster}
+            adapter={this.editing}
+            autoOpen={pending === "add:skills"}
+            onError={(error) => console.error("[microbrewery] skill update failed", error)}
           />
         );
       default:

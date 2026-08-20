@@ -70,6 +70,10 @@ const BIND = new Set([
   "prompt",
 ]);
 
+// jsdom has no layout, so it leaves `scrollIntoView` unimplemented. Anything
+// that keeps a highlighted row on screen calls it, so stub it once here.
+window.Element.prototype.scrollIntoView ??= () => {};
+
 for (const key of Object.getOwnPropertyNames(window)) {
   if (key in globalThis && !OVERRIDE.has(key)) continue;
 
