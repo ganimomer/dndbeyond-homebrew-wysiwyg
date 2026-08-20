@@ -1,0 +1,31 @@
+/* A movement's distance, edited in place inside its chip. Auto-sizes to the
+ * digits and drops the spinners so it reads as part of the sentence. */
+.statblock .speed-input {
+  field-sizing: content;
+  min-width: 2ch;
+  width: 3ch; /* fallback where field-sizing isn't supported */
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  border-radius: 3px;
+  /* Left-aligned so the field's intrinsic slack falls after the digits, where
+   * it reads as the space in "40 ft." — right-aligned it lands before them and
+   * doubles the chip's own gap. */
+  text-align: left;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.statblock .speed-input::-webkit-outer-spin-button,
+.statblock .speed-input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.statblock .speed-input:hover {
+  background: rgba(91, 22, 12, 0.08);
+}
+.statblock .speed-input:focus {
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}

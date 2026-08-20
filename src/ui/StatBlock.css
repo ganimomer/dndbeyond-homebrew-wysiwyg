@@ -1,0 +1,49 @@
+/* Stat block + artwork side by side (D&D Beyond's page layout); the image wraps
+ * below the block on narrow viewports. */
+.sb-layout {
+  display: flex;
+  align-items: flex-start;
+  /* Left-align the block+image group so the Description below lines up with the
+   * stat block's left edge (not centered under it). */
+  justify-content: flex-start;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+.sb-layout .statblock {
+  flex: 0 1 720px;
+  min-width: 0;
+}
+
+/* Artwork column, top-aligned beside the stat block. */
+.sb-image {
+  flex: 0 0 300px;
+  max-width: 100%;
+  margin: 0;
+}
+.sb-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+/* Free-form "Description" section, below the framed block in plain body type
+ * (matches D&D Beyond's monster page: Roboto, black, no accent/small-caps). */
+.sb-description {
+  max-width: 720px;
+  margin: 22px 0 0;
+  font-family: Roboto, Helvetica, sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #242528;
+}
+.sb-description .sb-description-heading {
+  margin: 0 0 14px;
+  font-family: Roboto, Helvetica, sans-serif;
+  font-size: 21px;
+  font-weight: 700;
+  color: #242528;
+}
+.sb-description .sb-description-content p {
+  margin: 0 0 10px;
+}

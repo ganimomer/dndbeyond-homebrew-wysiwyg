@@ -19,20 +19,58 @@ import { applyDependencyHighlights } from "../editor/dependency-highlights.js";
 import { applySaveState } from "../editor/save-indicator.js";
 import { StoreContext } from "./store-context.js";
 import { StatBlock } from "./StatBlock.js";
-import panelCss from "../editor/panel.css";
-import contextMenuCss from "../editor/context-menu.css";
-import optionPickerCss from "../editor/option-picker.css";
+import appCss from "./App.css";
+import statBlockCss from "./StatBlock.css";
+import nameRowCss from "./NameRow.css";
+import abilityScoresCss from "./fields/AbilityScores.css";
+import metaLineCss from "./fields/MetaLine.css";
+import chipCss from "./shared/Chip.css";
+import skillsRowCss from "./fields/SkillsRow.css";
+import speedRowCss from "./fields/SpeedRow.css";
+import hitPointsCss from "./fields/HitPointsField.css";
+import armorClassCss from "./fields/ArmorClassField.css";
+import miniFormCss from "./shared/MiniForm.css";
+import sensesRowCss from "./fields/SensesRow.css";
+import textRowCss from "./fields/TextRow.css";
+import addFieldCss from "./fields/AddFieldMenu.css";
+import saveSlotCss from "./shared/SaveSlot.css";
+import proseCss from "./prose/ProseSection.css";
+import contextMenuCss from "./shared/ContextMenu.css";
+import optionPickerCss from "./shared/OptionPicker.css";
 import statblock5eCss from "../preview/statblock-5e.css";
 import statblock55eCss from "../preview/statblock-55e.css";
 
 /**
- * One stylesheet for the whole shadow root. Rendered as part of the tree rather
- * than appended alongside it, so Preact owns every node under the root and
- * nothing it diffs can trip over a stray sibling.
+ * One stylesheet for the whole shadow root, assembled from the components'.
+ *
+ * Rendered as part of the tree rather than appended alongside it, so Preact
+ * owns every node under the root and nothing it diffs can trip over a stray
+ * sibling. The order is the cascade: the shared chrome first, then the fields,
+ * then the two layouts — which come last because their job is to say how a
+ * given ruleset differs from everything above.
  */
-const STYLES = [panelCss, contextMenuCss, optionPickerCss, statblock5eCss, statblock55eCss].join(
-  "\n",
-);
+const STYLES = [
+  appCss,
+  statBlockCss,
+  nameRowCss,
+  abilityScoresCss,
+  metaLineCss,
+  chipCss,
+  skillsRowCss,
+  speedRowCss,
+  hitPointsCss,
+  armorClassCss,
+  miniFormCss,
+  sensesRowCss,
+  textRowCss,
+  addFieldCss,
+  saveSlotCss,
+  proseCss,
+  contextMenuCss,
+  optionPickerCss,
+  statblock5eCss,
+  statblock55eCss,
+].join("\n");
 
 export interface AppProps {
   adapter: PageAdapter;

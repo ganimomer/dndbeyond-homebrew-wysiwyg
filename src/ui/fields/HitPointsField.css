@@ -1,0 +1,98 @@
+/* Hit points, closed: the whole value is the button, since every part of
+ * "195 (23d8 + 92)" opens the same form. The gear sits quiet until hovered,
+ * like the chips' ✕. */
+.statblock .sb-chip-button {
+  appearance: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  align-items: center;
+}
+.statblock .sb-chip-button svg {
+  display: block;
+  opacity: 0.5;
+}
+.statblock .sb-chip-button:hover {
+  background: rgba(91, 22, 12, 0.18);
+}
+.statblock .sb-chip-button:hover svg {
+  opacity: 1;
+}
+.statblock .sb-chip-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}
+
+/* Hit points, open: the four controls laid out as the stat block reads them,
+ * "195 (23d8 + 92)", with ✕/✓ trailing. */
+.statblock .hp-form {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 3px;
+}
+.statblock .hp-field {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+}
+.statblock .hp-input,
+.statblock .hp-die {
+  /* Same treatment as the movement distances: content-sized, spinner-free, so
+   * the form still reads as the sentence it replaced. */
+  field-sizing: content;
+  min-width: 2ch;
+  font: inherit;
+  color: inherit;
+  background: rgba(91, 22, 12, 0.06);
+  border: none;
+  outline: none;
+  padding: 0 2px;
+  border-radius: 3px;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.statblock .hp-input::-webkit-outer-spin-button,
+.statblock .hp-input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.statblock .hp-input {
+  width: 4ch; /* fallback where field-sizing isn't supported */
+}
+.statblock .hp-die {
+  appearance: auto;
+  cursor: pointer;
+}
+.statblock .hp-input:hover,
+.statblock .hp-die:hover {
+  background: rgba(91, 22, 12, 0.14);
+}
+.statblock .hp-input:focus,
+.statblock .hp-die:focus {
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}
+.statblock .sb-form-action {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  padding: 0 1px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.55;
+  align-self: center;
+}
+.statblock .sb-form-action svg {
+  display: block;
+}
+.statblock .sb-form-action:hover {
+  opacity: 1;
+}
+.statblock .sb-form-action:focus-visible {
+  outline: none;
+  opacity: 1;
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+  border-radius: 3px;
+}

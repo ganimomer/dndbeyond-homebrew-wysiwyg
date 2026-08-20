@@ -1,0 +1,42 @@
+/* Full-page editor overlay. Lives in a shadow root, isolated from D&D Beyond's
+ * page styles. */
+
+/* Block DDB's inherited (font/color/etc.) styles from reaching into the shadow
+ * root. Each component re-declares what it needs explicitly. */
+:host {
+  all: initial;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  overflow: auto;
+  background: #ece8e0;
+  background-image:
+    radial-gradient(120% 80% at 50% 0%, rgba(120, 90, 40, 0.06), transparent 60%);
+}
+
+.page {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100%;
+  box-sizing: border-box;
+  padding: 40px 24px 80px;
+}
+
+.stage {
+  width: 100%;
+  /* Wide enough to hold the stat block and its artwork side by side. */
+  max-width: 1060px;
+}
+
+/* Flags a value a recent ability edit may have invalidated (see
+ * ability-editing.ts). Deliberately loud enough to notice, soft enough to read
+ * through on both the parchment frame and the plain Description section. */
+.needs-review {
+  background: rgba(214, 158, 46, 0.24);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(214, 158, 46, 0.45);
+}

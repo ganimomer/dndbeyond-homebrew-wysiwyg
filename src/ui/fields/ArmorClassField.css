@@ -1,0 +1,73 @@
+/* Armor class, open: "[14 +] 2 = [16] (natural armor)". The prefix and the
+ * bonus are one control -- the box carries the background and the focus ring,
+ * and the input inside it is transparent -- so "14 +" reads as part of the
+ * field rather than as a separate label. */
+.statblock .ac-form {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+}
+.statblock .ac-field {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: rgba(91, 22, 12, 0.06);
+}
+.statblock .ac-field:hover {
+  background: rgba(91, 22, 12, 0.14);
+}
+.statblock .ac-field:focus-within {
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}
+
+/* The unarmored class, which is Dexterity's business, not the author's.
+ * Tabular so the operator doesn't shift when the base changes width. */
+.statblock .ac-prefix {
+  opacity: 0.6;
+  user-select: none;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.statblock .ac-input,
+.statblock .ac-type {
+  field-sizing: content;
+  min-width: 2ch;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.statblock .ac-input::-webkit-outer-spin-button,
+.statblock .ac-input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.statblock .ac-input {
+  width: 3ch; /* fallback where field-sizing isn't supported */
+}
+
+/* The parenthetical rides in the sentence unboxed -- it's prose, not a number --
+ * and names itself while empty. */
+.statblock .ac-type {
+  min-width: 8ch;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.statblock .ac-type::placeholder {
+  color: inherit;
+  opacity: 0.5;
+  font-style: italic;
+}
+.statblock .ac-type:hover {
+  background: rgba(91, 22, 12, 0.08);
+}
+.statblock .ac-type:focus {
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}

@@ -1,0 +1,54 @@
+/* Senses: the range reads as part of the sentence, like a movement's distance,
+ * but it's free text ("60 ft. (blind beyond this radius)"), so it auto-sizes
+ * rather than sitting in a fixed numeric well. */
+.statblock .sense-input {
+  field-sizing: content;
+  min-width: 4ch;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0 1px;
+  border-radius: 3px;
+}
+.statblock .sense-input:hover {
+  background: rgba(91, 22, 12, 0.08);
+}
+.statblock .sense-input:focus {
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}
+
+/* Passive Perception closes the Senses row: plain text with an editable number,
+ * not a chip — it's a property of the creature, not one of its senses. */
+.statblock .sb-passive {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+}
+.statblock .passive-input {
+  field-sizing: content;
+  min-width: 2ch;
+  width: 3ch; /* fallback where field-sizing isn't supported */
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  border-radius: 3px;
+  text-align: left;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.statblock .passive-input::-webkit-outer-spin-button,
+.statblock .passive-input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.statblock .passive-input:hover {
+  background: rgba(91, 22, 12, 0.08);
+}
+.statblock .passive-input:focus {
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}

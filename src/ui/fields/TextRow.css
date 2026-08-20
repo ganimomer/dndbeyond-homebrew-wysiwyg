@@ -1,0 +1,42 @@
+/* Gear and the languages note: one free-text field each, so the row *is* the
+ * input. The ✕ clears it, which is also what takes the row off the block. */
+.statblock .sb-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.statblock .sb-text-input {
+  field-sizing: content;
+  min-width: 12ch;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0 2px;
+  border-radius: 3px;
+}
+.statblock .sb-text-input::placeholder {
+  opacity: 0.5;
+  font-style: italic;
+}
+.statblock .sb-text-input:hover {
+  background: rgba(91, 22, 12, 0.08);
+}
+.statblock .sb-text-input:focus {
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}
+.statblock .sb-text-clear {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.55;
+}
+.statblock .sb-text-clear:hover {
+  opacity: 1;
+}

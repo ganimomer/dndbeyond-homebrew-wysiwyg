@@ -1,0 +1,8 @@
+/* A meta line slot before the editor turns it into a picker: inline text,
+ * dimmed where it's still prompting ("Alignment…"). Once wired, the mark moves
+ * to the picker's trigger (see option-picker.css) — left here it would dim the
+ * popover hanging inside the slot along with the prompt. */
+.statblock .meta-slot.is-placeholder {
+  opacity: 0.6;
+  font-style: italic;
+}
