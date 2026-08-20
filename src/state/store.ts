@@ -19,6 +19,11 @@
  */
 import type { PageAdapter } from "../adapter/types.js";
 import type { Monster } from "../statblock/model.js";
+// Autosave and the command stack both belong to the session, so they live here
+// rather than with whatever happens to be drawing the block.
+import { AutosaveController } from "../editor/autosave.js";
+import { CommandStack } from "./command.js";
+import { EditingAdapter } from "./editing.js";
 // The registry of which rows are optional. It moves under `ui/` when the fields
 // become components; the store only needs it to prune stale reveals.
 import { basicsFields } from "../preview/optional-fields.js";
@@ -35,7 +40,31 @@ export class EditorStore {
   private listeners = new Set<Listener>();
   private unobserve: (() => void) | null = null;
 
-  constructor(readonly adapter: PageAdapter) {}
+  /** Debounces edits into whole-form saves and tracks who is waiting. */
+  readonly autosave: AutosaveController;
+  /** Every edit, as something that can be undone. */
+  readonly commands: CommandStack;
+  /**
+   * What the editing code mutates the creature through: `PageAdapter`'s shape,
+   * but each call dispatched as a command.
+   */
+  readonly editing: EditingAdapter;
+
+  constructor(readonly adapter: PageAdapter) {
+    this.autosave = new AutosaveController(() => adapter.save());
+    this.commands = new CommandStack(adapter, (origin) => this.autosave.request(origin));
+    this.editing = new EditingAdapter(adapter, this.commands, () => this.requireMonster());
+  }
+
+  /**
+   * The creature, for a caller that cannot proceed without one. Only edits ask,
+   * and an edit can only come from a rendered block — which cannot exist before
+   * the first read.
+   */
+  private requireMonster(): Monster {
+    if (!this.monster) throw new Error("[microbrewery] edited before the form was read");
+    return this.monster;
+  }
 
   /** Reads the form and starts watching it. */
   start(): void {
@@ -47,6 +76,10 @@ export class EditorStore {
     this.unobserve?.();
     this.unobserve = null;
     this.listeners.clear();
+    // Persist anything still inside the debounce window before letting go. The
+    // form keeps the edits either way, but this is what makes closing the
+    // overlay feel like it committed them.
+    void this.autosave.flush().then(() => this.autosave.destroy());
   }
 
   getMonster(): Monster | null {

@@ -32,7 +32,6 @@ import { wireAdjustments } from "./adjustments-editing.js";
 import { wireSenses } from "./senses-editing.js";
 import { wireTextFields } from "./text-field-editing.js";
 import { ProseEditor } from "./prose-editor.js";
-import { AutosaveController } from "./autosave.js";
 import { applySaveState, HEADER_ORIGIN } from "./save-indicator.js";
 import { wireName } from "./name-editing.js";
 import { wireAddField } from "./field-visibility.js";
@@ -71,8 +70,6 @@ export class StatBlockController {
    */
   private traitsEditor: ProseEditor | null = null;
   private traitsHost: HTMLElement | null = null;
-  /** Debounces edits into whole-form saves and tracks who's waiting. */
-  private readonly autosave: AutosaveController;
   private unsubscribeSave: (() => void) | null = null;
   /**
    * Best-effort flush when the tab goes away mid-debounce. The save is far too
@@ -90,11 +87,15 @@ export class StatBlockController {
     private readonly options: StatBlockControllerOptions = {},
   ) {
     this.shadow = container.getRootNode() as ShadowRoot | Document;
-    this.autosave = new AutosaveController(() => this.adapter.save());
   }
 
-  private get adapter() {
-    return this.store.adapter;
+  /** Mutating the creature goes through commands, never straight to the page. */
+  private get editing() {
+    return this.store.editing;
+  }
+
+  private get autosave() {
+    return this.store.autosave;
   }
 
   /** Renders the block and starts tracking the form. */
@@ -124,10 +125,6 @@ export class StatBlockController {
     window.removeEventListener("beforeunload", this.onBeforeUnload);
     this.unsubscribeSave?.();
     this.unsubscribeSave = null;
-    // Persist anything still inside the debounce window before we let go. The
-    // form keeps the edits either way, but this is what makes closing the
-    // overlay feel like it committed them.
-    void this.autosave.flush().then(() => this.autosave.destroy());
     this.destroyMenus();
     this.destroyForms();
     this.traitsEditor?.destroy();
@@ -183,8 +180,7 @@ export class StatBlockController {
           label: `Use ${other} stat block`,
           icon: "loop",
           onClick: () => {
-            this.adapter.setRuleset(other);
-            this.autosave.request(HEADER_ORIGIN);
+            this.editing.setRuleset(other);
           },
         },
       ]);
@@ -203,8 +199,7 @@ export class StatBlockController {
     // records it so its dependents stay flagged across renders. Scores commit
     // on `change`, i.e. on blur — never per keystroke.
     wireAbilityInputs(block, monster, (ability, score) => {
-      this.adapter.setAbility(ability, score);
-      this.autosave.request(HEADER_ORIGIN);
+      this.editing.setAbility(ability, score);
       this.store.update({ changedAbilities: markChanged(this.store.getSession(), ability) });
     });
     applyDependencyHighlights(block, session.changedAbilities);
@@ -228,8 +223,7 @@ export class StatBlockController {
           if (open) open.draft = draft;
         },
         onCommit: (armorClass) => {
-          this.adapter.setArmorClass(armorClass);
-          this.autosave.request(HEADER_ORIGIN);
+          this.editing.setArmorClass(armorClass);
           this.store.update({
             armorClass: null,
             // Re-anchor against the Dexterity in force now: the user has
@@ -251,7 +245,7 @@ export class StatBlockController {
       wireHitPoints(block, monster, {
         state: session.hitPoints,
         conChanged: session.changedAbilities.has("con"),
-        dieOptions: () => this.adapter.hitDieOptions(),
+        dieOptions: () => this.editing.hitDieOptions(),
         onOpen: () => {
           this.store.update({
             hitPoints: {
@@ -266,8 +260,7 @@ export class StatBlockController {
           if (open) open.draft = draft;
         },
         onCommit: (hitPoints) => {
-          this.adapter.setHitPoints(hitPoints);
-          this.autosave.request(HEADER_ORIGIN);
+          this.editing.setHitPoints(hitPoints);
           this.store.update({ hitPoints: null });
         },
         onCancel: () => {
@@ -280,63 +273,36 @@ export class StatBlockController {
     // blur or Enter, and rides autosave like the rest of the header.
     wireName(block, monster, {
       onCommit: (name) => {
-        this.adapter.setName(name);
-        this.autosave.request(HEADER_ORIGIN);
+        this.editing.setName(name);
       },
     });
 
     // Size/type/alignment dropdowns + the subtype tag editor in the meta line all
     // write back to ordinary form fields, so they ride autosave.
     this.menus.push(
-      ...wireMetaControls(block, {
-        sizeOptions: () => this.adapter.sizeOptions(),
-        typeOptions: () => this.adapter.typeOptions(),
-        subTypeOptions: () => this.adapter.subTypeOptions(),
-        alignmentOptions: () => this.adapter.alignmentOptions(),
-        setSize: (value) => {
-          this.adapter.setSize(value);
-          this.autosave.request(HEADER_ORIGIN);
-        },
-        setType: (value) => {
-          this.adapter.setType(value);
-          this.autosave.request(HEADER_ORIGIN);
-        },
-        setSubTypes: (values) => {
-          this.adapter.setSubTypes(values);
-          this.autosave.request(HEADER_ORIGIN);
-        },
-        setAlignment: (value) => {
-          this.adapter.setAlignment(value);
-          this.autosave.request(HEADER_ORIGIN);
-        },
-      }),
+      ...wireMetaControls(block, this.editing),
     );
 
     // Saving throws are one multi-select in the form, so they ride autosave
     // like the rest — chips in 5e, proficiency dots in the 5.5e Save column.
     this.menus.push(
-      ...wireSavingThrows(block, monster, {
-        savingThrowOptions: () => this.adapter.savingThrowOptions(),
-        setSavingThrows: (values) => {
-          this.adapter.setSavingThrows(values);
-          this.autosave.request(HEADER_ORIGIN);
-        },
-      }),
+      ...wireSavingThrows(block, monster, this.editing),
     );
 
     // Damage adjustments and condition immunities are multi-selects on the form,
     // so they commit whole and ride autosave like the saving throws.
     this.menus.push(
-      ...wireAdjustments(block, this.adapter, () => this.autosave.request(HEADER_ORIGIN)),
+      // The third argument is the module's own "I committed something" hook;
+      // persistence is the command's job now, so there is nothing to do with it.
+      ...wireAdjustments(block, this.editing, () => {}),
     );
 
     // Gear and the languages note are plain form fields. Clearing one empties
     // the field *and* takes the row off the block.
     wireTextFields(block, monster, {
       onCommit: (field, value) => {
-        if (field === "gear") this.adapter.setGear(value);
-        else this.adapter.setLanguages(value);
-        this.autosave.request(HEADER_ORIGIN);
+        if (field === "gear") this.editing.setGear(value);
+        else this.editing.setLanguages(value);
       },
       onClear: (field) => {
         if (monster[field] === "") {
@@ -347,9 +313,8 @@ export class StatBlockController {
           return;
         }
         this.store.update({ revealed: unreveal(this.store.getSession(), field) });
-        if (field === "gear") this.adapter.setGear("");
-        else this.adapter.setLanguages("");
-        this.autosave.request(HEADER_ORIGIN);
+        if (field === "gear") this.editing.setGear("");
+        else this.editing.setLanguages("");
       },
     });
 
@@ -357,10 +322,10 @@ export class StatBlockController {
     // keeps them as separate records, so the adapter persists each change
     // itself and updates the listing table, which re-renders us via observe().
     this.menus.push(
-      ...wireSkills(block, monster, this.adapter, (error) => {
+      ...wireSkills(block, monster, this.editing, (error) => {
         console.error("[microbrewery] skill update failed", error);
       }),
-      ...wireMovements(block, monster, this.adapter, {
+      ...wireMovements(block, monster, this.editing, {
         // The chip doesn't exist yet — queue its input for the render that the
         // write-back triggers, so the default is selected and ready to type over.
         onAdd: (type) => {
@@ -370,11 +335,12 @@ export class StatBlockController {
       }),
       // Senses are listing records too; passive Perception, sharing the row, is
       // an ordinary field and rides autosave instead.
-      ...wireSenses(block, monster, this.adapter, {
+      ...wireSenses(block, monster, this.editing, {
         onAdd: (type) => {
           this.store.update({ pendingFocus: `sense:${type}` });
         },
-        onPassivePerception: () => this.autosave.request(HEADER_ORIGIN),
+        // Passive Perception is an ordinary field; its command persists it.
+        onPassivePerception: () => {},
         onError: (error) => console.error("[microbrewery] sense update failed", error),
       }),
     );
@@ -428,8 +394,7 @@ export class StatBlockController {
         section: "traits",
         initialHtml,
         onCommit: (section, html) => {
-          this.adapter.setDescription(section, html);
-          this.autosave.request(section);
+          this.editing.setDescription(section, html);
         },
       });
       this.traitsEditor.mount(this.traitsHost);
