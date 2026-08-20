@@ -23,7 +23,6 @@ import { el, saveSlot, scoreInput } from "./dom.js";
 import { makeIcon } from "./icons.js";
 import { expandInline } from "./inline.js";
 import { sectionBody } from "./sections.js";
-import { metaContent } from "./meta.js";
 import {
   hiddenFields,
   isVisible,
@@ -150,10 +149,9 @@ export function render55e(monster: Monster, options: RenderOptions = {}): HTMLEl
   // information, not a header plus attributes plus stats plus tidbits.
   const basics = el("section", "basics");
   basics.append(nameRow(monster));
-  const metaNodes = metaContent(monster, visibleMeta(monster, revealed));
-  if (metaNodes.length) {
+  if (visibleMeta(monster, revealed).size) {
     const meta = el("div", "meta");
-    meta.append(...metaNodes);
+    meta.append(island("meta"));
     basics.append(meta);
   }
 
@@ -189,6 +187,8 @@ export function render55e(monster: Monster, options: RenderOptions = {}): HTMLEl
   // value for isn't printed at all — the "Add…" menu below brings it back.
   for (const spec of tidbitFields("5.5e")) {
     if (!isVisible(spec, monster, revealed)) continue;
+    // Only the meta slots lack a `render`, and they aren't printed as rows.
+    if (!spec.render) continue;
     const line = labeled(spec.label ?? "", spec.render(monster));
     line.dataset.row = spec.key;
     if (spec.dep) line.dataset.dep = spec.dep;

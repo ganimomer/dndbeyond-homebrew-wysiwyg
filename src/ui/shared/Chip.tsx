@@ -21,9 +21,15 @@ export interface ChipProps {
   /** Names the ✕ where the label is a node, empty, or too terse to name it. */
   removeLabel?: string;
   onRemove?: () => void;
+  /**
+   * Drops the ✕ entirely. For a value that has no way to be emptied — a meta
+   * slot whose field D&D Beyond offers no "nothing chosen" option for, where a
+   * ✕ could only ever write something invalid.
+   */
+  hideRemove?: boolean;
 }
 
-export function Chip({ value, label, detail, removeLabel, onRemove }: ChipProps) {
+export function Chip({ value, label, detail, removeLabel, onRemove, hideRemove }: ChipProps) {
   const named = removeLabel ?? (typeof label === "string" ? label : "");
   return (
     <span class="sb-chip" data-value={value}>
@@ -36,9 +42,16 @@ export function Chip({ value, label, detail, removeLabel, onRemove }: ChipProps)
           <span class="sb-chip-detail">{detail}</span>
         </>
       ) : null}
-      <button type="button" class="sb-chip-remove" aria-label={`Remove ${named}`} onClick={onRemove}>
-        ×
-      </button>
+      {hideRemove ? null : (
+        <button
+          type="button"
+          class="sb-chip-remove"
+          aria-label={`Remove ${named}`}
+          onClick={onRemove}
+        >
+          ×
+        </button>
+      )}
     </span>
   );
 }

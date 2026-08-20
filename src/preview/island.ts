@@ -20,7 +20,8 @@ export type IslandName =
   | "conditionImmunities"
   | "immunities"
   | "senses"
-  | "movements";
+  | "movements"
+  | "meta";
 
 export function island(name: IslandName): HTMLElement {
   const slot = document.createElement("span");

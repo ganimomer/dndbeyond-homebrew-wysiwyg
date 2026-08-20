@@ -11,7 +11,6 @@ const jsdom = new JSDOM("<!doctype html><html><body></body></html>");
 const { render55e } = await import("../preview/render-55e.js");
 const { basicsFields, hiddenFields } = await import("../preview/optional-fields.js");
 const { wireAddField } = await import("./field-visibility.js");
-const { wireMetaControls } = await import("./meta-editing.js");
 const { emptyMonster } = await import("../statblock/model.js");
 
 const click = (el: Element) => el.dispatchEvent(new jsdom.window.MouseEvent("click", { bubbles: true }));
@@ -93,35 +92,13 @@ test("every optional field names a control to land in, and the block has it", ()
         block.querySelector(`[data-focus-key="${spec.focusKey}"]`) ??
           block.querySelector(`.meta-slot[data-meta="${spec.key}"]`) ??
           // A field that has become a component: the renderer owes the hole,
-          // and the component carries the focus key into it.
-          block.querySelector(`[data-island="${spec.key}"]`),
+          // and the component carries the focus key into it. The four meta
+          // slots share one hole, since the line is assembled as a sentence.
+          block.querySelector(`[data-island="${spec.key}"]`) ??
+          (spec.slot === "meta" ? block.querySelector('[data-island="meta"]') : null),
         `${spec.focusKey} is on nothing the renderer emits`,
       );
     }
   }
 });
 
-test("the wired controls answer to the focus keys the table promises", () => {
-  // The panel matches one against the other by string; a typo either side would
-  // silently leave the user's caret where it was.
-  const monster = emptyMonster();
-  const revealed = new Set(basicsFields(monster.ruleset).map((spec) => spec.key));
-  const block = render55e(monster, { revealed });
-  const keyFor = (key: OptionalField) =>
-    basicsFields(monster.ruleset).find((spec) => spec.key === key)?.focusKey;
-
-  const meta = wireMetaControls(block, {
-    sizeOptions: () => [{ value: "4", text: "Medium", selected: true }],
-    typeOptions: () => [{ value: "16", text: "Undead", selected: true }],
-    subTypeOptions: () => [],
-    alignmentOptions: () => [{ value: "10", text: "Unaligned", selected: true }],
-    setSize: () => {},
-    setType: () => {},
-    setSubTypes: () => {},
-    setAlignment: () => {},
-  });
-  assert.deepEqual(
-    meta.map((picker) => picker.focusKey),
-    ["size", "type", "alignment"].map(keyFor),
-  );
-});

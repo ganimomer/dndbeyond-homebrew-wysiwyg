@@ -92,22 +92,16 @@ for (const [name, render, ruleset] of [
     assert.equal(render(full).querySelector(".add-field"), null, "nothing left to add");
   });
 
-  test(`${name} composes the meta line from the slots that have values`, () => {
-    const shown = (m: Partial<Monster>) =>
-      render({ ...emptyMonster(), ...m }).querySelector(".meta")?.textContent;
+  test(`${name} gives the meta line a place when any slot has a value`, () => {
+    // The sentence the slots make of themselves is MetaLine.test.tsx's business;
+    // what the renderer owes is the line, and only when there is one.
+    const meta = (m: Partial<Monster>) =>
+      render({ ...emptyMonster(), ...m }).querySelector(".meta")?.querySelector("[data-island]");
 
-    // Every value is a chip, so each drags its ✕ along into the text; what's
-    // being read here is the sentence the separators make of them.
-    assert.equal(shown({ alignment: "" }), "Medium× humanoid×");
-    assert.equal(shown({ size: "", type: "" }), "unaligned×");
-    // The subtype's parenthetical hugs the type it qualifies (the trailing
-    // "add…" box is the chip editor's, not the sentence's).
-    assert.equal(
-      shown({ subTypes: ["elf"] })?.replace(/\s+/g, " "),
-      "Medium× humanoid× (elf× ), unaligned×",
-    );
+    assert.ok(meta({ alignment: "" }), "size and type still show");
+    assert.ok(meta({ size: "", type: "" }), "alignment alone still shows");
     // Nothing at all rather than an empty italic line of stray separators.
-    assert.equal(shown({ size: "", type: "", alignment: "" }), undefined);
+    assert.equal(meta({ size: "", type: "", alignment: "" }), undefined);
   });
 }
 

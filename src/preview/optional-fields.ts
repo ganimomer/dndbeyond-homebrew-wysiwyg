@@ -10,7 +10,6 @@
  * One table drives both the renderers and that menu, so the two can't drift.
  */
 import type { Monster, Ruleset } from "../statblock/model.js";
-import { metaSlot, subTypeEditor } from "./meta.js";
 import { hasAdjustments, type AdjustmentField } from "../statblock/adjustments.js";
 import { hasSenses } from "../statblock/senses.js";
 import { island } from "./island.js";
@@ -50,8 +49,12 @@ export interface FieldSpec {
   focusKey: string;
   /** True when the creature has a value, i.e. the row renders unprompted. */
   hasValue(monster: Monster): boolean;
-  /** The row's value (or, for a revealed-but-empty field, its empty form). */
-  render(monster: Monster): Node;
+  /**
+   * The row's value (or, for a revealed-but-empty field, its empty form).
+   * Absent for the meta slots: they are not rows, and the meta line assembles
+   * itself from whichever are showing (see `visibleMeta`).
+   */
+  render?(monster: Monster): Node;
 }
 
 /** Options rendered by both layouts, in meta-sentence order. */
@@ -62,7 +65,6 @@ const META: FieldSpec[] = [
     focusKey: "meta:size",
     menuLabel: "Size",
     hasValue: (m) => m.size !== "",
-    render: (m) => metaSlot("size", m.size || "Size…", !m.size),
   },
   {
     key: "type",
@@ -70,7 +72,6 @@ const META: FieldSpec[] = [
     focusKey: "meta:type",
     menuLabel: "Creature type",
     hasValue: (m) => m.type !== "",
-    render: (m) => metaSlot("type", m.type || "Type…", !m.type),
   },
   {
     key: "subTypes",
@@ -78,7 +79,6 @@ const META: FieldSpec[] = [
     focusKey: "meta:subTypes",
     menuLabel: "Subtype",
     hasValue: (m) => m.subTypes.length > 0,
-    render: (m) => subTypeEditor(m.subTypes),
   },
   {
     key: "alignment",
@@ -86,7 +86,6 @@ const META: FieldSpec[] = [
     focusKey: "meta:alignment",
     menuLabel: "Alignment",
     hasValue: (m) => m.alignment !== "",
-    render: (m) => metaSlot("alignment", m.alignment || "Alignment…", !m.alignment),
   },
 ];
 

@@ -24,15 +24,15 @@ import { SavingThrowsRow } from "../ui/fields/SavingThrowsRow.js";
 import { AdjustmentsRow } from "../ui/fields/AdjustmentsRow.js";
 import { SensesRow } from "../ui/fields/SensesRow.js";
 import { SpeedRow } from "../ui/fields/SpeedRow.js";
+import { MetaLine } from "../ui/fields/MetaLine.js";
 import { unreveal } from "../state/session.js";
-import { hiddenFields } from "../preview/optional-fields.js";
+import { hiddenFields, visibleMeta } from "../preview/optional-fields.js";
 import { unarmoredAc } from "../statblock/armor-class.js";
 import { saveSlot } from "../preview/dom.js";
 import { ContextMenu, makeIcon } from "./context-menu.js";
 import { applyDependencyHighlights, wireAbilityInputs } from "./ability-editing.js";
 import { wireHitPoints } from "./hit-points-editing.js";
 import { wireArmorClass } from "./armor-class-editing.js";
-import { wireMetaControls } from "./meta-editing.js";
 import { OptionPicker } from "./option-picker.js";
 import { wireSaveToggles } from "./saves-editing.js";
 import { ProseEditor } from "./prose-editor.js";
@@ -285,12 +285,6 @@ export class StatBlockController {
       },
     });
 
-    // Size/type/alignment dropdowns + the subtype tag editor in the meta line all
-    // write back to ordinary form fields, so they ride autosave.
-    this.menus.push(
-      ...wireMetaControls(block, this.editing),
-    );
-
     // 5.5e prints every save as a dot in the ability tables; those cells belong
     // to a table that is still drawn by hand. The 5e chip row is a component.
     wireSaveToggles(block, this.editing);
@@ -392,6 +386,15 @@ export class StatBlockController {
             field={name}
             adapter={this.editing}
             autoOpen={pending === `add:${name}`}
+          />
+        );
+      case "meta":
+        return (
+          <MetaLine
+            monster={monster}
+            shown={visibleMeta(monster, this.store.getSession().revealed)}
+            adapter={this.editing}
+            pendingFocus={pending}
           />
         );
       case "movements":
