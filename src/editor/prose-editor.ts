@@ -14,7 +14,13 @@
  * Behavior (shortcuts, floating menus, slash commands) is intentionally absent —
  * this is the seam those features attach to later.
  */
-import { createEditor, $getRoot, type LexicalEditor } from "lexical";
+import {
+  createEditor,
+  $createParagraphNode,
+  $getRoot,
+  type EditorState,
+  type LexicalEditor,
+} from "lexical";
 import { $generateNodesFromDOM, $generateHtmlFromNodes } from "@lexical/html";
 import { registerRichText } from "@lexical/rich-text";
 import { registerHistory, createEmptyHistoryState } from "@lexical/history";
@@ -59,13 +65,20 @@ export class ProseEditor {
     this.dispose = mergeRegister(
       registerRichText(this.editor),
       registerHistory(this.editor, createEmptyHistoryState(), 300),
-      this.editor.registerUpdateListener(({ dirtyElements, dirtyLeaves }) => {
+      this.editor.registerUpdateListener(({ editorState, dirtyElements, dirtyLeaves }) => {
+        this.markEmptiness(editorState);
         if (this.loading) return;
         if (dirtyElements.size === 0 && dirtyLeaves.size === 0) return;
         this.scheduleCommit();
       }),
     );
     this.load(this.opts.initialHtml);
+    this.markEmptiness();
+  }
+
+  /** Puts the caret in the section — what a freshly added one wants. */
+  focus(): void {
+    this.editor.focus();
   }
 
   /** True while the user is actively editing (drives the re-sync guard). */
@@ -102,6 +115,21 @@ export class ProseEditor {
     this.editor.setRootElement(null);
   }
 
+  /**
+   * Flags an editor with nothing in it, so the CSS can hold its height open and
+   * draw a placeholder. A section added from the "Add section" menu starts this
+   * way, and an empty contenteditable is otherwise invisible and unclickable.
+   */
+  private markEmptiness(state: EditorState = this.editor.getEditorState()): void {
+    const rootEl = this.editor.getRootElement();
+    if (!rootEl) return;
+    let empty = false;
+    state.read(() => {
+      empty = $getRoot().getTextContentSize() === 0;
+    });
+    rootEl.classList.toggle("is-empty", empty);
+  }
+
   private load(html: string): void {
     this.loading = true;
     this.editor.update(
@@ -110,7 +138,9 @@ export class ProseEditor {
         const nodes = $generateNodesFromDOM(this.editor, doc);
         const root = $getRoot();
         root.clear();
-        root.append(...nodes);
+        // An empty section still needs a block to put the caret in: a bare root
+        // has nowhere for typing to land.
+        root.append(...(nodes.length ? nodes : [$createParagraphNode()]));
       },
       {
         discrete: true,

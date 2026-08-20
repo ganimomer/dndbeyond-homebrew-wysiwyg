@@ -23,16 +23,6 @@ export function htmlHasContent(html: string | undefined): boolean {
   return !!text || !!t.content.querySelector("img, image, svg, table");
 }
 
-/** True when the section has any content to show (HTML or entries). */
-export function hasSection(
-  monster: Monster,
-  key: SectionKey,
-  entries?: NamedEntry[],
-): boolean {
-  if (htmlHasContent(monster.descriptionHtml?.[key])) return true;
-  return !!entries && entries.length > 0;
-}
-
 /**
  * The section's body as a fragment, or null when empty. `intro` applies only to
  * the structured path (the DDB HTML already embeds its own preamble).

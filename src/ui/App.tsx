@@ -33,8 +33,10 @@ import miniFormCss from "./shared/MiniForm.css";
 import sensesRowCss from "./fields/SensesRow.css";
 import textRowCss from "./fields/TextRow.css";
 import addFieldCss from "./fields/AddFieldMenu.css";
+import addSectionCss from "./AddSectionButton.css";
 import saveSlotCss from "./shared/SaveSlot.css";
 import proseCss from "./prose/ProseSection.css";
+import removeSectionCss from "./prose/RemoveSection.css";
 import contextMenuCss from "./shared/ContextMenu.css";
 import optionPickerCss from "./shared/OptionPicker.css";
 import statblock5eCss from "./StatBlock5e.css";
@@ -64,8 +66,10 @@ const STYLES = [
   sensesRowCss,
   textRowCss,
   addFieldCss,
+  addSectionCss,
   saveSlotCss,
   proseCss,
+  removeSectionCss,
   contextMenuCss,
   optionPickerCss,
   statblock5eCss,

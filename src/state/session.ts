@@ -11,7 +11,7 @@
  * throws the DOM away each time; a field that Preact diffs in place keeps its
  * own caret, so it stops meaning anything once the last hand-drawn field goes.
  */
-import type { Ability } from "../statblock/model.js";
+import type { Ability, SectionKey } from "../statblock/model.js";
 import type { OptionalField } from "../ui/fields/registry.js";
 
 export interface SessionState {
@@ -22,6 +22,17 @@ export interface SessionState {
    * A field drops out the moment it has a value of its own.
    */
   readonly revealed: ReadonlySet<OptionalField>;
+  /**
+   * Description sections the user added that D&D Beyond has no text for, held
+   * open with an empty editor to type into.
+   *
+   * Unlike `revealed` above, these are *not* pruned once the section has
+   * content — and not dropped again when it's emptied. Prose commits on a
+   * typing debounce rather than on blur, so a section that vanished the moment
+   * it read empty would pull the editor out from under the caret of anyone who
+   * deleted a word to retype it. A section leaves when the author removes it.
+   */
+  readonly revealedSections: ReadonlySet<SectionKey>;
   /** Abilities edited this session; drives the dependency highlights. */
   readonly changedAbilities: ReadonlySet<Ability>;
   /**
@@ -39,6 +50,7 @@ export interface SessionState {
 export function emptySession(): SessionState {
   return {
     revealed: new Set(),
+    revealedSections: new Set(),
     changedAbilities: new Set(),
     armorBonus: null,
     pendingFocus: null,
@@ -54,6 +66,18 @@ export function reveal(state: SessionState, field: OptionalField): ReadonlySet<O
 export function unreveal(state: SessionState, field: OptionalField): ReadonlySet<OptionalField> {
   const next = new Set(state.revealed);
   next.delete(field);
+  return next;
+}
+
+/** `revealedSections` with one more section held open. */
+export function revealSection(state: SessionState, key: SectionKey): ReadonlySet<SectionKey> {
+  return new Set(state.revealedSections).add(key);
+}
+
+/** `revealedSections` without a section — the author took it off the block. */
+export function unrevealSection(state: SessionState, key: SectionKey): ReadonlySet<SectionKey> {
+  const next = new Set(state.revealedSections);
+  next.delete(key);
   return next;
 }
 

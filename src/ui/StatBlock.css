@@ -1,9 +1,11 @@
-/* Stat block + artwork side by side (D&D Beyond's page layout); the image wraps
+/* Stat block + aside side by side (D&D Beyond's page layout); the aside wraps
  * below the block on narrow viewports. */
 .sb-layout {
   display: flex;
-  align-items: flex-start;
-  /* Left-align the block+image group so the Description below lines up with the
+  /* Stretch, not flex-start: the aside has to span the whole row so its sticky
+   * "Add section" button has somewhere to travel. */
+  align-items: stretch;
+  /* Left-align the block+aside group so the Description below lines up with the
    * stat block's left edge (not centered under it). */
   justify-content: flex-start;
   gap: 28px;
@@ -14,10 +16,19 @@
   min-width: 0;
 }
 
-/* Artwork column, top-aligned beside the stat block. */
-.sb-image {
+/* The column beside the block: the artwork, and the author's tools under it. */
+.sb-aside {
   flex: 0 0 300px;
   max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* Artwork, top-aligned beside the stat block. */
+.sb-image {
+  flex: none;
+  width: 100%;
   margin: 0;
 }
 .sb-image img {

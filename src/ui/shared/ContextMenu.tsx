@@ -8,7 +8,8 @@
  * treatment instead.
  */
 import { useLayoutEffect, useState } from "preact/hooks";
-import { makeIcon, type IconName } from "../shared/icons.js";
+import { Icon } from "./Icon.js";
+import type { IconName } from "./icons.js";
 
 export interface MenuItem {
   label: string;
@@ -30,18 +31,6 @@ export interface ContextMenuProps {
   triggerClass?: string;
   /** Extra class on the popover, e.g. "compact" for a long list. */
   menuClass?: string;
-}
-
-/** Renders one of the hand-built icon SVGs into a span. */
-function Icon({ name, size }: { name: IconName; size?: number }) {
-  return (
-    <span
-      class="cm-icon"
-      ref={(node) => {
-        if (node && !node.firstChild) node.append(makeIcon(name, size));
-      }}
-    />
-  );
 }
 
 export function ContextMenu({
@@ -90,13 +79,7 @@ export function ContextMenu({
           setOpen(!open);
         }}
       >
-        {triggerIcon ? (
-          <span
-            ref={(node) => {
-              if (node && !node.firstChild) node.append(makeIcon(triggerIcon, 16));
-            }}
-          />
-        ) : null}
+        {triggerIcon ? <Icon name={triggerIcon} size={16} /> : null}
         {label}
       </button>
       <ul class={menuClass ? `cm-menu ${menuClass}` : "cm-menu"}>
@@ -111,7 +94,7 @@ export function ContextMenu({
               item.onClick();
             }}
           >
-            {item.icon ? <Icon name={item.icon} /> : <span class="cm-icon" />}
+            {item.icon ? <Icon name={item.icon} class="cm-icon" /> : <span class="cm-icon" />}
             <span class="cm-label">{item.label}</span>
           </li>
         ))}

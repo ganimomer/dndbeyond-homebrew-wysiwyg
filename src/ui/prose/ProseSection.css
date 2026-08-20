@@ -1,4 +1,4 @@
-/* The editable Traits body (Lexical mounts here). Inherits the surrounding
+/* An editable section body (Lexical mounts here). Inherits the surrounding
  * stat-block typography so it reads identically to the read-only sections, with
  * a quiet affordance that it can be edited and a focus ring while active. */
 .sb-prose {
@@ -19,4 +19,23 @@
 }
 .sb-prose p:last-child {
   margin-bottom: 0;
+}
+
+/* A section with nothing in it yet — added from the "Add section" menu. An
+ * empty contenteditable collapses to nothing, so hold a line open and say what
+ * belongs there, in the same quiet italic the meta placeholders use. */
+.sb-prose.is-empty {
+  position: relative;
+  min-height: 1.5em;
+}
+.sb-prose.is-empty::before {
+  content: attr(data-placeholder);
+  display: block;
+  opacity: 0.5;
+  font-style: italic;
+  /* The caret sits in the real (empty) paragraph underneath; the prompt is
+   * decoration and must never take a click or land in a selection. */
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
 }

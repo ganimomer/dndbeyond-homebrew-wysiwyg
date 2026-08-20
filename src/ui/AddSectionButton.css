@@ -1,0 +1,51 @@
+/* The "Add section" button in the column beside the block.
+ *
+ * Loud where the basics' "Add…" is quiet: that one offers a row inside a
+ * sentence and should stay out of the way, this one offers a whole section and
+ * is the main thing in an otherwise empty column. */
+.sb-add-section {
+  /* Sticky rather than pinned: it rests where the description sections begin
+   * (`--add-section-offset`, measured in StatBlock.tsx) and follows the page
+   * down from there, never rising above that line. */
+  position: sticky;
+  top: 24px;
+  margin-top: var(--add-section-offset, 12px);
+}
+
+/* `.cm` is an inline-flex wrapper by default; here it's the column's full width. */
+.sb-add-section .cm {
+  display: block;
+}
+
+.sb-add-section .cm-trigger.add-section-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+  padding: 11px 14px;
+  border-radius: 5px;
+  background: var(--accent, #5b160c);
+  color: #ffffff;
+  font-family: "Scala Sans Sc Offc", "Scala Sans Offc", Roboto, Helvetica, sans-serif;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+  transition: filter 0.12s ease, box-shadow 0.12s ease;
+}
+
+.sb-add-section .cm-trigger.add-section-trigger:hover {
+  filter: brightness(1.25);
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.3);
+}
+
+.sb-add-section .cm-trigger.add-section-trigger:focus-visible {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--accent, #5b160c);
+}
+
+.sb-add-section .cm-trigger.add-section-trigger svg {
+  display: block;
+}

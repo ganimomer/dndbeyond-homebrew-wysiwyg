@@ -9,6 +9,9 @@ import type { Monster, NamedEntry, SectionKey } from "../statblock/model.js";
 import { formatModifier, initiativeText, proficiencyBonus, xpForCr } from "../statblock/compute.js";
 import { htmlHasContent, sectionBody } from "./prose/sections.js";
 import { ProseSection } from "./prose/ProseSection.js";
+import { RemoveSection } from "./prose/RemoveSection.js";
+import { SECTION_LABEL, SECTION_PLACEHOLDER } from "./prose/section-registry.js";
+import { sectionFocusKey } from "./AddSectionButton.js";
 import { useEditing, useSession } from "./store-context.js";
 import { Raw } from "./shared/Raw.js";
 import { SaveSlot } from "./shared/SaveSlot.js";
@@ -51,30 +54,40 @@ function crText(monster: Monster): string {
 
 function DescriptionBlock({
   monster,
-  heading,
   section,
   entries,
   intro,
 }: {
   monster: Monster;
-  heading: string;
   section: SectionKey;
   entries?: NamedEntry[];
   intro?: string;
 }) {
+  const session = useSession();
   const html = monster.descriptionHtml?.[section];
   const editable = htmlHasContent(html);
   const body = editable ? null : sectionBody(monster, section, entries, intro);
-  if (!editable && !body) return null;
+  // A section the creature has no text for isn't printed — unless the author
+  // asked for it from the "Add section" button, which holds an empty editor
+  // open to write in.
+  const revealed = session.revealedSections.has(section);
+  if (!editable && !body && !revealed) return null;
+  const heading = SECTION_LABEL[section];
   return (
     <section class="description-block">
       <div class="heading">
         {heading}
         {/* The autosave spinner rides the right end of the section's heading. */}
         <SaveSlot origin={section} />
+        <RemoveSection section={section} />
       </div>
-      {editable ? (
-        <ProseSection section={section} html={html!} />
+      {editable || revealed ? (
+        <ProseSection
+          section={section}
+          html={html ?? ""}
+          autoFocus={session.pendingFocus === sectionFocusKey(section)}
+          placeholder={SECTION_PLACEHOLDER[section]}
+        />
       ) : (
         <Raw class="content" node={body} data-section={section} />
       )}
@@ -88,14 +101,16 @@ export function StatBlock55e({ monster, onClose }: { monster: Monster; onClose?:
   const commitAbility = useCommitAbility();
   const revealed = session.revealed;
 
-  const sections: Array<[string, SectionKey, NamedEntry[]?, string?]> = [
-    ["Traits", "traits", monster.traits],
-    ["Actions", "actions", monster.actions],
-    ["Bonus Actions", "bonusActions", monster.bonusActions],
-    ["Reactions", "reactions", monster.reactions],
-    ["Legendary Actions", "legendary", monster.legendaryActions, monster.legendaryActionsIntro],
-    ["Mythic Actions", "mythic"],
-    ["Lair Actions", "lair"],
+  // Print order, and what each one's structured samples are. The headings come
+  // from the section registry, so the block and the "Add section" menu agree.
+  const sections: Array<[SectionKey, NamedEntry[]?, string?]> = [
+    ["traits", monster.traits],
+    ["actions", monster.actions],
+    ["bonusActions", monster.bonusActions],
+    ["reactions", monster.reactions],
+    ["legendary", monster.legendaryActions, monster.legendaryActionsIntro],
+    ["mythic"],
+    ["lair"],
   ];
 
   return (
@@ -174,11 +189,10 @@ export function StatBlock55e({ monster, onClose }: { monster: Monster; onClose?:
       </section>
 
       <div class="description-blocks">
-        {sections.map(([heading, section, entries, intro]) => (
+        {sections.map(([section, entries, intro]) => (
           <DescriptionBlock
             key={section}
             monster={monster}
-            heading={heading}
             section={section}
             entries={entries}
             intro={intro}

@@ -14,16 +14,18 @@ with a thin per-browser layer for each extension format.
 > Every field on the block is editable — name, the meta line, ability scores,
 > armor class, hit points, speed, skills, saving throws, damage adjustments,
 > condition immunities, senses, gear and languages — and **every description
-> section D&D Beyond holds text for** is a [Lexical](https://lexical.dev)
-> rich-text editor that writes back to the form. **Autosave** persists all of it
-> without a page reload. This pulls Lexical + Preact into the content script
-> (~400 KB minified); release builds are minified.
+> section** — traits and actions through to the Description below the block —
+> is a [Lexical](https://lexical.dev) rich-text editor that writes back to the
+> form. **Autosave** persists all of it without a page reload. This pulls
+> Lexical + Preact into the content script (~400 KB minified); release builds
+> are minified.
 >
 > The block is a [Preact](https://preactjs.com) tree over an `EditorStore`, and
 > every edit is a `Command` — see **Architecture** below.
 >
-> Known gap: a section D&D Beyond has *no* text for isn't printed, so there is
-> nowhere to start typing an empty Traits.
+> A section D&D Beyond holds *no* text for isn't printed at all — so an **"Add
+> section"** button beside the block puts one there, empty and with the caret
+> already in it, and a trash on every section heading takes it back off again.
 >
 > The D&D Beyond ⇄ editor markup codec has unit + headless-Lexical round-trip
 > tests, and the whole loop is exercised against a captured copy of the real
@@ -49,6 +51,19 @@ dangling comma where an alignment isn't set. An **"Add…" menu** at the foot of
 the section lists whatever is missing and puts it back, empty and ready to fill
 in; a field added that way sticks around for the session, and drops off again
 the moment its last value is removed.
+
+Whole **sections** work the same way, one level up. A section the creature has
+no text for isn't printed, and the solid **"Add section"** button in the column
+beside the block — under the artwork, and sticky, so it follows the page down
+but never rides above the line the sections start on — offers whichever are
+missing and drops the caret straight into the new one. Every section heading
+carries a **trash** that takes it off again: one click while it's still empty,
+and a confirm once there is prose to lose, since removing it clears D&D Beyond's
+field. Legendary, mythic and lair actions aren't on offer — DDB keeps each
+behind a checkbox on the form and won't read the textarea back while it's
+unticked, so tick the box there and the section appears on its own merit. In the
+2014 layout, where Traits prints with no heading at all, its trash rides the top
+right of the body on hover instead.
 
 A kebab **context menu** on the name row (styled after the Encounters tool)
 switches ruleset — **Use 5e / Use 5.5e stat block**, which writes back to the
@@ -82,6 +97,7 @@ src/
 ├── ui/                   the injected editor, in Preact
 │   ├── App.tsx             overlay chrome; the only store subscriber
 │   ├── StatBlock.tsx       artwork + layout + the Description section
+│   ├── AddSectionButton.tsx  the sticky "Add section" beside the block
 │   ├── StatBlock5e.tsx     the 2014 layout      (+ .css)
 │   ├── StatBlock55e.tsx    the 2024 layout      (+ .css)
 │   ├── NameRow.tsx         name, ruleset menu, close
@@ -89,6 +105,8 @@ src/
 │   │   ├── registry.ts       which rows are optional, and what the "Add…" menu offers
 │   │   └── Field.tsx         picks a row's control by which field it is
 │   ├── prose/              ProseSection (Lexical) + the DDB-HTML plumbing
+│   │   ├── section-registry.ts  the sections' names, and which can be added
+│   │   └── RemoveSection.tsx    the trash that takes one back off
 │   └── shared/            Chip, OptionPicker, ContextMenu, MiniForm, SaveSlot, icons
 └── editor/               what hasn't found a better home yet
     ├── fab.ts              the "Open in Microbrewery" launcher

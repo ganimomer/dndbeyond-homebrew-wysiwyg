@@ -1,0 +1,78 @@
+/* The trash at the end of a section heading. An author's tool, not part of the
+ * creature — so it keeps out of the way until it's wanted, like the "Add…" menu
+ * at the foot of the basics. */
+.sb-remove-section {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  vertical-align: middle;
+  /* Headings that host these are flex rows (see SaveSlot.css). Idle, the save
+   * slot is `display:none` and this is what pushes the group right; mid-save
+   * the slot's own `margin-left:auto` takes over and the trash just follows it. */
+  margin-left: auto;
+}
+.save-slot:not(:empty) + .sb-remove-section {
+  margin-left: 0.25em;
+}
+
+.sb-remove-section button {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.45;
+}
+.sb-remove-section button:hover,
+.sb-remove-section button:focus-visible {
+  opacity: 1;
+  background: rgba(91, 22, 12, 0.12);
+}
+.sb-remove-section button:focus-visible {
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}
+
+/* Armed: the trash is replaced in the same slot by what it's actually asking. */
+.sb-remove-section.is-armed {
+  gap: 4px;
+}
+.sb-remove-prompt {
+  font-family: Roboto, "Open Sans", Helvetica, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.8;
+}
+.sb-remove-section .sb-remove-confirm {
+  opacity: 1;
+  color: #b00;
+}
+.sb-remove-section .sb-remove-confirm:hover {
+  background: rgba(187, 0, 0, 0.14);
+}
+.sb-remove-section .sb-remove-cancel {
+  opacity: 0.7;
+}
+
+/* The 2014 block prints Traits with no heading at all, so there is no row to
+ * hang the trash off. It rides the top-right corner of the body instead, out of
+ * sight until the section is pointed at or the control itself is tabbed to. */
+.sb-traits-removable {
+  position: relative;
+}
+.sb-traits-removable > .sb-remove-section {
+  position: absolute;
+  top: -2px;
+  right: 0;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.sb-traits-removable:hover > .sb-remove-section,
+.sb-traits-removable:focus-within > .sb-remove-section {
+  opacity: 1;
+}

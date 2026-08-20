@@ -8,7 +8,7 @@
  */
 import type { TestContext } from "node:test";
 import type { PageAdapter, SelectOption } from "../adapter/types.js";
-import type { Monster } from "../statblock/model.js";
+import type { Monster, SectionKey } from "../statblock/model.js";
 import { EditorStore } from "../state/store.js";
 import { StoreContext } from "../ui/store-context.js";
 import { StatBlock } from "../ui/StatBlock.js";
@@ -69,6 +69,8 @@ export function stubAdapter(monster: Monster, overrides: Partial<PageAdapter> = 
 export interface RenderBlockOptions {
   /** Optional fields the user has added but not yet filled in. */
   revealed?: Iterable<string>;
+  /** Description sections the user has added from the "Add section" button. */
+  revealedSections?: Iterable<SectionKey>;
   adapter?: Partial<PageAdapter>;
 }
 
@@ -78,13 +80,20 @@ export function renderBlock(t: TestContext, monster: Monster, options: RenderBlo
   if (options.revealed) {
     store.update({ revealed: new Set(options.revealed) as never });
   }
+  if (options.revealedSections) {
+    store.update({ revealedSections: new Set(options.revealedSections) });
+  }
   t.after(() => store.stop());
 
-  const view = renderInShadowRoot(
-    t,
+  // The tree the overlay draws, from whatever the store currently holds. `App`
+  // repaints by re-rendering exactly this on a store notification; a test that
+  // needs the same does it by hand, since nothing here subscribes.
+  const tree = () => (
     <StoreContext.Provider value={store}>
-      <StatBlock monster={monster} />
-    </StoreContext.Provider>,
+      <StatBlock monster={store.getMonster() ?? monster} />
+    </StoreContext.Provider>
   );
-  return { ...view, store };
+
+  const view = renderInShadowRoot(t, tree());
+  return { ...view, store, repaint: () => view.rerender(tree()) };
 }

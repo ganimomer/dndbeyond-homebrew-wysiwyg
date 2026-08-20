@@ -19,7 +19,19 @@ import type { SectionKey } from "../../statblock/model.js";
 import { ProseEditor } from "../../editor/prose-editor.js";
 import { useEditing } from "../store-context.js";
 
-export function ProseSection({ section, html }: { section: SectionKey; html: string }) {
+export interface ProseSectionProps {
+  section: SectionKey;
+  html: string;
+  /**
+   * Put the caret here as soon as it mounts. Set by the "Add section" menu:
+   * adding a section is always a prelude to writing in it.
+   */
+  autoFocus?: boolean;
+  /** Shown while the section is empty, e.g. "Write the creature's traits…". */
+  placeholder?: string;
+}
+
+export function ProseSection({ section, html, autoFocus, placeholder }: ProseSectionProps) {
   const editing = useEditing();
   const host = useRef<HTMLDivElement>(null);
   const editor = useRef<ProseEditor | null>(null);
@@ -37,6 +49,9 @@ export function ProseSection({ section, html }: { section: SectionKey; html: str
     });
     created.mount(node);
     editor.current = created;
+    // Read once, on mount: it says how this section came to be on the block, and
+    // a later re-render must never steal the caret back.
+    if (autoFocus) created.focus();
     return () => {
       created.destroy();
       editor.current = null;
@@ -50,5 +65,7 @@ export function ProseSection({ section, html }: { section: SectionKey; html: str
     if (live && !live.hasFocus()) live.setContent(html);
   }, [html]);
 
-  return <div class="content" data-section={section} ref={host} />;
+  return (
+    <div class="content sb-prose" data-section={section} data-placeholder={placeholder} ref={host} />
+  );
 }

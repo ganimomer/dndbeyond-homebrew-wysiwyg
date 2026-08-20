@@ -8,6 +8,11 @@ import { emptyMonster, type Monster, type Ruleset } from "../statblock/model.js"
 import { basicsFields, hiddenFields, tidbitFields } from "./fields/registry.js";
 import { fireEvent } from "../test-support/render.js";
 import { renderBlock } from "../test-support/editor.js";
+import {
+  ADDABLE_SECTIONS,
+  SECTION_LABEL,
+  SECTION_PLACEHOLDER,
+} from "./prose/section-registry.js";
 
 const creature = (ruleset: Ruleset, overrides: Partial<Monster> = {}): Monster => ({
   ...emptyMonster(),
@@ -211,4 +216,89 @@ test("a section that only exists as sample entries stays read-only", (t) => {
   assert.ok(body);
   assert.equal(body!.getAttribute("contenteditable"), null);
   assert.match(body!.textContent ?? "", /Spider Climb/);
+});
+
+for (const ruleset of ["5e", "5.5e"] as const) {
+  test(`${ruleset} prints nothing for a section with neither text nor a reveal`, (t) => {
+    const { root } = renderBlock(t, creature(ruleset));
+
+    for (const section of ADDABLE_SECTIONS) {
+      assert.equal(
+        root.querySelector(`[data-section="${section}"]`),
+        null,
+        `${section} has nothing to say`,
+      );
+    }
+  });
+
+  test(`${ruleset} prints a revealed section as an empty editor to type into`, (t) => {
+    const { root } = renderBlock(t, creature(ruleset), {
+      revealedSections: ["bonusActions"],
+    });
+
+    const body = root.querySelector<HTMLElement>('[data-section="bonusActions"]');
+    assert.ok(body, "on the block");
+    assert.equal(body!.getAttribute("contenteditable"), "true");
+    assert.equal(body!.textContent, "", "and empty");
+    // An empty contenteditable collapses to nothing; the prompt is what holds
+    // the line open and says what belongs there.
+    assert.ok(body!.classList.contains("is-empty"));
+    assert.equal(body!.dataset.placeholder, SECTION_PLACEHOLDER.bonusActions);
+  });
+
+  test(`${ruleset} heads a revealed section with the name the menu offered it under`, (t) => {
+    const { root } = renderBlock(t, creature(ruleset), { revealedSections: ["reactions"] });
+
+    const headings = [...root.querySelectorAll(".statblock .heading, .statblock h4")].map((h) =>
+      (h.textContent ?? "").trim(),
+    );
+    assert.ok(headings.includes(SECTION_LABEL.reactions));
+  });
+
+  test(`${ruleset} gives every section on the block a way off it again`, (t) => {
+    const { root } = renderBlock(
+      t,
+      creature(ruleset, {
+        descriptionHtml: Object.fromEntries(
+          ADDABLE_SECTIONS.map((key) => [key, `<p>${key}</p>`]),
+        ),
+      }),
+    );
+
+    for (const section of ADDABLE_SECTIONS) {
+      assert.ok(
+        root.querySelector(`[aria-label="Remove ${SECTION_LABEL[section]}"]`),
+        `${section} can be removed`,
+      );
+    }
+  });
+}
+
+test("the Description below the block is editable, like every other section", (t) => {
+  // It was the last one still rendered read-only — which would have made
+  // "Add section → Description" produce an empty div nothing could be typed in.
+  const { root } = renderBlock(
+    t,
+    creature("5.5e", { descriptionHtml: { characteristics: "<p>A pale figure.</p>" } }),
+  );
+
+  const body = root.querySelector('.sb-description [data-section="characteristics"]');
+  assert.ok(body, "on the page");
+  assert.equal(body!.getAttribute("contenteditable"), "true");
+  assert.match(body!.textContent ?? "", /A pale figure/);
+});
+
+test("5e Traits keeps its headingless print, trash and all", (t) => {
+  // The 2014 block genuinely prints no "Traits" heading, so the trash rides the
+  // body instead of a heading row.
+  const { root } = renderBlock(t, creature("5e"), { revealedSections: ["traits"] });
+
+  const wrapper = root.querySelector(".sb-traits-removable");
+  assert.ok(wrapper, "the body carries the control");
+  assert.ok(wrapper!.querySelector('[aria-label="Remove Traits"]'));
+  assert.deepEqual(
+    [...root.querySelectorAll(".statblock h4")].map((h) => (h.textContent ?? "").trim()),
+    [],
+    "and no heading was invented for it",
+  );
 });
