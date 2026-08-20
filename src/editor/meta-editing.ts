@@ -2,8 +2,8 @@
  * Turns the meta line's editable controls (emitted by `metaContent`) into live
  * editors that write straight back to the form, mirroring `wireAbilityInputs`:
  *
- *   - the size, type and alignment `<select>`s — fill options, preselect the
- *     current one, commit on change;
+ *   - the size, type and alignment slots — each becomes an `OptionPicker` over
+ *     DDB's options, opening on the current one and committing the pick;
  *   - the subtype multi-tag editor — fill the search `<datalist>`, remove a tag on
  *     its ✕, add a tag when one is typed/picked; each edit writes the whole new
  *     set back (DDB's sub-type is a multi-select).
@@ -12,6 +12,7 @@
  */
 import type { SelectOption } from "../adapter/types.js";
 import type { MetaKind } from "../preview/dom.js";
+import { OptionPicker } from "./option-picker.js";
 
 /** The adapter surface the meta controls need (satisfied by PageAdapter). */
 export interface MetaControlsAdapter {
@@ -25,48 +26,61 @@ export interface MetaControlsAdapter {
   setAlignment(value: string): void;
 }
 
-export function wireMetaControls(scope: ParentNode, adapter: MetaControlsAdapter): void {
-  wireSelect(scope, "size", () => adapter.sizeOptions(), (v) => adapter.setSize(v));
-  wireSelect(scope, "type", () => adapter.typeOptions(), (v) => adapter.setType(v));
-  wireSelect(
-    scope,
-    "alignment",
-    () => adapter.alignmentOptions(),
-    (v) => adapter.setAlignment(v),
-  );
+/** The pickers built for the meta line; the panel owns destroying them. */
+export function wireMetaControls(
+  scope: ParentNode,
+  adapter: MetaControlsAdapter,
+): OptionPicker[] {
+  const pickers = [
+    wirePicker(scope, "size", () => adapter.sizeOptions(), (v) => adapter.setSize(v)),
+    wirePicker(scope, "type", () => adapter.typeOptions(), (v) => adapter.setType(v)),
+    wirePicker(
+      scope,
+      "alignment",
+      () => adapter.alignmentOptions(),
+      (v) => adapter.setAlignment(v),
+    ),
+  ];
   wireSubTypes(scope, adapter);
+  return pickers.filter((p): p is OptionPicker => p !== null);
 }
 
-/** Fills one single-value meta dropdown and commits the picked option's value. */
-function wireSelect(
+/** Turns one meta slot into a picker over DDB's options for that field. */
+function wirePicker(
   scope: ParentNode,
   kind: MetaKind,
   options: () => SelectOption[],
   commit: (value: string) => void,
-): void {
-  const select = scope.querySelector<HTMLSelectElement>(
-    `select.meta-select[data-meta="${kind}"]`,
-  );
-  if (!select) return;
+): OptionPicker | null {
+  const slot = scope.querySelector<HTMLElement>(`.meta-slot[data-meta="${kind}"]`);
+  if (!slot) return null;
 
   // DDB labels its "nothing chosen" option with a bare em-dash. Where the field
   // is blank the renderer seeded a prompt ("Alignment…") instead, so keep that
   // wording on the empty option rather than letting the dash win.
-  const prompt = select.classList.contains("is-placeholder")
-    ? (select.options[0]?.text ?? "")
-    : "";
+  const isPlaceholder = slot.classList.contains("is-placeholder");
+  const prompt = isPlaceholder ? slot.textContent ?? "" : "";
+  const label = slot.dataset.label ?? kind;
 
-  // Replace the seeded option with the full list, keeping the customizable
-  // <button><selectedcontent> trigger (only <option>s are removed).
-  select.querySelectorAll("option").forEach((o) => o.remove());
-  for (const o of options()) {
-    const option = document.createElement("option");
-    option.value = o.value;
-    option.textContent = prompt && o.value === "" ? prompt : o.text;
-    if (o.selected) option.selected = true;
-    select.appendChild(option);
-  }
-  select.addEventListener("change", () => commit(select.value));
+  const picker = new OptionPicker(
+    options().map((o) => ({
+      label: prompt && o.value === "" ? prompt : o.text,
+      selected: o.selected,
+      onClick: () => commit(o.value),
+    })),
+    {
+      trigger: {
+        text: slot.textContent ?? "",
+        ariaLabel: label,
+        variant: "value",
+        isPlaceholder,
+      },
+      filterPlaceholder: `Filter ${label.toLowerCase()}…`,
+      focusKey: `meta:${kind}`,
+    },
+  );
+  slot.replaceChildren(picker.element);
+  return picker;
 }
 
 function wireSubTypes(scope: ParentNode, adapter: MetaControlsAdapter): void {

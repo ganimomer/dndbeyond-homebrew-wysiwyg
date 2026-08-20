@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 
-// chip-picker builds DOM via the global `document`; back it with jsdom.
+// option-picker builds DOM via the global `document`; back it with jsdom.
 const jsdom = new JSDOM("<!doctype html><html><body></body></html>");
 (globalThis as Record<string, unknown>).document = jsdom.window.document;
 (globalThis as Record<string, unknown>).window = jsdom.window;
@@ -10,7 +10,7 @@ const jsdom = new JSDOM("<!doctype html><html><body></body></html>");
 // calls it purely to keep the highlight in view.
 jsdom.window.Element.prototype.scrollIntoView = () => {};
 
-const { ChipPicker } = await import("./chip-picker.js");
+const { OptionPicker } = await import("./option-picker.js");
 
 const DAMAGE = ["Acid", "Cold", "Fire", "Force", "Lightning", "Necrotic"];
 
@@ -26,12 +26,19 @@ const press = (el: Element, key: string) =>
  */
 let disposeLast: (() => void) | null = null;
 
-function setup(labels: string[] = DAMAGE) {
+function setup(labels: string[] = DAMAGE, { selected = "", focusKey = "" } = {}) {
   disposeLast?.();
   const taken: string[] = [];
-  const picker = new ChipPicker(
-    labels.map((label) => ({ label, onClick: () => taken.push(label) })),
-    { label: "Add to damageResistances" },
+  const picker = new OptionPicker(
+    labels.map((label) => ({
+      label,
+      selected: label === selected,
+      onClick: () => taken.push(label),
+    })),
+    {
+      trigger: { text: "+", ariaLabel: "Add to damageResistances", variant: "add" },
+      ...(focusKey ? { focusKey } : {}),
+    },
   );
   disposeLast = () => picker.destroy();
 
@@ -88,6 +95,43 @@ test("opening focuses the filter box and highlights the first option", () => {
   assert.equal(jsdom.window.document.activeElement, filter);
   assert.equal(filter.getAttribute("aria-expanded"), "true");
   assert.equal(active(), "Acid");
+});
+
+test("with a value already chosen, it opens on that option", () => {
+  const { trigger, active } = setup(DAMAGE, { selected: "Force" });
+
+  click(trigger);
+
+  assert.equal(active(), "Force");
+});
+
+test("once the user types, the highlight follows the matches, not the value", () => {
+  const { trigger, filter, active } = setup(DAMAGE, { selected: "Force" });
+  click(trigger);
+
+  type(filter, "c");
+
+  assert.equal(active(), "Acid");
+});
+
+test("aria-selected marks the chosen value, not the highlight", () => {
+  const { trigger, root, active } = setup(DAMAGE, { selected: "Force" });
+  click(trigger);
+  const selected = () =>
+    [...root.querySelectorAll(".cp-option")]
+      .filter((li) => li.getAttribute("aria-selected") === "true")
+      .map((li) => li.textContent);
+
+  assert.deepEqual(selected(), ["Force"]);
+  press(trigger, "ArrowDown");
+  assert.equal(active(), "Lightning", "the highlight moved");
+  assert.deepEqual(selected(), ["Force"], "and the chosen value did not");
+});
+
+test("a focus key reaches the trigger, so the panel can find it again", () => {
+  const { trigger } = setup(DAMAGE, { focusKey: "add:damageResistances" });
+
+  assert.equal(trigger.dataset.focusKey, "add:damageResistances");
 });
 
 test("typing hides what doesn't match, keeping the rest in source order", () => {

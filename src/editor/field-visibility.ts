@@ -7,21 +7,17 @@
  * (see `EditorPanel.pruneRevealed`). Which is also what makes a field go away
  * again when its last value is removed.
  */
-import type { FieldSpec, OptionalField } from "../preview/optional-fields.js";
+import type { FieldSpec } from "../preview/optional-fields.js";
 import { ContextMenu } from "./context-menu.js";
 
 /**
- * The control to put the caret in when `key` is revealed, or null when the
- * field's first move is a menu rather than typing.
+ * `onReveal` is handed the whole spec rather than its key: the caller wants
+ * `focusKey` too, to land the user in the control it just put on the block.
  */
-export function revealFocusKey(key: OptionalField): string | null {
-  return key === "gear" || key === "languages" ? `text:${key}` : null;
-}
-
 export function wireAddField(
   scope: ParentNode,
   hidden: FieldSpec[],
-  onReveal: (key: OptionalField) => void,
+  onReveal: (spec: FieldSpec) => void,
 ): ContextMenu[] {
   const host = scope.querySelector<HTMLElement>(".add-field");
   // The renderer only emits the footer when something is missing, so an absent
@@ -29,7 +25,7 @@ export function wireAddField(
   if (!host || !hidden.length) return [];
 
   const menu = new ContextMenu(
-    hidden.map((spec) => ({ label: spec.menuLabel, onClick: () => onReveal(spec.key) })),
+    hidden.map((spec) => ({ label: spec.menuLabel, onClick: () => onReveal(spec) })),
     {
       triggerText: "Add…",
       triggerIcon: "add",

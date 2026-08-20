@@ -11,7 +11,7 @@
 import type { SelectOption } from "../adapter/types.js";
 import type { Monster } from "../statblock/model.js";
 import { defaultSenseNote, senseText } from "../statblock/senses.js";
-import { ChipPicker } from "./chip-picker.js";
+import { OptionPicker } from "./option-picker.js";
 import { commitOnEnter } from "./inline-input.js";
 
 /** The adapter surface the Senses row needs (satisfied by PageAdapter). */
@@ -37,7 +37,7 @@ export function wireSenses(
   monster: Monster,
   adapter: SenseAdapter,
   { onAdd = () => {}, onPassivePerception = () => {}, onError = () => {} }: SenseHandlers = {},
-): ChipPicker[] {
+): OptionPicker[] {
   const wrap = scope.querySelector<HTMLElement>('.sb-chips[data-field="senses"]');
   if (!wrap) return [];
 
@@ -107,7 +107,11 @@ export function wireSenses(
     return [];
   }
 
-  const menu = new ChipPicker(items, { label: "Add sense", placeholder: "Filter senses…" });
+  const menu = new OptionPicker(items, {
+    trigger: { text: "+", ariaLabel: "Add sense", variant: "add" },
+    filterPlaceholder: "Filter senses…",
+    focusKey: "add:senses",
+  });
   host.replaceChildren(menu.element);
   return [menu];
 }

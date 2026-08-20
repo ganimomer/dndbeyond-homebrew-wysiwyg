@@ -1,6 +1,6 @@
-/* The filterable "＋" picker on a chip row. The trigger matches the chips it
- * sits beside; the popover matches the context menu's white card, so the two
- * still read as one family. */
+/* The filterable picker, in its two faces: the "＋" on a chip row, and a meta
+ * line slot reading as the value it holds. Either way the popover matches the
+ * context menu's white card, so the two still read as one family. */
 
 .cp {
   position: relative;
@@ -13,19 +13,43 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 5px;
   border-radius: 4px;
   /* `font` carries line-height, so the trigger takes the same line box as the
-   * chips beside it and the two end up exactly the same height. */
+   * text beside it and the two end up exactly the same height. */
   font: inherit;
   color: inherit;
+}
+
+/* The chip row's "＋": chip-sized, and quiet until wanted. */
+.cp-trigger.add {
+  padding: 0 5px;
   background: rgba(91, 22, 12, 0.1);
   opacity: 0.65;
 }
 
-.cp-trigger:hover {
+.cp-trigger.add:hover {
   opacity: 1;
   background: rgba(91, 22, 12, 0.18);
+}
+
+/* A meta line slot (size, creature type, alignment): inline text with nothing
+ * but a hover to say it can be clicked. */
+.cp-trigger.value {
+  padding: 0 1px;
+}
+
+.cp-trigger.value:hover {
+  background: rgba(91, 22, 12, 0.08);
+}
+
+.cp-trigger.value.is-placeholder {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.cp-trigger:focus-visible {
+  outline: 1px solid var(--accent, #5b160c);
+  outline-offset: 1px;
 }
 
 .cp-panel {
@@ -41,6 +65,8 @@
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
   font-family: Roboto, "Open Sans", Helvetica, sans-serif;
   font-size: 13px;
+  /* The meta line this can hang from is italic; the popover is not. */
+  font-style: normal;
   color: #242527;
   display: none;
 }
@@ -86,6 +112,11 @@
 
 .cp-option.is-active {
   background: #f2f5f7;
+}
+
+/* The value the field currently holds, as a native select bolds its own. */
+.cp-option.is-selected {
+  font-weight: 600;
 }
 
 .cp-empty {

@@ -43,7 +43,7 @@ export function saveSlot(origin: string): HTMLElement {
   return slot;
 }
 
-/** Which meta-line control a `<select>` drives. */
+/** Which meta-line control a picker drives. */
 export type MetaKind = "size" | "type" | "subType" | "alignment";
 
 const META_LABEL: Record<MetaKind, string> = {
@@ -53,40 +53,22 @@ const META_LABEL: Record<MetaKind, string> = {
   alignment: "Alignment",
 };
 
-/** True where the browser supports the customizable-select feature (Chrome 135+). */
-const SUPPORTS_BASE_SELECT =
-  typeof CSS !== "undefined" && typeof CSS.supports === "function" &&
-  CSS.supports("appearance", "base-select");
-
 /**
- * An editable meta-line control (size, creature type, alignment): a real
- * `<select>` tagged for `wireMetaControls` to fill with options. Where the
- * customizable-select feature exists it gets the `<button><selectedcontent>`
- * trigger so it can be styled to read as inline text; elsewhere it stays a plain
- * native select (Firefox). Seeded with the current label as a lone option until
- * wired. Pass `isPlaceholder` when `currentText` is prompt text rather than a
- * real value, so it renders dimmed.
+ * A meta-line slot (size, creature type, alignment): the current value as inline
+ * text, tagged for `wireMetaControls` to replace with an `OptionPicker`. Same
+ * contract as `.sb-chip-menu` — the renderer marks the spot, the editor supplies
+ * the control. Pass `isPlaceholder` when `currentText` is prompt text rather than
+ * a real value, so it renders dimmed.
  */
-export function metaSelect(
+export function metaSlot(
   kind: MetaKind,
   currentText: string,
   isPlaceholder = false,
-): HTMLSelectElement {
-  const select = el("select", "meta-select");
-  select.dataset.meta = kind;
-  select.setAttribute("aria-label", META_LABEL[kind]);
-  if (isPlaceholder) select.classList.add("is-placeholder");
-
-  if (SUPPORTS_BASE_SELECT) {
-    const button = el("button", "meta-select-button");
-    button.type = "button";
-    button.appendChild(document.createElement("selectedcontent"));
-    select.appendChild(button);
-  }
-
-  const option = el("option");
-  option.textContent = currentText;
-  option.selected = true;
-  select.appendChild(option);
-  return select;
+): HTMLElement {
+  const slot = el("span", "meta-slot");
+  slot.dataset.meta = kind;
+  slot.dataset.label = META_LABEL[kind];
+  if (isPlaceholder) slot.classList.add("is-placeholder");
+  slot.textContent = currentText;
+  return slot;
 }

@@ -11,7 +11,7 @@
 import type { SelectOption } from "../adapter/types.js";
 import type { AdjustmentField } from "../preview/adjustments-line.js";
 import { parseAdjustment, type AdjustmentKind } from "../statblock/adjustments.js";
-import { ChipPicker } from "./chip-picker.js";
+import { OptionPicker } from "./option-picker.js";
 
 /** The adapter surface these rows need (satisfied by PageAdapter). */
 export interface AdjustmentsAdapter {
@@ -40,8 +40,8 @@ export function wireAdjustments(
   scope: ParentNode,
   adapter: AdjustmentsAdapter,
   onCommit: () => void,
-): ChipPicker[] {
-  const menus: ChipPicker[] = [];
+): OptionPicker[] {
+  const menus: OptionPicker[] = [];
   for (const field of Object.keys(ROWS) as AdjustmentField[]) {
     const wrap = scope.querySelector<HTMLElement>(`.sb-chips[data-field="${field}"]`);
     if (wrap) menus.push(...wireRow(wrap, field, adapter, onCommit));
@@ -54,7 +54,7 @@ function wireRow(
   field: AdjustmentField,
   adapter: AdjustmentsAdapter,
   onCommit: () => void,
-): ChipPicker[] {
+): OptionPicker[] {
   const row = ROWS[field];
   const damageOptions = adapter.damageAdjustmentOptions();
   const conditionOptions = adapter.conditionImmunityOptions();
@@ -124,7 +124,10 @@ function wireRow(
     return [];
   }
 
-  const menu = new ChipPicker(items, { label: `Add to ${field}` });
+  const menu = new OptionPicker(items, {
+    trigger: { text: "+", ariaLabel: `Add to ${field}`, variant: "add" },
+    focusKey: `add:${field}`,
+  });
   host.replaceChildren(menu.element);
   return [menu];
 }

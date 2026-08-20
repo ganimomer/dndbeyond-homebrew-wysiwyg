@@ -10,7 +10,7 @@
  * One table drives both the renderers and that menu, so the two can't drift.
  */
 import type { Monster, Ruleset } from "../statblock/model.js";
-import { metaSelect } from "./dom.js";
+import { metaSlot } from "./dom.js";
 import { subTypeEditor } from "./meta.js";
 import { skillsChips } from "./skills-line.js";
 import { savingThrowChips } from "./saves-line.js";
@@ -44,6 +44,13 @@ export interface FieldSpec {
   menuLabel: string;
   /** `data-dep` for the row, when its value is derived from ability scores. */
   dep?: string;
+  /**
+   * The control to land in when this field is revealed: a `data-focus-key` on an
+   * input, or on the trigger of the picker the panel should open (see
+   * `EditorPanel.render`). Every field has one — adding a row is always a
+   * prelude to filling it in.
+   */
+  focusKey: string;
   /** True when the creature has a value, i.e. the row renders unprompted. */
   hasValue(monster: Monster): boolean;
   /** The row's value (or, for a revealed-but-empty field, its empty form). */
@@ -55,20 +62,23 @@ const META: FieldSpec[] = [
   {
     key: "size",
     slot: "meta",
+    focusKey: "meta:size",
     menuLabel: "Size",
     hasValue: (m) => m.size !== "",
-    render: (m) => metaSelect("size", m.size || "Size…", !m.size),
+    render: (m) => metaSlot("size", m.size || "Size…", !m.size),
   },
   {
     key: "type",
     slot: "meta",
+    focusKey: "meta:type",
     menuLabel: "Creature type",
     hasValue: (m) => m.type !== "",
-    render: (m) => metaSelect("type", m.type || "Type…", !m.type),
+    render: (m) => metaSlot("type", m.type || "Type…", !m.type),
   },
   {
     key: "subTypes",
     slot: "meta",
+    focusKey: "meta:subTypes",
     menuLabel: "Subtype",
     hasValue: (m) => m.subTypes.length > 0,
     render: (m) => subTypeEditor(m.subTypes),
@@ -76,9 +86,10 @@ const META: FieldSpec[] = [
   {
     key: "alignment",
     slot: "meta",
+    focusKey: "meta:alignment",
     menuLabel: "Alignment",
     hasValue: (m) => m.alignment !== "",
-    render: (m) => metaSelect("alignment", m.alignment || "Alignment…", !m.alignment),
+    render: (m) => metaSlot("alignment", m.alignment || "Alignment…", !m.alignment),
   },
 ];
 
@@ -93,6 +104,7 @@ function adjustments(
     slot: "tidbit",
     label,
     menuLabel,
+    focusKey: `add:${key}`,
     hasValue: (m) => hasAdjustments(m, key),
     render: (m) => adjustmentChips(m, key, `Add ${menuLabel.toLowerCase()}`),
   };
@@ -101,6 +113,7 @@ function adjustments(
 const SKILLS: FieldSpec = {
   key: "skills",
   slot: "tidbit",
+  focusKey: "add:skills",
   label: "Skills",
   menuLabel: "Skills",
   // Every skill bonus moves with its governing ability score.
@@ -112,6 +125,7 @@ const SKILLS: FieldSpec = {
 const SENSES: FieldSpec = {
   key: "senses",
   slot: "tidbit",
+  focusKey: "add:senses",
   label: "Senses",
   menuLabel: "Senses",
   hasValue: hasSenses,
@@ -121,6 +135,7 @@ const SENSES: FieldSpec = {
 const LANGUAGES: FieldSpec = {
   key: "languages",
   slot: "tidbit",
+  focusKey: "text:languages",
   label: "Languages",
   menuLabel: "Languages",
   hasValue: (m) => m.languages !== "",
@@ -130,6 +145,7 @@ const LANGUAGES: FieldSpec = {
 const GEAR: FieldSpec = {
   key: "gear",
   slot: "tidbit",
+  focusKey: "text:gear",
   label: "Gear",
   menuLabel: "Gear",
   hasValue: (m) => m.gear !== "",
@@ -153,6 +169,7 @@ const TIDBITS_5E: FieldSpec[] = [
   {
     key: "savingThrows",
     slot: "tidbit",
+    focusKey: "add:savingThrows",
     label: "Saving Throws",
     menuLabel: "Saving Throws",
     // 5.5e has no such row: it prints all six saves in the ability tables.

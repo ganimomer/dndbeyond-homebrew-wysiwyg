@@ -17,6 +17,7 @@ import { applyDependencyHighlights, wireAbilityInputs } from "./ability-editing.
 import { wireHitPoints, type HitPointsEditing } from "./hit-points-editing.js";
 import { wireArmorClass, type ArmorClassEditing } from "./armor-class-editing.js";
 import { wireMetaControls } from "./meta-editing.js";
+import { OptionPicker } from "./option-picker.js";
 import { wireSkills } from "./skills-editing.js";
 import { wireSavingThrows } from "./saves-editing.js";
 import { wireMovements } from "./speed-editing.js";
@@ -27,11 +28,11 @@ import { ProseEditor } from "./prose-editor.js";
 import { AutosaveController } from "./autosave.js";
 import { applySaveState, HEADER_ORIGIN } from "./save-indicator.js";
 import { wireName } from "./name-editing.js";
-import { revealFocusKey, wireAddField } from "./field-visibility.js";
+import { wireAddField } from "./field-visibility.js";
 import { NAME_FOCUS_KEY } from "../preview/name-row.js";
 import panelCss from "./panel.css";
 import contextMenuCss from "./context-menu.css";
-import chipPickerCss from "./chip-picker.css";
+import optionPickerCss from "./option-picker.css";
 import statblock5eCss from "../preview/statblock-5e.css";
 import statblock55eCss from "../preview/statblock-55e.css";
 
@@ -50,10 +51,10 @@ export class EditorPanel {
   private rafToken = 0;
   /**
    * Popovers mounted into the current block: the name-row kebab and the "Add…"
-   * footer are `ContextMenu`s, every chip row's "＋" a `ChipPicker`. Only the
-   * teardown is shared, so that is all this holds them by.
+   * footer are `ContextMenu`s, the chip rows' "＋" and the meta slots
+   * `OptionPicker`s.
    */
-  private menus: { destroy(): void }[] = [];
+  private menus: (ContextMenu | OptionPicker)[] = [];
   /**
    * Click-away listeners belonging to the mini-forms in the current block. They
    * live on `window`, outside the block that gets thrown away, so each render
@@ -168,7 +169,7 @@ export class EditorPanel {
     style.textContent = [
       panelCss,
       contextMenuCss,
-      chipPickerCss,
+      optionPickerCss,
       statblock5eCss,
       statblock55eCss,
     ].join("\n");
@@ -325,28 +326,30 @@ export class EditorPanel {
 
     // Size/type/alignment dropdowns + the subtype tag editor in the meta line all
     // write back to ordinary form fields, so they ride autosave.
-    wireMetaControls(block, {
-      sizeOptions: () => this.adapter.sizeOptions(),
-      typeOptions: () => this.adapter.typeOptions(),
-      subTypeOptions: () => this.adapter.subTypeOptions(),
-      alignmentOptions: () => this.adapter.alignmentOptions(),
-      setSize: (value) => {
-        this.adapter.setSize(value);
-        this.autosave.request(HEADER_ORIGIN);
-      },
-      setType: (value) => {
-        this.adapter.setType(value);
-        this.autosave.request(HEADER_ORIGIN);
-      },
-      setSubTypes: (values) => {
-        this.adapter.setSubTypes(values);
-        this.autosave.request(HEADER_ORIGIN);
-      },
-      setAlignment: (value) => {
-        this.adapter.setAlignment(value);
-        this.autosave.request(HEADER_ORIGIN);
-      },
-    });
+    this.menus.push(
+      ...wireMetaControls(block, {
+        sizeOptions: () => this.adapter.sizeOptions(),
+        typeOptions: () => this.adapter.typeOptions(),
+        subTypeOptions: () => this.adapter.subTypeOptions(),
+        alignmentOptions: () => this.adapter.alignmentOptions(),
+        setSize: (value) => {
+          this.adapter.setSize(value);
+          this.autosave.request(HEADER_ORIGIN);
+        },
+        setType: (value) => {
+          this.adapter.setType(value);
+          this.autosave.request(HEADER_ORIGIN);
+        },
+        setSubTypes: (values) => {
+          this.adapter.setSubTypes(values);
+          this.autosave.request(HEADER_ORIGIN);
+        },
+        setAlignment: (value) => {
+          this.adapter.setAlignment(value);
+          this.autosave.request(HEADER_ORIGIN);
+        },
+      }),
+    );
 
     // Saving throws are one multi-select in the form, so they ride autosave
     // like the rest — chips in 5e, proficiency dots in the 5.5e Save column.
@@ -417,9 +420,9 @@ export class EditorPanel {
     // The "Add…" menu at the foot of the section. Revealing a field changes
     // nothing in the form, so `observe()` won't fire — re-render by hand.
     this.menus.push(
-      ...wireAddField(block, hiddenFields(monster, this.revealed, monster.ruleset), (key) => {
-        this.revealed.add(key);
-        this.pendingFocus = revealFocusKey(key);
+      ...wireAddField(block, hiddenFields(monster, this.revealed, monster.ruleset), (spec) => {
+        this.revealed.add(spec.key);
+        this.pendingFocus = spec.focusKey;
         this.render();
       }),
     );
@@ -431,7 +434,7 @@ export class EditorPanel {
     this.pendingFocus = null;
     const focusKey = pending ?? this.focusedKey();
     this.stage.replaceChildren(block);
-    this.restoreFocus(block, focusKey, pending !== null);
+    if (!this.openPending(pending)) this.restoreFocus(block, focusKey, pending !== null);
 
     // Mount after the block is attached so Lexical binds to a connected node.
     this.mountTraitsEditor(block, monster);
@@ -502,6 +505,23 @@ export class EditorPanel {
   private destroyForms(): void {
     for (const teardown of this.formTeardowns) teardown();
     this.formTeardowns = [];
+  }
+
+  /**
+   * Opens the picker a just-revealed field wants the user in, if that's what it
+   * has — adding a row from "Add…" is always a prelude to filling it in, and a
+   * closed dropdown would just cost another click. Answers whether it did.
+   *
+   * Only ever called with a `pending` key: a picker whose trigger happened to
+   * hold focus through an ordinary re-render must stay shut.
+   */
+  private openPending(pending: string | null): boolean {
+    if (!pending) return false;
+    const picker = this.menus.find(
+      (menu): menu is OptionPicker => menu instanceof OptionPicker && menu.focusKey === pending,
+    );
+    picker?.open();
+    return picker !== undefined;
   }
 
   /**

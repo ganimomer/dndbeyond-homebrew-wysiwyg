@@ -15,7 +15,7 @@ import type { SelectOption } from "../adapter/types.js";
 import { ABILITY_ABBREV, type Monster } from "../statblock/model.js";
 import { formatModifier } from "../statblock/compute.js";
 import { SKILL_ABILITY, skillBonus } from "../statblock/skills.js";
-import { ChipPicker } from "./chip-picker.js";
+import { OptionPicker } from "./option-picker.js";
 
 /** The adapter surface the skills row needs (satisfied by PageAdapter). */
 export interface SkillsAdapter {
@@ -33,7 +33,7 @@ export function wireSkills(
   monster: Monster,
   adapter: SkillsAdapter,
   onError: (error: unknown) => void = () => {},
-): ChipPicker[] {
+): OptionPicker[] {
   const wrap = scope.querySelector<HTMLElement>('.sb-chips[data-field="skills"]');
   if (!wrap) return [];
 
@@ -76,7 +76,11 @@ export function wireSkills(
     return [];
   }
 
-  const menu = new ChipPicker(items, { label: "Add skill", placeholder: "Filter skills…" });
+  const menu = new OptionPicker(items, {
+    trigger: { text: "+", ariaLabel: "Add skill", variant: "add" },
+    filterPlaceholder: "Filter skills…",
+    focusKey: "add:skills",
+  });
   host.replaceChildren(menu.element);
   return [menu];
 }

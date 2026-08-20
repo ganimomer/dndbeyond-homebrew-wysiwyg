@@ -61,51 +61,81 @@ function scopeFor(subTypes: string[], overrides: Partial<Monster> = {}): HTMLEle
   return root;
 }
 
-test("size select: fills options, preselects current, commits on change", () => {
+/** The labels a wired slot's picker offers, in order. */
+const options = (scope: ParentNode, kind: string): string[] =>
+  [...scope.querySelectorAll(`[data-meta="${kind}"] .cp-option`)].map((n) => n.textContent ?? "");
+
+/** The option a wired slot's picker marks as the value the field holds. */
+const chosen = (scope: ParentNode, kind: string): string[] =>
+  [...scope.querySelectorAll(`[data-meta="${kind}"] .cp-option`)]
+    .filter((n) => n.getAttribute("aria-selected") === "true")
+    .map((n) => n.textContent ?? "");
+
+/** Clicks the picker option reading `label`. */
+function pick(scope: ParentNode, kind: string, label: string): void {
+  const option = [...scope.querySelectorAll(`[data-meta="${kind}"] .cp-option`)].find(
+    (n) => n.textContent === label,
+  );
+  assert.ok(option, `expected a ${kind} option "${label}"`);
+  option.dispatchEvent(new jsdom.window.MouseEvent("click", { bubbles: true }));
+}
+
+test("size slot: offers every option, marks the current one, commits a pick", () => {
   const scope = scopeFor([]);
   const { adapter, calls } = stubAdapter([]);
   wireMetaControls(scope, adapter);
 
-  const size = scope.querySelector<HTMLSelectElement>('select[data-meta="size"]')!;
-  assert.deepEqual([...size.options].map((o) => o.text), ["Small", "Medium"]);
-  assert.equal(size.value, "4");
+  assert.deepEqual(options(scope, "size"), ["Small", "Medium"]);
+  assert.deepEqual(chosen(scope, "size"), ["Medium"]);
+  assert.equal(scope.querySelector('[data-meta="size"] .cp-trigger')?.textContent, "Medium");
 
   // The commit carries DDB's option *value*, not the label.
-  size.value = "3";
-  size.dispatchEvent(new jsdom.window.Event("change"));
+  pick(scope, "size", "Small");
   assert.deepEqual(calls.size, ["3"]);
 });
 
-test("alignment select: fills options, preselects current, commits on change", () => {
+test("alignment slot: offers every option, marks the current one, commits a pick", () => {
   const scope = scopeFor([]);
   const { adapter, calls } = stubAdapter([]);
   wireMetaControls(scope, adapter);
 
-  const alignment = scope.querySelector<HTMLSelectElement>('select[data-meta="alignment"]')!;
-  assert.deepEqual([...alignment.options].map((o) => o.text), ["Lawful Good", "Unaligned"]);
-  assert.equal(alignment.value, "10");
+  assert.deepEqual(options(scope, "alignment"), ["Lawful Good", "Unaligned"]);
+  assert.deepEqual(chosen(scope, "alignment"), ["Unaligned"]);
 
-  alignment.value = "1";
-  alignment.dispatchEvent(new jsdom.window.Event("change"));
+  pick(scope, "alignment", "Lawful Good");
   assert.deepEqual(calls.alignment, ["1"]);
 });
 
-test("a blank size or alignment still renders a placeholder dropdown", () => {
+test("type slot: offers every option, marks the current one, commits a pick", () => {
+  const scope = scopeFor([]);
+  const { adapter, calls } = stubAdapter([]);
+  wireMetaControls(scope, adapter);
+
+  assert.deepEqual(options(scope, "type"), ["Aberration", "Undead"]);
+  assert.deepEqual(chosen(scope, "type"), ["Undead"]);
+
+  pick(scope, "type", "Aberration");
+  assert.deepEqual(calls.type, ["1"]);
+});
+
+test("a blank size or alignment still renders a placeholder control", () => {
   // The old meta line dropped the text node entirely, leaving no way to set a
   // blank field from the preview; every slot must now hold a control.
   const scope = scopeFor([], { size: "", alignment: "" });
 
   for (const kind of ["size", "alignment"]) {
-    const select = scope.querySelector<HTMLSelectElement>(`select[data-meta="${kind}"]`);
-    assert.ok(select, `expected a ${kind} select`);
-    assert.ok(select!.classList.contains("is-placeholder"), `${kind} should be dimmed`);
+    const slot = scope.querySelector(`.meta-slot[data-meta="${kind}"]`);
+    assert.ok(slot, `expected a ${kind} slot`);
+    assert.ok(slot.classList.contains("is-placeholder"), `${kind} should be dimmed`);
   }
 
   const { adapter, calls } = stubAdapter([]);
   wireMetaControls(scope, adapter);
-  const size = scope.querySelector<HTMLSelectElement>('select[data-meta="size"]')!;
-  size.value = "3";
-  size.dispatchEvent(new jsdom.window.Event("change"));
+
+  const trigger = scope.querySelector('[data-meta="size"] .cp-trigger')!;
+  assert.equal(trigger.textContent, "Size…");
+  assert.ok(trigger.classList.contains("is-placeholder"), "and stays dimmed once wired");
+  pick(scope, "size", "Small");
   assert.deepEqual(calls.size, ["3"]);
 });
 
@@ -122,14 +152,12 @@ test("picking the em-dash option clears the slot, taking it off the block", () =
     ],
   });
 
-  const size = scope.querySelector<HTMLSelectElement>('select[data-meta="size"]')!;
-  size.value = "";
-  size.dispatchEvent(new jsdom.window.Event("change"));
+  pick(scope, "size", "—");
   assert.deepEqual(calls.size, [""]);
 });
 
 test("a blank field keeps its prompt wording on DDB's em-dash option", () => {
-  // DDB's "nothing chosen" option is labelled "—". Filling the dropdown must not
+  // DDB's "nothing chosen" option is labelled "—". Building the list must not
   // let that dash replace the seeded "Alignment…" prompt.
   const scope = scopeFor([], { alignment: "" });
   const { adapter } = stubAdapter([]);
@@ -141,9 +169,8 @@ test("a blank field keeps its prompt wording on DDB's em-dash option", () => {
     ],
   });
 
-  const alignment = scope.querySelector<HTMLSelectElement>('select[data-meta="alignment"]')!;
-  assert.equal(alignment.options[alignment.selectedIndex]?.text, "Alignment…");
-  assert.deepEqual([...alignment.options].map((o) => o.text), ["Alignment…", "Lawful Good"]);
+  assert.deepEqual(options(scope, "alignment"), ["Alignment…", "Lawful Good"]);
+  assert.deepEqual(chosen(scope, "alignment"), ["Alignment…"]);
 });
 
 test("a populated field leaves every option label alone", () => {
@@ -157,22 +184,7 @@ test("a populated field leaves every option label alone", () => {
     ],
   });
 
-  const alignment = scope.querySelector<HTMLSelectElement>('select[data-meta="alignment"]')!;
-  assert.deepEqual([...alignment.options].map((o) => o.text), ["—", "Unaligned"]);
-});
-
-test("type select: fills options, preselects current, commits on change", () => {
-  const scope = scopeFor([]);
-  const { adapter, calls } = stubAdapter([]);
-  wireMetaControls(scope, adapter);
-
-  const type = scope.querySelector<HTMLSelectElement>('select[data-meta="type"]')!;
-  assert.deepEqual([...type.options].map((o) => o.text), ["Aberration", "Undead"]);
-  assert.equal(type.value, "16");
-
-  type.value = "1";
-  type.dispatchEvent(new jsdom.window.Event("change"));
-  assert.deepEqual(calls.type, ["1"]);
+  assert.deepEqual(options(scope, "alignment"), ["—", "Unaligned"]);
 });
 
 test("subtype datalist is filled with every tag label", () => {

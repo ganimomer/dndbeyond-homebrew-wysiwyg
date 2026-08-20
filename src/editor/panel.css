@@ -157,64 +157,12 @@
   vertical-align: baseline;
 }
 
-/* Editable creature type / subtype in the meta line. It reads as inline text
- * with a quiet hover/focus affordance. Where the browser supports customizable
- * selects (appearance: base-select) the popup is styled below; elsewhere (e.g.
- * Firefox) it falls back to a plain native <select>. */
-.statblock .meta-select {
-  appearance: base-select;
-  font: inherit;
-  color: inherit;
-  background: transparent;
-  border: none;
-  border-radius: 3px;
-  padding: 0 1px;
-  margin: 0;
-  cursor: pointer;
-}
-.statblock .meta-select:hover {
-  background: rgba(91, 22, 12, 0.08);
-}
-.statblock .meta-select:focus-visible {
-  outline: 1px solid var(--accent, #5b160c);
-  outline-offset: 1px;
-}
-.statblock .meta-select.is-placeholder {
+/* A meta line slot before the editor turns it into a picker: inline text,
+ * dimmed where it's still prompting ("Alignment…"). Once wired, the picker's
+ * own .cp-trigger.value carries the same look (see option-picker.css). */
+.statblock .meta-slot.is-placeholder {
   opacity: 0.6;
   font-style: italic;
-}
-.statblock .meta-select-button {
-  appearance: none;
-  font: inherit;
-  color: inherit;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-}
-/* Customizable-select popup (supporting browsers only). */
-.statblock .meta-select::picker(select) {
-  appearance: base-select;
-  background: #fff;
-  color: #242528;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  padding: 4px;
-  font-family: Roboto, Helvetica, sans-serif;
-  font-size: 14px;
-  font-style: normal;
-  max-height: 320px;
-}
-.statblock .meta-select::picker(select) option {
-  padding: 4px 10px;
-  border-radius: 4px;
-}
-.statblock .meta-select::picker(select) option:hover {
-  background: rgba(91, 22, 12, 0.1);
-}
-.statblock .meta-select option:checked {
-  font-weight: 600;
 }
 
 /* Chips for multi-value fields (subtypes in the meta line, skills in the

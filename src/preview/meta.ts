@@ -1,9 +1,9 @@
 /**
  * Builds the stat-block meta line ("Medium humanoid (elf), lawful evil") as DOM,
- * shared by both renderers. Size, creature type and alignment are each an
- * editable `<select>` dropdown; the subtype is an editable multi-tag editor
- * (removable chips + a searchable "add" box) because DDB's sub-type is a
- * multi-select. All four are filled + committed by the panel's
+ * shared by both renderers. Size, creature type and alignment are each a slot
+ * the editor turns into a filterable picker; the subtype is an editable
+ * multi-tag editor (removable chips + a searchable "add" box) because DDB's
+ * sub-type is a multi-select. All four are filled + committed by the panel's
  * `wireMetaControls`.
  *
  * All four are also optional (see optional-fields.ts): the line is assembled
@@ -12,7 +12,7 @@
  */
 import type { Monster } from "../statblock/model.js";
 import type { OptionalField } from "./optional-fields.js";
-import { el, metaSelect } from "./dom.js";
+import { el, metaSlot } from "./dom.js";
 import { chip } from "./tags.js";
 
 /** id of the shared subtype `<datalist>` (filled by wireMetaControls). */
@@ -23,6 +23,8 @@ function addInput(placeholder: string): HTMLInputElement {
   input.type = "text";
   input.setAttribute("list", SUBTYPE_LIST_ID);
   input.setAttribute("aria-label", "Add subtype");
+  // Revealing the subtype slot puts the caret straight in here.
+  input.dataset.focusKey = "meta:subTypes";
   input.placeholder = placeholder;
   // Fallback width for browsers without CSS field-sizing (Chrome uses that);
   // +2 leaves slack so proportional placeholder text isn't cropped.
@@ -67,11 +69,11 @@ export function metaContent(monster: Monster, shown: ReadonlySet<OptionalField>)
 
   const groups: Node[][] = [];
   if (shown.has("size")) {
-    groups.push([metaSelect("size", monster.size || "Size…", !monster.size)]);
+    groups.push([metaSlot("size", monster.size || "Size…", !monster.size)]);
   }
   const typeGroup: Node[] = [];
   if (shown.has("type")) {
-    typeGroup.push(metaSelect("type", monster.type || "Type…", !monster.type));
+    typeGroup.push(metaSlot("type", monster.type || "Type…", !monster.type));
   }
   if (shown.has("subTypes")) typeGroup.push(subTypeEditor(monster.subTypes));
   if (typeGroup.length) groups.push(typeGroup);
@@ -80,7 +82,7 @@ export function metaContent(monster: Monster, shown: ReadonlySet<OptionalField>)
 
   if (shown.has("alignment")) {
     if (nodes.length) nodes.push(text(", "));
-    nodes.push(metaSelect("alignment", monster.alignment || "Alignment…", !monster.alignment));
+    nodes.push(metaSlot("alignment", monster.alignment || "Alignment…", !monster.alignment));
   }
   return nodes;
 }
