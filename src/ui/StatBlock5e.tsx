@@ -6,9 +6,9 @@
 import type { ComponentChildren } from "preact";
 import type { Monster, NamedEntry, SectionKey } from "../statblock/model.js";
 import { formatModifier, proficiencyBonus, xpForCr } from "../statblock/compute.js";
-import { expandInline } from "../preview/inline.js";
-import { el } from "../preview/dom.js";
-import { htmlHasContent, sectionBody } from "../preview/sections.js";
+import { expandInline } from "./prose/inline.js";
+import { el } from "./shared/dom.js";
+import { htmlHasContent, sectionBody } from "./prose/sections.js";
 import { ProseSection } from "./prose/ProseSection.js";
 import { useEditing, useSession } from "./store-context.js";
 import { Raw } from "./shared/Raw.js";

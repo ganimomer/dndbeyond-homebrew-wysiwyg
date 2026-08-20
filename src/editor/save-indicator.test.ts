@@ -9,7 +9,7 @@ const jsdom = new JSDOM("<!doctype html><html><body></body></html>");
 (globalThis as Record<string, unknown>).window = jsdom.window;
 
 const { applySaveState, resolveOrigin, HEADER_ORIGIN } = await import("./save-indicator.js");
-const { saveSlot } = await import("../preview/dom.js");
+const { saveSlot } = await import("../ui/shared/dom.js");
 
 const state = (status: SaveState["status"], ...origins: string[]): SaveState => ({
   status,

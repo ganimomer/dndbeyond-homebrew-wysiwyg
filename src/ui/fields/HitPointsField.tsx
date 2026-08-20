@@ -20,7 +20,7 @@ import type { SelectOption } from "../../adapter/types.js";
 import type { HitPoints, Monster } from "../../statblock/model.js";
 import { abilityModifier } from "../../statblock/compute.js";
 import { expectedAverage, expectedModifier, hitPointsText } from "../../statblock/hit-points.js";
-import { makeIcon } from "../../preview/icons.js";
+import { makeIcon } from "../shared/icons.js";
 import { HintChip, IconButton, toInt, useCloseOnOutsideClick } from "../shared/MiniForm.js";
 
 /** Which fields are currently offering a better value, and what it is. */

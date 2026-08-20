@@ -3,8 +3,8 @@
  * the ready-made HTML read from D&D Beyond (`monster.descriptionHtml[key]`),
  * and otherwise renders the structured `NamedEntry[]` that samples use.
  */
-import type { Monster, NamedEntry, SectionKey } from "../statblock/model.js";
-import { el } from "./dom.js";
+import type { Monster, NamedEntry, SectionKey } from "../../statblock/model.js";
+import { el } from "../shared/dom.js";
 import { expandInline } from "./inline.js";
 import { sanitizeHtml } from "./sanitize-html.js";
 

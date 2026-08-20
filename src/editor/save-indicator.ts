@@ -12,7 +12,7 @@
  * hang one on) falls back to the header slot, so its spinner still shows up
  * somewhere sensible rather than vanishing.
  */
-import { makeIcon } from "../preview/icons.js";
+import { makeIcon } from "../ui/shared/icons.js";
 import type { SaveOrigin, SaveState } from "./autosave.js";
 
 /** The origin used for the stat block's top area (name row, before the menu). */

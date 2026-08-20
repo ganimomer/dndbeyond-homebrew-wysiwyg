@@ -8,8 +8,8 @@
  * type below the block rather than part of it.
  */
 import type { Monster } from "../statblock/model.js";
-import { defaultImageUrl } from "../preview/default-image.js";
-import { sectionBody } from "../preview/sections.js";
+import { defaultImageUrl } from "./default-image.js";
+import { sectionBody } from "./prose/sections.js";
 import { Raw } from "./shared/Raw.js";
 import { SaveSlot } from "./shared/SaveSlot.js";
 import { StatBlock5e } from "./StatBlock5e.js";

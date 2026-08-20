@@ -27,7 +27,7 @@ import {
   proficiencyBonus,
   saveBonus,
 } from "../../statblock/compute.js";
-import { makeIcon } from "../../preview/icons.js";
+import { makeIcon } from "../shared/icons.js";
 import { blurOnEnter } from "../shared/inline-input.js";
 import { saveCommitter, type SavesAdapter } from "./saving-throws.js";
 

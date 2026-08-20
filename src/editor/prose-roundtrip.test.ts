@@ -25,15 +25,15 @@ let $generateNodesFromDOM: typeof import("@lexical/html").$generateNodesFromDOM;
 let $generateHtmlFromNodes: typeof import("@lexical/html").$generateHtmlFromNodes;
 let $getRoot: typeof import("lexical").$getRoot;
 let DDB_NODES: typeof import("./nodes.js").DDB_NODES;
-let ddbToEditorHtml: typeof import("../preview/ddb-markup.js").ddbToEditorHtml;
-let editorHtmlToDdb: typeof import("../preview/ddb-markup.js").editorHtmlToDdb;
+let ddbToEditorHtml: typeof import("../adapter/ddb-markup.js").ddbToEditorHtml;
+let editorHtmlToDdb: typeof import("../adapter/ddb-markup.js").editorHtmlToDdb;
 
 before(async () => {
   ({ createHeadlessEditor } = await import("@lexical/headless"));
   ({ $generateNodesFromDOM, $generateHtmlFromNodes } = await import("@lexical/html"));
   ({ $getRoot } = await import("lexical"));
   ({ DDB_NODES } = await import("./nodes.js"));
-  ({ ddbToEditorHtml, editorHtmlToDdb } = await import("../preview/ddb-markup.js"));
+  ({ ddbToEditorHtml, editorHtmlToDdb } = await import("../adapter/ddb-markup.js"));
 });
 
 function roundTripThroughEditor(ddbHtml: string): string {

@@ -8,7 +8,7 @@
  * treatment instead.
  */
 import { useLayoutEffect, useState } from "preact/hooks";
-import { makeIcon, type IconName } from "../../preview/icons.js";
+import { makeIcon, type IconName } from "../shared/icons.js";
 
 export interface MenuItem {
   label: string;

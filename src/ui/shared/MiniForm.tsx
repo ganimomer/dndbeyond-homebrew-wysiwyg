@@ -9,7 +9,7 @@
  */
 import { useLayoutEffect } from "preact/hooks";
 import type { RefObject } from "preact";
-import { makeIcon } from "../../preview/icons.js";
+import { makeIcon } from "../shared/icons.js";
 
 /**
  * The "←218" a field grows when another edit has left it behind. A real button,

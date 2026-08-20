@@ -22,7 +22,7 @@
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { ArmorClass, Monster } from "../../statblock/model.js";
 import { armorBonus, armorClassText, unarmoredAc } from "../../statblock/armor-class.js";
-import { makeIcon } from "../../preview/icons.js";
+import { makeIcon } from "../shared/icons.js";
 import { HintChip, IconButton, toInt, useCloseOnOutsideClick } from "../shared/MiniForm.js";
 
 /** The name the hint chip announces itself under. */

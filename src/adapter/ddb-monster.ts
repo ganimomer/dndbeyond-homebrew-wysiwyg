@@ -23,7 +23,7 @@ import {
 } from "../statblock/model.js";
 import { abilityModifier, proficiencyForCr } from "../statblock/compute.js";
 import { parseAdjustment } from "../statblock/adjustments.js";
-import { ddbToEditorHtml, editorHtmlToDdb } from "../preview/ddb-markup.js";
+import { ddbToEditorHtml, editorHtmlToDdb } from "../adapter/ddb-markup.js";
 import { renamedEditUrl } from "./edit-url.js";
 import { listingCollection } from "./ddb-listings.js";
 

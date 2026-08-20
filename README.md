@@ -10,18 +10,24 @@ Built Firefox-first, but the real work lives in a shared, browser-agnostic core
 with a thin per-browser layer for each extension format.
 
 > **Status.** The launcher, the full read of the monster editor form, and the
-> faithful 2014/2024 preview are working end-to-end against the live page.
-> Ability scores, the ruleset, creature type/subtype, **skills**, **saving
-> throw proficiencies** and **movement types** are editable. The **Traits** section is the
-> first editable prose block: it mounts a [Lexical](https://lexical.dev) rich-text
-> editor and writes edits back to DDB's form (the foundation for editing every
-> section). **Autosave** persists those edits without a page reload. This pulls
-> Lexical + lit-html into the content script (~290 KB minified / ~96 KB gzip);
-> release builds are minified. The remaining prose sections and the lit-html view
-> conversion are next.
+> faithful 2014/2024 rendering are working end-to-end against the live page.
+> Every field on the block is editable — name, the meta line, ability scores,
+> armor class, hit points, speed, skills, saving throws, damage adjustments,
+> condition immunities, senses, gear and languages — and **every description
+> section D&D Beyond holds text for** is a [Lexical](https://lexical.dev)
+> rich-text editor that writes back to the form. **Autosave** persists all of it
+> without a page reload. This pulls Lexical + Preact into the content script
+> (~400 KB minified); release builds are minified.
+>
+> The block is a [Preact](https://preactjs.com) tree over an `EditorStore`, and
+> every edit is a `Command` — see **Architecture** below.
+>
+> Known gap: a section D&D Beyond has *no* text for isn't printed, so there is
+> nowhere to start typing an empty Traits.
 >
 > The D&D Beyond ⇄ editor markup codec has unit + headless-Lexical round-trip
-> tests: `npm test`.
+> tests, and the whole loop is exercised against a captured copy of the real
+> form: `npm test`.
 
 ## Preview
 
@@ -46,78 +52,72 @@ the moment its last value is removed.
 
 A kebab **context menu** on the name row (styled after the Encounters tool)
 switches ruleset — **Use 5e / Use 5.5e stat block**, which writes back to the
-form's Stat Block Type field — or **Close** to restore the editor.
+form's Stat Block Type field. Closing is its own button beside it: leaving is
+the one action that shouldn't take two clicks to find.
 
 ## Architecture
 
 ```
-src/                     shared, browser-agnostic core (all the real logic)
+src/
 ├── content/index.ts      content-script entry: detect editor, show launcher ↔ panel, SPA nav
 ├── background/index.ts   background entry (home for future storage/message routing)
-├── platform/            browser.* API wrapper (webextension-polyfill) + build globals
-├── adapter/             the seam between our model and DDB's DOM
-│   ├── types.ts         PageAdapter interface
-│   └── ddb-monster.ts   monster adapter — reads/writes form#monster-form, saves it via fetch
-├── statblock/           the domain model
-│   ├── model.ts         Monster model (`ruleset` discriminator, per-section `descriptionHtml`)
-│   ├── compute.ts       ability modifiers, saves, proficiency, CR → XP, meta line
-│   ├── skills.ts        the 18 skills → governing ability, and the derived bonus
-│   ├── movement.ts      movement types, print order, and the smart speed defaults
-│   ├── senses.ts        sense types and the range each one usually arrives with
-│   ├── adjustments.ts   splits DDB's "Acid - Resistance" option labels
-│   └── sample.ts        era-accurate sample vampires (5e + 5.5e)
-├── editor/              the injected UI
-│   ├── fab.ts / fab.css                 the "Open in Microbrewery" launcher
-│   ├── panel.ts / panel.css             the full-page editor overlay
-│   ├── ability-editing.ts               live ability-score inputs + dependency highlights
-│   ├── meta-editing.ts                  creature type dropdown + subtype tag editor
-│   ├── skills-editing.ts                skill chips + the "＋" menu (computes the bonus)
-│   ├── saves-editing.ts                 save chips (5e) / proficiency dots (5.5e)
-│   ├── speed-editing.ts                 movement chips with inline, defaulted distances
-│   ├── adjustments-editing.ts           damage-adjustment + condition-immunity chips
-│   ├── senses-editing.ts                sense chips, inline ranges, passive Perception
-│   ├── text-field-editing.ts            the one-input rows (Gear, Languages) and their ✕
-│   ├── field-visibility.ts              the "Add…" menu of fields not on the block
-│   ├── inline-input.ts                  shared commit-on-Enter for the inline number fields
-│   ├── autosave.ts                      debounced, single-flight save controller + retry
-│   ├── save-indicator.ts                paints save state into the renderers' slots
-│   ├── prose-editor.ts                  a section's Lexical editor (mount, edit, commit)
-│   ├── nodes.ts                         RollNode / RefNode — DDB roll & reference tokens
-│   └── context-menu.ts / context-menu.css  Encounters-style kebab menu
-└── preview/             the live preview
-    ├── statblock-view.ts   dispatcher: renders by monster.ruleset
-    ├── render-55e.ts       5.5e "mon-stat-block-2024" layout
-    ├── render-5e.ts        5e classic layout
-    ├── statblock-55e.css   5.5e styling (scoped .statblock.v55e)
-    ├── statblock-5e.css    5e styling (scoped .statblock.v5e)
-    ├── meta.ts             the size/type/subtype/alignment line
-    ├── optional-fields.ts  which basics rows are optional, and what each one renders
-    ├── tags.ts             chip primitives + the "Add…" footer
-    ├── skills-line.ts      the Skills row's chips + "＋" host
-    ├── saves-line.ts       the 5e Saving Throws row's chips + "＋" host
-    ├── speed-line.ts       the Speed row's chips, each with an editable distance
-    ├── adjustments-line.ts the vulnerability/resistance/immunity rows' chips
-    ├── senses-line.ts      the Senses row: chips, ranges, passive Perception
-    ├── text-line.ts        the rows that are a single free-text field
-    ├── icons.ts            inlined Material icon paths (menu, save indicator, proficiency dots)
-    ├── sections.ts         section body: DDB HTML (preferred) or structured entries
-    ├── sanitize-html.ts    allowlist sanitizer for DDB's description HTML
-    ├── ddb-markup.ts       bidirectional DDB-macro ⇄ editor-span codec (round-trip safe)
-    ├── inline.ts           {roll}/**bold**/*italic*/newline expander (samples only)
-    └── dom.ts              tiny element builder
+├── platform/             browser.* API wrapper (webextension-polyfill) + build globals
+├── adapter/              the seam between our model and DDB's DOM
+│   ├── types.ts            PageAdapter interface
+│   ├── ddb-monster.ts      reads/writes form#monster-form, saves it via fetch
+│   ├── ddb-listings.ts     skills/movements/senses — DDB's separate records
+│   ├── ddb-markup.ts       bidirectional DDB-macro ⇄ editor-span codec
+│   └── __fixtures__/       a real captured edit page, for the end-to-end test
+├── statblock/            the domain model — no DOM, no D&D Beyond
+│   ├── model.ts            Monster (`ruleset` discriminator, per-section HTML)
+│   ├── compute.ts          modifiers, saves, proficiency, CR → XP
+│   ├── skills.ts / movement.ts / senses.ts / adjustments.ts / armor-class.ts
+│   └── sample.ts           era-accurate sample vampires (5e + 5.5e)
+├── state/                the spine
+│   ├── store.ts            EditorStore: the creature + the session, one subscription
+│   ├── session.ts          what the editor knows that the form doesn't
+│   ├── command.ts          Command + CommandStack (batching, coalescing)
+│   ├── commands.ts         one constructor per edit
+│   └── editing.ts          PageAdapter's shape, dispatched as commands
+├── ui/                   the injected editor, in Preact
+│   ├── App.tsx             overlay chrome; the only store subscriber
+│   ├── StatBlock.tsx       artwork + layout + the Description section
+│   ├── StatBlock5e.tsx     the 2014 layout      (+ .css)
+│   ├── StatBlock55e.tsx    the 2024 layout      (+ .css)
+│   ├── NameRow.tsx         name, ruleset menu, close
+│   ├── fields/             one component per field, each with its own styles
+│   │   ├── registry.ts       which rows are optional, and what the "Add…" menu offers
+│   │   └── Field.tsx         picks a row's control by which field it is
+│   ├── prose/              ProseSection (Lexical) + the DDB-HTML plumbing
+│   └── shared/            Chip, OptionPicker, ContextMenu, MiniForm, SaveSlot, icons
+└── editor/               what hasn't found a better home yet
+    ├── fab.ts              the "Open in Microbrewery" launcher
+    ├── panel.tsx           the host element + shadow root the tree mounts into
+    ├── autosave.ts         debounced, single-flight save controller + retry
+    ├── save-indicator.ts   paints save state into the components' slots
+    ├── prose-editor.ts     a section's Lexical editor (mount, edit, commit)
+    └── nodes.ts            RollNode / RefNode — DDB roll & reference tokens
 
 targets/                 the thin per-browser layer — just manifests
-├── firefox/manifest.json   MV3 + browser_specific_settings, background.scripts
-└── chrome/manifest.json    MV3 + background.service_worker
-
 build.mjs                bundles the shared src into dist/<browser>/ + copies the manifest
 ```
 
-The design principle: **everything above the `PageAdapter` interface is
-browser- and page-agnostic**, and everything below it knows about D&D Beyond's
-DOM. Supporting another content type later (spells, magic items) means adding an
-adapter, not touching the editor or preview. Supporting another browser means
-adding a manifest under `targets/`.
+Three seams carry the design.
+
+**The `PageAdapter` interface.** Everything above it is browser- and
+page-agnostic; everything below knows D&D Beyond's DOM. Supporting another
+content type later means adding an adapter, not touching the editor.
+
+**The store.** `EditorStore` holds the creature — re-read from DDB's form, which
+stays the source of truth, so their inputs and ours never disagree — plus the
+session state that only the editor knows: which optional rows the user revealed,
+which abilities they have touched, what the armor was worth before they started.
+`App` is its only subscriber; everything below reads through context.
+
+**Commands.** Every edit is a `Command` that knows how to apply itself and how
+to put itself back, captured with the value it replaced. That is what collapsed
+the save requests into one path, and what `transaction()` — templates, bulk
+edits — is built on. (Undo is not wired to a key; the pipeline is.)
 
 The injected UI lives entirely inside a **shadow root**, so DDB's page styles
 can't leak into the stat block and vice versa.
@@ -165,16 +165,14 @@ The editor is a server-rendered form (`form#monster-form`) with stable
   `[rollable]…[/rollable]` and `[type]…[/type]` markup to spans;
 - detects the layout from `#field-stat-block-type` (`0` → `5e`, `1` → `5.5e`).
 
-`observe()` watches the form so the preview updates live. Write-backs
-(`setRuleset`, `setAbility`, `setType`/`setSubTypes`, `setSavingThrows`,
-`setDescription`) all set the control's value and dispatch a bubbling
-`input`+`change`, leaving autosave to persist them. Broader field editing is a
-later feature.
+`observe()` watches the form so the block updates live. Write-backs set the
+control's value and dispatch a bubbling `input`+`change`, leaving autosave to
+persist them.
 
-**Skills and movements are the exception.** They aren't form fields at all: each
+**Skills, movements and senses are the exception.** They aren't form fields at all: each
 row is a separate server record, which is why D&D Beyond's own "Add a Skill" /
 "Add a Movement" navigates away and saves. So those methods are async and persist
-themselves — a POST to `/monster/skills/create/<monsterId>` or
+themselves (see `adapter/ddb-listings.ts`, which says it once for all three) — a POST to `/monster/skills/create/<monsterId>` or
 `/monster/movement/<id>/edit` (reusing the edit page's anti-forgery tokens), and
 to `…/delete` (which instead needs the `RequestVerificationToken` cookie, as
 DDB's own `ajax-post` links send). All of them patch the listing table in place,

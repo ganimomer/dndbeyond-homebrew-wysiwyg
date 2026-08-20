@@ -37,8 +37,8 @@ import saveSlotCss from "./shared/SaveSlot.css";
 import proseCss from "./prose/ProseSection.css";
 import contextMenuCss from "./shared/ContextMenu.css";
 import optionPickerCss from "./shared/OptionPicker.css";
-import statblock5eCss from "../preview/statblock-5e.css";
-import statblock55eCss from "../preview/statblock-55e.css";
+import statblock5eCss from "./StatBlock5e.css";
+import statblock55eCss from "./StatBlock55e.css";
 
 /**
  * One stylesheet for the whole shadow root, assembled from the components'.
