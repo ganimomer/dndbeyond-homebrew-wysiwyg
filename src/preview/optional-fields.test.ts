@@ -30,21 +30,20 @@ for (const [name, render, ruleset] of [
     assert.ok(block.querySelector('.sb-chips[data-field="hitPoints"]'), "HP");
   });
 
+  // Languages is a component now, so what the renderer owes is the hole it goes
+  // in; the field's own markup and behaviour are TextRow.test.tsx's business.
   test(`${name} prints a row once the creature has a value for it`, () => {
     const block = render({ ...emptyMonster(), languages: "Common" });
 
     assert.deepEqual(rows(block), ["languages"]);
-    const input = block.querySelector<HTMLInputElement>('.sb-text[data-field="languages"] input');
-    assert.equal(input?.value, "Common");
+    assert.ok(block.querySelector('[data-island="languages"]'), "leaves the field a place");
   });
 
   test(`${name} prints a revealed row empty, ready to fill in`, () => {
     const block = render(emptyMonster(), { revealed: new Set(["languages" as const]) });
 
     assert.deepEqual(rows(block), ["languages"]);
-    const wrap = block.querySelector<HTMLElement>('.sb-text[data-field="languages"]')!;
-    assert.equal(wrap.querySelector<HTMLInputElement>("input")!.value, "");
-    assert.ok(wrap.querySelector(".sb-text-clear"), "carries a ✕ to drop it again");
+    assert.ok(block.querySelector('[data-island="languages"]'));
   });
 
   test(`${name} keeps every optional row in the layout's print order`, () => {

@@ -14,8 +14,12 @@
  */
 import type { Monster } from "../statblock/model.js";
 import type { EditorStore } from "../state/store.js";
-import { markChanged, reveal, unreveal } from "../state/session.js";
+import { markChanged, reveal } from "../state/session.js";
+import { render } from "preact";
 import { renderStatBlock } from "../preview/statblock-view.js";
+import type { IslandName } from "../preview/island.js";
+import { TextRow } from "../ui/fields/TextRow.js";
+import { unreveal } from "../state/session.js";
 import { hiddenFields } from "../preview/optional-fields.js";
 import { unarmoredAc } from "../statblock/armor-class.js";
 import { saveSlot } from "../preview/dom.js";
@@ -30,7 +34,6 @@ import { wireSavingThrows } from "./saves-editing.js";
 import { wireMovements } from "./speed-editing.js";
 import { wireAdjustments } from "./adjustments-editing.js";
 import { wireSenses } from "./senses-editing.js";
-import { wireTextFields } from "./text-field-editing.js";
 import { ProseEditor } from "./prose-editor.js";
 import { applySaveState, HEADER_ORIGIN } from "./save-indicator.js";
 import { wireName } from "./name-editing.js";
@@ -71,6 +74,8 @@ export class StatBlockController {
   private traitsEditor: ProseEditor | null = null;
   private traitsHost: HTMLElement | null = null;
   private unsubscribeSave: (() => void) | null = null;
+  /** One persistent host per converted field, keyed by island name. */
+  private readonly islands = new Map<string, HTMLElement>();
   /**
    * Best-effort flush when the tab goes away mid-debounce. The save is far too
    * large for `keepalive`, so an immediate unload can still cut it off — but DDB
@@ -127,6 +132,8 @@ export class StatBlockController {
     this.unsubscribeSave = null;
     this.destroyMenus();
     this.destroyForms();
+    for (const host of this.islands.values()) render(null, host);
+    this.islands.clear();
     this.traitsEditor?.destroy();
     this.traitsEditor = null;
     this.traitsHost = null;
@@ -297,27 +304,6 @@ export class StatBlockController {
       ...wireAdjustments(block, this.editing, () => {}),
     );
 
-    // Gear and the languages note are plain form fields. Clearing one empties
-    // the field *and* takes the row off the block.
-    wireTextFields(block, monster, {
-      onCommit: (field, value) => {
-        if (field === "gear") this.editing.setGear(value);
-        else this.editing.setLanguages(value);
-      },
-      onClear: (field) => {
-        if (monster[field] === "") {
-          // Nothing to write — it was an empty row the user changed their mind
-          // about, so no form mutation will come back to re-render us. The
-          // session update is what repaints.
-          this.store.update({ revealed: unreveal(this.store.getSession(), field) });
-          return;
-        }
-        this.store.update({ revealed: unreveal(this.store.getSession(), field) });
-        if (field === "gear") this.editing.setGear("");
-        else this.editing.setLanguages("");
-      },
-    });
-
     // Skills and movements are the edits that don't go through autosave: DDB
     // keeps them as separate records, so the adapter persists each change
     // itself and updates the listing table, which re-renders us via observe().
@@ -364,11 +350,80 @@ export class StatBlockController {
     this.container.replaceChildren(block);
     if (!this.openPending(pending)) this.restoreFocus(block, focusKey, pending !== null);
 
-    // Mount after the block is attached so Lexical binds to a connected node.
+    // Mount after the block is attached: the fields that have become components
+    // live in hosts that are moved into the new block, not rebuilt with it.
+    this.mountIslands(block, monster);
     this.mountTraitsEditor(block, monster);
 
     // The block is brand new, so any in-progress save needs re-painting onto it.
     applySaveState(this.container, this.autosave.state, () => this.autosave.retry());
+  }
+
+  /**
+   * Fills the holes the renderers leave for the fields that have become
+   * components.
+   *
+   * Each field gets one host element, created once and moved into every
+   * freshly drawn block rather than rebuilt with it. That is what lets Preact
+   * diff the field in place: the input the user is typing into is the same
+   * element it was before the block was redrawn, so their half-typed value
+   * survives a form mutation that would previously have wiped it.
+   *
+   * The same trick as the Traits editor below, which needed it first.
+   */
+  private mountIslands(block: ParentNode, monster: Monster): void {
+    const wanted = new Set<string>();
+    for (const slot of block.querySelectorAll<HTMLElement>("[data-island]")) {
+      const name = slot.dataset.island as IslandName;
+      wanted.add(name);
+      let host = this.islands.get(name);
+      if (!host) {
+        host = document.createElement("span");
+        this.islands.set(name, host);
+      }
+      slot.replaceWith(host);
+      render(this.island(name, monster), host);
+    }
+    // A field the creature no longer shows: unmount it and forget the host.
+    for (const [name, host] of this.islands) {
+      if (wanted.has(name)) continue;
+      render(null, host);
+      this.islands.delete(name);
+    }
+  }
+
+  /** What each island holds. */
+  private island(name: IslandName, monster: Monster) {
+    switch (name) {
+      case "gear":
+      case "languages":
+        return (
+          <TextRow
+            field={name}
+            value={monster[name]}
+            label={name === "gear" ? "Gear" : "Languages"}
+            placeholder={name === "gear" ? "gear…" : "languages…"}
+            onCommit={(field, value) =>
+              field === "gear" ? this.editing.setGear(value) : this.editing.setLanguages(value)
+            }
+            onClear={(field) => this.clearTextField(field, monster)}
+          />
+        );
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * The ✕ on a text row drops the value *and* the row. Clearing a field that
+   * was only ever revealed writes nothing — there is nothing in the form to
+   * clear — so the session update is what repaints.
+   */
+  private clearTextField(field: "gear" | "languages", monster: Monster): void {
+    this.store.update({ revealed: unreveal(this.store.getSession(), field) });
+    if (monster[field] === "") return;
+    if (field === "gear") this.editing.setGear("");
+    else this.editing.setLanguages("");
   }
 
   /**

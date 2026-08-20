@@ -90,7 +90,10 @@ test("every optional field names a control to land in, and the block has it", ()
     } else {
       assert.ok(
         block.querySelector(`[data-focus-key="${spec.focusKey}"]`) ??
-          block.querySelector(`.meta-slot[data-meta="${spec.key}"]`),
+          block.querySelector(`.meta-slot[data-meta="${spec.key}"]`) ??
+          // A field that has become a component: the renderer owes the hole,
+          // and the component carries the focus key into it.
+          block.querySelector(`[data-island="${spec.key}"]`),
         `${spec.focusKey} is on nothing the renderer emits`,
       );
     }

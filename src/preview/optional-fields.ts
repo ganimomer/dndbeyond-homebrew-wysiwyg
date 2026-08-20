@@ -15,7 +15,7 @@ import { skillsChips } from "./skills-line.js";
 import { savingThrowChips } from "./saves-line.js";
 import { adjustmentChips, hasAdjustments, type AdjustmentField } from "./adjustments-line.js";
 import { hasSenses, senseChips } from "./senses-line.js";
-import { textValue } from "./text-line.js";
+import { island } from "./island.js";
 
 export type OptionalField =
   | "size"
@@ -138,7 +138,8 @@ const LANGUAGES: FieldSpec = {
   label: "Languages",
   menuLabel: "Languages",
   hasValue: (m) => m.languages !== "",
-  render: (m) => textValue("languages", m.languages, "Languages", "languages…"),
+  // A component now: the registry only says where it goes (see island.ts).
+  render: () => island("languages"),
 };
 
 const GEAR: FieldSpec = {
@@ -148,7 +149,7 @@ const GEAR: FieldSpec = {
   label: "Gear",
   menuLabel: "Gear",
   hasValue: (m) => m.gear !== "",
-  render: (m) => textValue("gear", m.gear, "Gear", "gear…"),
+  render: () => island("gear"),
 };
 
 /** 5.5e tidbits, in the order the 2024 stat block prints them. */
