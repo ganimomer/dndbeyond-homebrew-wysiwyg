@@ -1,10 +1,16 @@
 /**
- * The full-page editor overlay. Opened from the launcher, it covers the D&D
- * Beyond homebrew form with a stat block that looks like the monster outside
- * edit mode (artwork + all sections), and carries an Encounters-style context
- * menu on the name row for switching ruleset or closing back to the form.
+ * The stat block's render loop, as it stood before the Preact conversion.
  *
- * Everything lives in one shadow root so DDB's page styles can't leak in.
+ * Transitional by design. It still rebuilds the whole block on every form
+ * mutation and re-attaches every `wireX` behaviour to the result, which is why
+ * it carries focus save/restore, the open-menu teardown lists and the three
+ * "don't re-render while the user is mid-edit" guards. All of that exists to
+ * work around the rebuild, and all of it goes when the fields become components
+ * that Preact can diff in place.
+ *
+ * What has changed is ownership: it no longer creates or removes anything above
+ * the block. It is handed a container that the Preact tree owns, renders into
+ * it, and stops when told.
  */
 import type { PageAdapter } from "../adapter/types.js";
 import type { Ability, Monster } from "../statblock/model.js";
@@ -30,23 +36,19 @@ import { applySaveState, HEADER_ORIGIN } from "./save-indicator.js";
 import { wireName } from "./name-editing.js";
 import { wireAddField } from "./field-visibility.js";
 import { NAME_FOCUS_KEY } from "../preview/name-row.js";
-import panelCss from "./panel.css";
-import contextMenuCss from "./context-menu.css";
-import optionPickerCss from "./option-picker.css";
-import statblock5eCss from "../preview/statblock-5e.css";
-import statblock55eCss from "../preview/statblock-55e.css";
 
-const HOST_ID = "microbrewery-panel-host";
-
-export interface EditorPanelOptions {
+export interface StatBlockControllerOptions {
   /** Called when the user closes the overlay (to restore the launcher). */
   onClose?: () => void;
 }
 
-export class EditorPanel {
-  private host: HTMLDivElement;
-  private root: ShadowRoot;
-  private stage!: HTMLElement;
+export class StatBlockController {
+  /**
+   * The root the block lives under. Focus is read against it rather than the
+   * document, because inside a shadow root `document.activeElement` is only ever
+   * the host element.
+   */
+  private readonly shadow: ShadowRoot | Document;
   private unobserve: (() => void) | null = null;
   private rafToken = 0;
   /**
@@ -113,34 +115,29 @@ export class EditorPanel {
 
   constructor(
     private readonly adapter: PageAdapter,
-    private readonly options: EditorPanelOptions = {},
+    /** The element to render into. Owned by the Preact tree, not by us. */
+    private readonly container: HTMLElement,
+    private readonly options: StatBlockControllerOptions = {},
   ) {
-    this.host = document.createElement("div");
-    this.host.id = HOST_ID;
-    this.root = this.host.attachShadow({ mode: "open" });
+    this.shadow = container.getRootNode() as ShadowRoot | Document;
     this.autosave = new AutosaveController(() => this.adapter.save());
-    this.build();
   }
 
-  /** Mounts the overlay and starts tracking the form. */
-  mount(): void {
-    if (document.getElementById(HOST_ID)) return;
-    document.body.appendChild(this.host);
-    // Freeze the page underneath so only the overlay scrolls.
-    document.documentElement.style.overflow = "hidden";
+  /** Renders the block and starts tracking the form. */
+  start(): void {
     this.render();
     this.unobserve = this.adapter.observe(() => this.scheduleRender());
     // Save state changes on its own schedule — a request starting or finishing
     // doesn't touch the form — so it repaints the indicators directly rather
     // than waiting for a render.
     this.unsubscribeSave = this.autosave.onStateChange((state) =>
-      applySaveState(this.stage, state, () => this.autosave.retry()),
+      applySaveState(this.container, state, () => this.autosave.retry()),
     );
     window.addEventListener("beforeunload", this.onBeforeUnload);
   }
 
-  /** Removes the overlay and stops tracking. */
-  unmount(): void {
+  /** Stops tracking the form and releases everything mounted into the block. */
+  stop(): void {
     this.unobserve?.();
     this.unobserve = null;
     window.removeEventListener("beforeunload", this.onBeforeUnload);
@@ -155,35 +152,11 @@ export class EditorPanel {
     this.traitsEditor?.destroy();
     this.traitsEditor = null;
     this.traitsHost = null;
-    document.documentElement.style.overflow = "";
-    this.host.remove();
   }
 
   private close(): void {
-    this.unmount();
+    // Taking the overlay down is the panel's job — it owns the host element.
     this.options.onClose?.();
-  }
-
-  private build(): void {
-    const style = document.createElement("style");
-    style.textContent = [
-      panelCss,
-      contextMenuCss,
-      optionPickerCss,
-      statblock5eCss,
-      statblock55eCss,
-    ].join("\n");
-    this.root.appendChild(style);
-
-    const overlay = document.createElement("div");
-    overlay.className = "overlay";
-    const page = document.createElement("div");
-    page.className = "page";
-    this.stage = document.createElement("div");
-    this.stage.className = "stage";
-    page.appendChild(this.stage);
-    overlay.appendChild(page);
-    this.root.appendChild(overlay);
   }
 
   /** Coalesces bursts of form mutations into a single render per frame. */
@@ -433,14 +406,14 @@ export class EditorPanel {
     const pending = this.pendingFocus;
     this.pendingFocus = null;
     const focusKey = pending ?? this.focusedKey();
-    this.stage.replaceChildren(block);
+    this.container.replaceChildren(block);
     if (!this.openPending(pending)) this.restoreFocus(block, focusKey, pending !== null);
 
     // Mount after the block is attached so Lexical binds to a connected node.
     this.mountTraitsEditor(block, monster);
 
     // The block is brand new, so any in-progress save needs re-painting onto it.
-    applySaveState(this.stage, this.autosave.state, () => this.autosave.retry());
+    applySaveState(this.container, this.autosave.state, () => this.autosave.retry());
   }
 
   /**
@@ -530,13 +503,13 @@ export class EditorPanel {
    * would leave `restoreFocus` no way to tell which one to go back to.
    */
   private filteringPicker(): boolean {
-    const active = this.root.activeElement as HTMLElement | null;
+    const active = this.shadow.activeElement as HTMLElement | null;
     return active?.classList.contains("cp-filter") ?? false;
   }
 
   /** The `data-focus-key` of the field that currently holds focus, if any. */
   private focusedKey(): string | null {
-    const active = this.root.activeElement as HTMLElement | null;
+    const active = this.shadow.activeElement as HTMLElement | null;
     return active?.dataset.focusKey ?? null;
   }
 
