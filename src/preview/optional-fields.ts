@@ -11,7 +11,6 @@
  */
 import type { Monster, Ruleset } from "../statblock/model.js";
 import { metaSlot, subTypeEditor } from "./meta.js";
-import { savingThrowChips } from "./saves-line.js";
 import { adjustmentChips, hasAdjustments, type AdjustmentField } from "./adjustments-line.js";
 import { hasSenses, senseChips } from "./senses-line.js";
 import { island } from "./island.js";
@@ -173,7 +172,7 @@ const TIDBITS_5E: FieldSpec[] = [
     menuLabel: "Saving Throws",
     // 5.5e has no such row: it prints all six saves in the ability tables.
     hasValue: (m) => Object.keys(m.savingThrows).length > 0,
-    render: (m) => savingThrowChips(m),
+    render: () => island("savingThrows"),
   },
   SKILLS,
   adjustments("damageVulnerabilities", "Damage Vulnerabilities", "Damage Vulnerabilities"),

@@ -9,7 +9,7 @@
  * Transitional. When the layouts themselves become components these disappear:
  * the fields go back to being ordinary children.
  */
-export type IslandName = "gear" | "languages" | "skills";
+export type IslandName = "gear" | "languages" | "skills" | "savingThrows";
 
 export function island(name: IslandName): HTMLElement {
   const slot = document.createElement("span");

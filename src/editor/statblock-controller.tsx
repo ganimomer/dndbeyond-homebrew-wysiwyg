@@ -20,6 +20,7 @@ import { renderStatBlock } from "../preview/statblock-view.js";
 import type { IslandName } from "../preview/island.js";
 import { TextRow } from "../ui/fields/TextRow.js";
 import { SkillsRow } from "../ui/fields/SkillsRow.js";
+import { SavingThrowsRow } from "../ui/fields/SavingThrowsRow.js";
 import { unreveal } from "../state/session.js";
 import { hiddenFields } from "../preview/optional-fields.js";
 import { unarmoredAc } from "../statblock/armor-class.js";
@@ -30,7 +31,7 @@ import { wireHitPoints } from "./hit-points-editing.js";
 import { wireArmorClass } from "./armor-class-editing.js";
 import { wireMetaControls } from "./meta-editing.js";
 import { OptionPicker } from "./option-picker.js";
-import { wireSavingThrows } from "./saves-editing.js";
+import { wireSaveToggles } from "./saves-editing.js";
 import { wireMovements } from "./speed-editing.js";
 import { wireAdjustments } from "./adjustments-editing.js";
 import { wireSenses } from "./senses-editing.js";
@@ -290,11 +291,9 @@ export class StatBlockController {
       ...wireMetaControls(block, this.editing),
     );
 
-    // Saving throws are one multi-select in the form, so they ride autosave
-    // like the rest — chips in 5e, proficiency dots in the 5.5e Save column.
-    this.menus.push(
-      ...wireSavingThrows(block, monster, this.editing),
-    );
+    // 5.5e prints every save as a dot in the ability tables; those cells belong
+    // to a table that is still drawn by hand. The 5e chip row is a component.
+    wireSaveToggles(block, this.editing);
 
     // Damage adjustments and condition immunities are multi-selects on the form,
     // so they commit whole and ride autosave like the saving throws.
@@ -404,6 +403,14 @@ export class StatBlockController {
               field === "gear" ? this.editing.setGear(value) : this.editing.setLanguages(value)
             }
             onClear={(field) => this.clearTextField(field, monster)}
+          />
+        );
+      case "savingThrows":
+        return (
+          <SavingThrowsRow
+            monster={monster}
+            adapter={this.editing}
+            autoOpen={pending === "add:savingThrows"}
           />
         );
       case "skills":
