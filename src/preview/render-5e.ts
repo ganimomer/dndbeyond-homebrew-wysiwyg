@@ -30,8 +30,6 @@ import {
 } from "./optional-fields.js";
 import { addFieldButton } from "./tags.js";
 import { island } from "./island.js";
-import { hitPointsChip } from "./hit-points-line.js";
-import { armorClassChip } from "./armor-class-line.js";
 
 function inline(text: string): DocumentFragment {
   return expandInline(text, el, "roll");
@@ -102,10 +100,10 @@ export function render5e(monster: Monster, options: RenderOptions = {}): HTMLEle
 
   basics.append(el("hr", "rule"));
 
-  const acLine = labeled("Armor Class", armorClassChip(monster));
+  const acLine = labeled("Armor Class", island("armorClass"));
   acLine.dataset.dep = "dex";
   basics.append(acLine);
-  const hpLine = labeled("Hit Points", hitPointsChip(monster));
+  const hpLine = labeled("Hit Points", island("hitPoints"));
   hpLine.dataset.dep = "con";
   basics.append(hpLine);
   basics.append(labeled("Speed", island("movements")));

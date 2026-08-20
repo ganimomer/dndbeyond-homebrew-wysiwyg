@@ -22,7 +22,9 @@ export type IslandName =
   | "senses"
   | "movements"
   | "meta"
-  | "name";
+  | "name"
+  | "armorClass"
+  | "hitPoints";
 
 export function island(name: IslandName): HTMLElement {
   const slot = document.createElement("span");

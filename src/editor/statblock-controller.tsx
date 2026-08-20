@@ -31,14 +31,14 @@ import { unarmoredAc } from "../statblock/armor-class.js";
 import { saveSlot } from "../preview/dom.js";
 import { ContextMenu, makeIcon } from "./context-menu.js";
 import { applyDependencyHighlights, wireAbilityInputs } from "./ability-editing.js";
-import { wireHitPoints } from "./hit-points-editing.js";
-import { wireArmorClass } from "./armor-class-editing.js";
 import { OptionPicker } from "./option-picker.js";
 import { wireSaveToggles } from "./saves-editing.js";
 import { ProseEditor } from "./prose-editor.js";
 import { applySaveState, HEADER_ORIGIN } from "./save-indicator.js";
 import { wireAddField } from "./field-visibility.js";
 import { NameField, NAME_FOCUS_KEY } from "../ui/fields/NameField.js";
+import { ArmorClassField } from "../ui/fields/ArmorClassField.js";
+import { HitPointsField } from "../ui/fields/HitPointsField.js";
 
 export interface StatBlockControllerOptions {
   /** Called when the user closes the overlay (to restore the launcher). */
@@ -60,12 +60,6 @@ export class StatBlockController {
    * `OptionPicker`s.
    */
   private menus: (ContextMenu | OptionPicker)[] = [];
-  /**
-   * Click-away listeners belonging to the mini-forms in the current block. They
-   * live on `window`, outside the block that gets thrown away, so each render
-   * detaches the last one's before the fresh form registers its own.
-   */
-  private formTeardowns: (() => void)[] = [];
   /**
    * The live editor for the Traits section (the first prose section wired for
    * editing). Persists across re-renders — its host is re-parented into each
@@ -131,7 +125,6 @@ export class StatBlockController {
     this.unsubscribeSave?.();
     this.unsubscribeSave = null;
     this.destroyMenus();
-    this.destroyForms();
     for (const host of this.islands.values()) render(null, host);
     this.islands.clear();
     this.traitsEditor?.destroy();
@@ -172,7 +165,6 @@ export class StatBlockController {
     const session = this.store.getSession();
 
     this.destroyMenus();
-    this.destroyForms();
     const block = renderStatBlock(monster, { revealed: session.revealed });
 
     const slot = block.querySelector<HTMLElement>(".name-menu");
@@ -214,71 +206,6 @@ export class StatBlockController {
     // 5.5e prints every save as a dot in the ability tables; those cells belong
     // to a table that is still drawn by hand. The 5e chip row is a component.
     wireSaveToggles(block, this.editing);
-
-    // Armor class is one stored number the form splits into "what Dexterity
-    // gives you" and "what your armor adds". Remember the armor's worth from
-    // the pristine form so a later DEX edit has something to preserve.
-    this.keepForm(
-      wireArmorClass(block, monster, {
-        state: session.armorClass,
-        dexChanged: session.changedAbilities.has("dex"),
-        armorBonus: session.armorBonus,
-        onOpen: () => {
-          this.store.update({
-            armorClass: { draft: { ...monster.armorClass } },
-            pendingFocus: "ac:bonus",
-          });
-        },
-        onChange: (draft) => {
-          const open = this.store.getSession().armorClass;
-          if (open) open.draft = draft;
-        },
-        onCommit: (armorClass) => {
-          this.editing.setArmorClass(armorClass);
-          this.store.update({
-            armorClass: null,
-            // Re-anchor against the Dexterity in force now: the user has
-            // reconciled the two, so this is the bonus a *future* DEX edit
-            // should preserve.
-            armorBonus: armorClass.value - unarmoredAc(monster),
-          });
-        },
-        onCancel: () => {
-          this.store.update({ armorClass: null });
-        },
-      }),
-    );
-
-    // Hit points are four fields behind one chip. Opening and cancelling only
-    // change our own state — nothing writes to the form, so `observe()` won't
-    // fire and we re-render by hand; committing writes and rides autosave.
-    this.keepForm(
-      wireHitPoints(block, monster, {
-        state: session.hitPoints,
-        conChanged: session.changedAbilities.has("con"),
-        dieOptions: () => this.editing.hitDieOptions(),
-        onOpen: () => {
-          this.store.update({
-            hitPoints: {
-              draft: { ...monster.hitPoints },
-              baseline: { ...monster.hitPoints },
-            },
-            pendingFocus: "hp:average",
-          });
-        },
-        onChange: (draft) => {
-          const open = this.store.getSession().hitPoints;
-          if (open) open.draft = draft;
-        },
-        onCommit: (hitPoints) => {
-          this.editing.setHitPoints(hitPoints);
-          this.store.update({ hitPoints: null });
-        },
-        onCancel: () => {
-          this.store.update({ hitPoints: null });
-        },
-      }),
-    );
 
     // The "Add…" menu at the foot of the section. Revealing a field changes
     // nothing in the form, so `observe()` won't fire — re-render by hand.
@@ -379,6 +306,30 @@ export class StatBlockController {
             autoOpen={pending === `add:${name}`}
           />
         );
+      case "armorClass":
+        return (
+          <ArmorClassField
+            monster={monster}
+            dexChanged={this.store.getSession().changedAbilities.has("dex")}
+            armorBonus={this.store.getSession().armorBonus}
+            onCommit={(armorClass) => {
+              this.editing.setArmorClass(armorClass);
+              // Re-anchor against the Dexterity in force now: the user has
+              // reconciled the two, so this is the bonus a *future* DEX edit
+              // should preserve.
+              this.store.update({ armorBonus: armorClass.value - unarmoredAc(monster) });
+            }}
+          />
+        );
+      case "hitPoints":
+        return (
+          <HitPointsField
+            monster={monster}
+            conChanged={this.store.getSession().changedAbilities.has("con")}
+            dieOptions={() => this.editing.hitDieOptions()}
+            onCommit={(hitPoints) => this.editing.setHitPoints(hitPoints)}
+          />
+        );
       case "name":
         return <NameField name={monster.name} onCommit={(next) => this.editing.setName(next)} />;
       case "meta":
@@ -473,16 +424,6 @@ export class StatBlockController {
   private destroyMenus(): void {
     for (const menu of this.menus) menu.destroy();
     this.menus = [];
-  }
-
-  /** Holds on to a mini-form's teardown; the closed chips return nothing. */
-  private keepForm(teardown: (() => void) | void): void {
-    if (teardown) this.formTeardowns.push(teardown);
-  }
-
-  private destroyForms(): void {
-    for (const teardown of this.formTeardowns) teardown();
-    this.formTeardowns = [];
   }
 
   /**

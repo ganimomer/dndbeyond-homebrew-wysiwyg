@@ -7,17 +7,12 @@
  * in it. It exists because the stat block is a *document*, and a document
  * editor has to remember things the document itself has no place to record.
  *
- * Three of these fields are transitional and named as such. They exist to prop
- * up a render loop that throws the DOM away each time; once a field is a
- * component that Preact diffs in place, its draft belongs in the component and
- * `pendingFocus` stops meaning anything at all.
+ * One field here is transitional. `pendingFocus` props up a render loop that
+ * throws the DOM away each time; a field that Preact diffs in place keeps its
+ * own caret, so it stops meaning anything once the last hand-drawn field goes.
  */
 import type { Ability } from "../statblock/model.js";
 import type { OptionalField } from "../preview/optional-fields.js";
-// Type-only, and only until these forms become components that hold their own
-// drafts (at which point both of them leave this file).
-import type { HitPointsEditing } from "../editor/hit-points-editing.js";
-import type { ArmorClassEditing } from "../editor/armor-class-editing.js";
 
 export interface SessionState {
   /**
@@ -39,10 +34,6 @@ export interface SessionState {
 
   /** Transitional: a `data-focus-key` to focus once, on the next render. */
   readonly pendingFocus: string | null;
-  /** Transitional: the open hit-points form, or null while it's a chip. */
-  readonly hitPoints: HitPointsEditing | null;
-  /** Transitional: the open armor-class form, or null while it's a chip. */
-  readonly armorClass: ArmorClassEditing | null;
 }
 
 export function emptySession(): SessionState {
@@ -51,8 +42,6 @@ export function emptySession(): SessionState {
     changedAbilities: new Set(),
     armorBonus: null,
     pendingFocus: null,
-    hitPoints: null,
-    armorClass: null,
   };
 }
 

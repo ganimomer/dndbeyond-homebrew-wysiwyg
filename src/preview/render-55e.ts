@@ -33,8 +33,6 @@ import {
 import { nameRow } from "./name-row.js";
 import { addFieldButton } from "./tags.js";
 import { island } from "./island.js";
-import { hitPointsChip } from "./hit-points-line.js";
-import { armorClassChip } from "./armor-class-line.js";
 
 function inline(text: string): DocumentFragment {
   return expandInline(text, el, "roll");
@@ -161,7 +159,7 @@ export function render55e(monster: Monster, options: RenderOptions = {}): HTMLEl
   acLabel.textContent = "AC";
   const acValue = el("span", "value");
   acValue.dataset.dep = "dex";
-  acValue.append(armorClassChip(monster));
+  acValue.append(island("armorClass"));
   acLine.append(acLabel, " ", acValue);
   const initLabel = el("span", "label");
   initLabel.textContent = "Initiative";
@@ -170,7 +168,7 @@ export function render55e(monster: Monster, options: RenderOptions = {}): HTMLEl
   initValue.textContent = initiativeText(monster);
   acLine.append("  ", initLabel, " ", initValue);
   basics.append(acLine);
-  const hpLine = labeled("HP", hitPointsChip(monster));
+  const hpLine = labeled("HP", island("hitPoints"));
   hpLine.dataset.dep = "con";
   basics.append(hpLine);
   basics.append(labeled("Speed", island("movements")));

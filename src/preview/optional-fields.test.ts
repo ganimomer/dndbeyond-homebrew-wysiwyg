@@ -27,7 +27,7 @@ for (const [name, render, ruleset] of [
     assert.deepEqual(rows(block), []);
     // The rows that aren't optional are still there.
     assert.ok(block.querySelector('[data-island="movements"]'), "Speed");
-    assert.ok(block.querySelector('.sb-chips[data-field="hitPoints"]'), "HP");
+    assert.ok(block.querySelector('[data-island="hitPoints"]'), "HP");
   });
 
   // Languages is a component now, so what the renderer owes is the hole it goes
