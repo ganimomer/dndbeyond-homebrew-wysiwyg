@@ -14,14 +14,17 @@ import { makeIcon } from "./icons.js";
 export interface ChipOptions {
   /** The token the editor commits (an option value, or the label itself). */
   value: string;
-  /** Shown before the detail. Empty renders no label at all (a walk speed). */
-  label: string;
+  /**
+   * Shown before the detail: the value's text, or the node that edits it in
+   * place (a meta slot's picker). Empty renders no label at all (a walk speed).
+   */
+  label: string | Node;
   /**
    * Trailing detail: a skill's "+7", or a whole node when the value is itself
    * editable (a movement's speed input).
    */
   detail?: string | Node;
-  /** Overrides the ✕'s label when `label` is empty or too terse to name it. */
+  /** Names the ✕ where `label` is a node, empty, or too terse to name it. */
   removeLabel?: string;
 }
 
@@ -31,7 +34,7 @@ export function chip({ value, label, detail, removeLabel }: ChipOptions): HTMLEl
 
   if (label) {
     const text = el("span", "sb-chip-label");
-    text.textContent = label;
+    text.append(label);
     tag.append(text);
   }
 
@@ -46,7 +49,10 @@ export function chip({ value, label, detail, removeLabel }: ChipOptions): HTMLEl
 
   const remove = el("button", "sb-chip-remove");
   remove.type = "button";
-  remove.setAttribute("aria-label", `Remove ${removeLabel ?? label}`);
+  remove.setAttribute(
+    "aria-label",
+    `Remove ${removeLabel ?? (typeof label === "string" ? label : "")}`,
+  );
   remove.textContent = "×";
   tag.append(remove);
   return tag;

@@ -118,6 +118,51 @@ test("type slot: offers every option, marks the current one, commits a pick", ()
   assert.deepEqual(calls.type, ["1"]);
 });
 
+test("a chosen value rides in a chip, whose ✕ commits the empty option", () => {
+  const scope = scopeFor([]);
+  const { adapter, calls } = stubAdapter([]);
+  wireMetaControls(scope, {
+    ...adapter,
+    alignmentOptions: () => [
+      { value: "", text: "—", selected: false },
+      { value: "10", text: "Unaligned", selected: true },
+    ],
+  });
+
+  const chip = scope.querySelector('[data-meta="alignment"]')!.closest(".sb-chip")!;
+  assert.equal(
+    chip.querySelector(".sb-chip-remove")?.getAttribute("aria-label"),
+    "Remove alignment",
+  );
+
+  chip.querySelector(".sb-chip-remove")!.dispatchEvent(
+    new jsdom.window.MouseEvent("click", { bubbles: true }),
+  );
+  // Same commit as picking the em-dash: a field with no value leaves the block.
+  assert.deepEqual(calls.alignment, [""]);
+});
+
+test("a field DDB won't let you empty loses its ✕ rather than the option", () => {
+  const scope = scopeFor([]);
+  const { adapter, calls } = stubAdapter([]);
+  // The stub's size options have no "nothing chosen" entry.
+  wireMetaControls(scope, adapter);
+
+  const chip = scope.querySelector('[data-meta="size"]')!.closest(".sb-chip")!;
+  assert.equal(chip.querySelector(".sb-chip-remove"), null);
+  assert.deepEqual(calls.size, []);
+});
+
+test("a slot still prompting has no chip to remove", () => {
+  // Nothing has been chosen yet, so there is nothing an ✕ could take away.
+  const scope = scopeFor([], { alignment: "" });
+  const { adapter } = stubAdapter([]);
+  wireMetaControls(scope, adapter);
+
+  const slot = scope.querySelector('.meta-slot[data-meta="alignment"]')!;
+  assert.equal(slot.closest(".sb-chip"), null);
+});
+
 test("a blank size or alignment still renders a placeholder control", () => {
   // The old meta line dropped the text node entirely, leaving no way to set a
   // blank field from the preview; every slot must now hold a control.

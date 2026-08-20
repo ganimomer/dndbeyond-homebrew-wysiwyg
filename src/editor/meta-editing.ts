@@ -11,7 +11,7 @@
  * Re-reading options every render keeps things correct after a write-back re-render.
  */
 import type { SelectOption } from "../adapter/types.js";
-import type { MetaKind } from "../preview/dom.js";
+import type { MetaKind } from "../preview/meta.js";
 import { OptionPicker } from "./option-picker.js";
 
 /** The adapter surface the meta controls need (satisfied by PageAdapter). */
@@ -61,9 +61,20 @@ function wirePicker(
   const isPlaceholder = slot.classList.contains("is-placeholder");
   const prompt = isPlaceholder ? slot.textContent ?? "" : "";
   const label = slot.dataset.label ?? kind;
+  const choices = options();
+
+  // A value's chip carries a ✕, which commits DDB's own "nothing chosen"
+  // option — the same thing picking its em-dash does, and what takes the field
+  // back off the block. A field DDB gives no such option simply can't be
+  // emptied, so it loses the ✕ rather than being handed an invalid value.
+  const remove = slot.closest(".sb-chip")?.querySelector<HTMLButtonElement>(".sb-chip-remove");
+  if (remove) {
+    if (choices.some((o) => o.value === "")) remove.addEventListener("click", () => commit(""));
+    else remove.remove();
+  }
 
   const picker = new OptionPicker(
-    options().map((o) => ({
+    choices.map((o) => ({
       label: prompt && o.value === "" ? prompt : o.text,
       selected: o.selected,
       onClick: () => commit(o.value),

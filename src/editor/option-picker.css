@@ -32,14 +32,20 @@
   background: rgba(91, 22, 12, 0.18);
 }
 
-/* A meta line slot (size, creature type, alignment): inline text with nothing
- * but a hover to say it can be clicked. */
+/* A meta line slot (size, creature type, alignment). A chosen value sits in a
+ * chip, whose background this inherits, so the trigger only darkens on hover —
+ * the treatment the hit-points chip button already uses. A slot still prompting
+ * ("Alignment…") has no chip around it and carries the hover alone. */
 .cp-trigger.value {
   padding: 0 1px;
 }
 
 .cp-trigger.value:hover {
   background: rgba(91, 22, 12, 0.08);
+}
+
+.sb-chip .cp-trigger.value:hover {
+  background: rgba(91, 22, 12, 0.18);
 }
 
 .cp-trigger.value.is-placeholder {

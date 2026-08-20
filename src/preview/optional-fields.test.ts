@@ -97,11 +97,16 @@ for (const [name, render, ruleset] of [
     const shown = (m: Partial<Monster>) =>
       render({ ...emptyMonster(), ...m }).querySelector(".meta")?.textContent;
 
-    assert.equal(shown({ alignment: "" }), "Medium humanoid");
-    assert.equal(shown({ size: "", type: "" }), "unaligned");
-    // The subtype's parenthetical hugs the type it qualifies (the ✕ and the
-    // trailing "add…" box are the chip editor's, not the sentence's).
-    assert.equal(shown({ subTypes: ["elf"] })?.replace(/\s+/g, " "), "Medium humanoid (elf× ), unaligned");
+    // Every value is a chip, so each drags its ✕ along into the text; what's
+    // being read here is the sentence the separators make of them.
+    assert.equal(shown({ alignment: "" }), "Medium× humanoid×");
+    assert.equal(shown({ size: "", type: "" }), "unaligned×");
+    // The subtype's parenthetical hugs the type it qualifies (the trailing
+    // "add…" box is the chip editor's, not the sentence's).
+    assert.equal(
+      shown({ subTypes: ["elf"] })?.replace(/\s+/g, " "),
+      "Medium× humanoid× (elf× ), unaligned×",
+    );
     // Nothing at all rather than an empty italic line of stray separators.
     assert.equal(shown({ size: "", type: "", alignment: "" }), undefined);
   });

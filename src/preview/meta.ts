@@ -12,8 +12,51 @@
  */
 import type { Monster } from "../statblock/model.js";
 import type { OptionalField } from "./optional-fields.js";
-import { el, metaSlot } from "./dom.js";
+import { el } from "./dom.js";
 import { chip } from "./tags.js";
+
+/** Which meta-line control a picker drives. */
+export type MetaKind = "size" | "type" | "subType" | "alignment";
+
+const META_LABEL: Record<MetaKind, string> = {
+  size: "Size",
+  type: "Creature type",
+  subType: "Creature subtype",
+  alignment: "Alignment",
+};
+
+/**
+ * A meta-line slot (size, creature type, alignment): the current value, tagged
+ * for `wireMetaControls` to replace with an `OptionPicker`. Same contract as
+ * `.sb-chip-menu` — the renderer marks the spot, the editor supplies the
+ * control.
+ *
+ * A value rides in a chip, like every other value on the block, so its ✕ takes
+ * the field off the stat block the way a subtype's does. Pass `isPlaceholder`
+ * when `currentText` is prompt text instead ("Alignment…"): there is nothing to
+ * remove yet, so it renders as dimmed bare text.
+ */
+export function metaSlot(
+  kind: MetaKind,
+  currentText: string,
+  isPlaceholder = false,
+): HTMLElement {
+  const slot = el("span", "meta-slot");
+  slot.dataset.meta = kind;
+  slot.dataset.label = META_LABEL[kind];
+  slot.textContent = currentText;
+
+  if (isPlaceholder) {
+    slot.classList.add("is-placeholder");
+    return slot;
+  }
+  return chip({
+    value: currentText,
+    label: slot,
+    removeLabel: META_LABEL[kind].toLowerCase(),
+  });
+}
+
 
 /** id of the shared subtype `<datalist>` (filled by wireMetaControls). */
 export const SUBTYPE_LIST_ID = "meta-subtype-list";

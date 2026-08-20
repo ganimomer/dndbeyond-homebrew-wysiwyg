@@ -42,33 +42,3 @@ export function saveSlot(origin: string): HTMLElement {
   slot.dataset.saveOrigin = origin;
   return slot;
 }
-
-/** Which meta-line control a picker drives. */
-export type MetaKind = "size" | "type" | "subType" | "alignment";
-
-const META_LABEL: Record<MetaKind, string> = {
-  size: "Size",
-  type: "Creature type",
-  subType: "Creature subtype",
-  alignment: "Alignment",
-};
-
-/**
- * A meta-line slot (size, creature type, alignment): the current value as inline
- * text, tagged for `wireMetaControls` to replace with an `OptionPicker`. Same
- * contract as `.sb-chip-menu` — the renderer marks the spot, the editor supplies
- * the control. Pass `isPlaceholder` when `currentText` is prompt text rather than
- * a real value, so it renders dimmed.
- */
-export function metaSlot(
-  kind: MetaKind,
-  currentText: string,
-  isPlaceholder = false,
-): HTMLElement {
-  const slot = el("span", "meta-slot");
-  slot.dataset.meta = kind;
-  slot.dataset.label = META_LABEL[kind];
-  if (isPlaceholder) slot.classList.add("is-placeholder");
-  slot.textContent = currentText;
-  return slot;
-}

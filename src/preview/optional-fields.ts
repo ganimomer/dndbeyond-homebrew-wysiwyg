@@ -10,8 +10,7 @@
  * One table drives both the renderers and that menu, so the two can't drift.
  */
 import type { Monster, Ruleset } from "../statblock/model.js";
-import { metaSlot } from "./dom.js";
-import { subTypeEditor } from "./meta.js";
+import { metaSlot, subTypeEditor } from "./meta.js";
 import { skillsChips } from "./skills-line.js";
 import { savingThrowChips } from "./saves-line.js";
 import { adjustmentChips, hasAdjustments, type AdjustmentField } from "./adjustments-line.js";
