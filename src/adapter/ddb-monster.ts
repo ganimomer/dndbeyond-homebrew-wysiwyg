@@ -25,6 +25,7 @@ import { abilityModifier, proficiencyForCr } from "../statblock/compute.js";
 import { parseAdjustment } from "../statblock/adjustments.js";
 import { ddbToEditorHtml, editorHtmlToDdb } from "../preview/ddb-markup.js";
 import { renamedEditUrl } from "./edit-url.js";
+import { listingCollection } from "./ddb-listings.js";
 
 /** Every DOM hook the monster adapter needs, in one place. */
 export const SELECTORS = {
@@ -112,6 +113,41 @@ const MOVEMENT_ID: Record<string, string> = {
   Fly: "4",
   Swim: "5",
 };
+
+/**
+ * The three record kinds, and the only things that differ between them: what
+ * DDB calls the rows, where it lists them, and what their forms post.
+ */
+const SKILLS = listingCollection<number>({
+  ids: SKILL_ID,
+  table: SELECTORS.skillTable,
+  createPath: "skills",
+  fields: (id, bonus) => ({
+    skill: id,
+    value: String(bonus),
+    "additional-bonus": "",
+  }),
+});
+
+const MOVEMENTS = listingCollection<number>({
+  ids: MOVEMENT_ID,
+  table: SELECTORS.movementTable,
+  createPath: "movement", // singular, unlike the other two
+  fields: (id, speed, existing) => ({
+    "movement-type": id,
+    speed: String(speed),
+    // The row's own note rides along unchanged — the edit form posts all three
+    // fields, so omitting it would quietly erase things like "hover".
+    note: existing?.cells[2] ?? "",
+  }),
+});
+
+const SENSES = listingCollection<string>({
+  ids: SENSE_ID,
+  table: SELECTORS.senseTable,
+  createPath: "senses",
+  fields: (id, note) => ({ sense: id, "sense-note": note }),
+});
 
 const ABBREV_TO_ABILITY: Record<string, Ability> = {
   STR: "str",
@@ -304,50 +340,6 @@ function readSkills(): Record<string, number> {
   return skills;
 }
 
-/** One row of a listing table, with the links its actions cell exposes. */
-interface ListingRow {
-  /** The first cell — the skill's or movement type's name. */
-  name: string;
-  /** Remaining cell texts, so callers can read e.g. a movement's note. */
-  cells: string[];
-  editUrl: string;
-  deleteUrl: string;
-}
-
-/**
- * Rows of a listing table. Skills and movements aren't form fields — each is
- * its own server record, reachable only through the links in its row.
- */
-function listingRows(tableSelector: string): ListingRow[] {
-  const table = document.querySelector(tableSelector);
-  if (!table) return [];
-  return Array.from(table.querySelectorAll("tbody tr")).flatMap((tr) => {
-    const cells = Array.from(tr.querySelectorAll("td")).map((td) => (td.textContent ?? "").trim());
-    const href = (suffix: string) =>
-      Array.from(tr.querySelectorAll("a")).find((a) =>
-        new RegExp(`/${suffix}$`).test(a.getAttribute("href") ?? ""),
-      )?.getAttribute("href") ?? "";
-    const name = cells[0] ?? "";
-    const deleteUrl = href("delete");
-    return name && deleteUrl
-      ? [{ name, cells, editUrl: href("edit"), deleteUrl }]
-      : [];
-  });
-}
-
-/**
- * The "Add a …" link's target, which carries the monster id we POST to.
- * `path` is DDB's segment for the record type ("skills", "movement").
- */
-function createUrl(path: string): string {
-  const anchor = document.querySelector<HTMLAnchorElement>(`a[href*="/monster/${path}/create/"]`);
-  const href = anchor?.getAttribute("href");
-  if (href) return href;
-  // Fall back to the id in our own URL if DDB ever drops the link.
-  const id = /\/monsters\/(\d+)/.exec(location.pathname)?.[1];
-  return id ? `/monster/${path}/create/${id}` : "";
-}
-
 /**
  * Points the page at the monster's new URL after a save reslugged it — which is
  * what renaming a creature does, since DDB builds the slug from the name.
@@ -366,103 +358,6 @@ function followSlugChange(form: HTMLFormElement, responseUrl: string): void {
   if (!next) return;
   history.replaceState(history.state, "", next);
   if (form.getAttribute("action")) form.setAttribute("action", new URL(next).pathname);
-}
-
-function cookie(name: string): string {
-  return document.cookie.split("; ").find((c) => c.startsWith(`${name}=`))?.slice(name.length + 1) ?? "";
-}
-
-/**
- * The token DDB's own `ajax-post` links send (`Cobalt.Forms.AjaxPostSubmit`):
- * the `RequestVerificationToken` cookie, refreshed when it's missing. The skill
- * *delete* endpoint accepts nothing else — not the form's two tokens, not an
- * XHR header.
- */
-async function requestVerificationToken(): Promise<string> {
-  const existing = cookie("RequestVerificationToken");
-  if (existing) return existing;
-  await fetch("/refresh-request-verification-token", { method: "POST", credentials: "include" });
-  return cookie("RequestVerificationToken");
-}
-
-/**
- * POSTs a urlencoded body and returns the response text.
- *
- * DDB answers a rejected request with `200` and a redirect to `/error` (the
- * same shape as the signed-out redirect to `/sign-in`), so status alone would
- * report a bogus success.
- */
-async function postForm(url: string, body: URLSearchParams): Promise<string> {
-  const response = await fetch(url, {
-    method: "POST",
-    body,
-    credentials: "include",
-    redirect: "follow",
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`request failed (${response.status})`);
-  if (/\/error|sign-in|login/i.test(new URL(response.url).pathname)) {
-    throw new Error("request rejected by D&D Beyond");
-  }
-  return text;
-}
-
-/**
- * Submits a listing record's create or edit form and syncs the live table from
- * the response.
- *
- * DDB's own flow navigates to a separate page per row (which is why adding a
- * skill or movement there saves and reloads the monster); we post the same form
- * in place, reusing the edit page's anti-forgery tokens — those are accepted on
- * these endpoints, so no preliminary GET is needed.
- *
- * The response is the whole edit page with the listing already updated, so the
- * fresh `<tbody>` is lifted straight out of it. That's what gives a new row its
- * real id (needed to edit or delete it later) and, because these tables live
- * inside the observed form, what re-renders the stat block. Parsing a ~530 KB
- * response is banned in `save()` — that runs every few seconds — but this is
- * one deliberate click.
- */
-async function submitListingForm(
-  url: string,
-  tableSelector: string,
-  fields: Record<string, string>,
-): Promise<void> {
-  const html = await postForm(
-    url,
-    new URLSearchParams({
-      "security-token": val("field-security-token"),
-      "authenticity-token": val("field-authenticity-token"),
-      ...fields,
-    }),
-  );
-
-  const fresh = new DOMParser()
-    .parseFromString(html, "text/html")
-    .querySelector(`${tableSelector} tbody`);
-  const live = document.querySelector(`${tableSelector} tbody`);
-  if (fresh && live) live.replaceWith(live.ownerDocument.importNode(fresh, true));
-}
-
-/**
- * Deletes the named listing row via its own Delete link. The response is a few
- * dozen bytes of JSON rather than a page, so the row is dropped from the live
- * table by hand — which, the table being inside the form, re-renders.
- */
-async function deleteListingRow(tableSelector: string, name: string): Promise<void> {
-  const row = listingRows(tableSelector).find((r) => r.name === name);
-  if (!row) return;
-
-  await postForm(
-    row.deleteUrl,
-    new URLSearchParams({ "request-verification-token": await requestVerificationToken() }),
-  );
-
-  document
-    .querySelector(`${tableSelector} tbody`)
-    ?.querySelector(`a[href="${row.deleteUrl}"]`)
-    ?.closest("tr")
-    ?.remove();
 }
 
 /** Splits the combined "X - Resistance/Immunity/Vulnerability" multi-select. */
@@ -694,67 +589,47 @@ export class DdbMonsterAdapter implements PageAdapter {
   }
 
   skillOptions(): SelectOption[] {
-    const taken = new Set(listingRows(SELECTORS.skillTable).map((r) => r.name));
-    return Object.entries(SKILL_ID).map(([text, value]) => ({
-      value,
-      text,
-      selected: taken.has(text),
-    }));
+    return SKILLS.options();
   }
 
-  async addSkill(value: string, bonus: number): Promise<void> {
-    const url = createUrl("skills");
-    if (!url) throw new Error("skill create URL not found");
-    await submitListingForm(url, SELECTORS.skillTable, {
-      skill: value,
-      value: String(bonus),
-      "additional-bonus": "",
-    });
+  addSkill(value: string, bonus: number): Promise<void> {
+    return SKILLS.add(value, bonus);
   }
 
-  async removeSkill(name: string): Promise<void> {
-    await deleteListingRow(SELECTORS.skillTable, name);
+  removeSkill(name: string): Promise<void> {
+    return SKILLS.remove(name);
   }
 
   movementOptions(): SelectOption[] {
-    const taken = new Set(listingRows(SELECTORS.movementTable).map((r) => r.name));
-    return Object.entries(MOVEMENT_ID).map(([text, value]) => ({
-      value,
-      text,
-      selected: taken.has(text),
-    }));
+    return MOVEMENTS.options();
   }
 
-  async addMovement(value: string, speed: number): Promise<void> {
-    const url = createUrl("movement"); // singular, unlike skills
-    if (!url) throw new Error("movement create URL not found");
-    await submitListingForm(url, SELECTORS.movementTable, {
-      "movement-type": value,
-      speed: String(speed),
-      note: "",
-    });
+  addMovement(value: string, speed: number): Promise<void> {
+    return MOVEMENTS.add(value, speed);
   }
 
-  /**
-   * Changes an existing movement's speed. The row's own note rides along
-   * unchanged — the edit form posts all three fields, so omitting it would
-   * quietly erase things like "hover".
-   */
-  async setMovementSpeed(type: string, speed: number): Promise<void> {
-    const row = listingRows(SELECTORS.movementTable).find((r) => r.name === type);
-    if (!row?.editUrl) return;
-    const value = MOVEMENT_ID[type];
-    if (!value) return;
-
-    await submitListingForm(row.editUrl, SELECTORS.movementTable, {
-      "movement-type": value,
-      speed: String(speed),
-      note: row.cells[2] ?? "",
-    });
+  setMovementSpeed(type: string, speed: number): Promise<void> {
+    return MOVEMENTS.update(type, speed);
   }
 
-  async removeMovement(type: string): Promise<void> {
-    await deleteListingRow(SELECTORS.movementTable, type);
+  removeMovement(type: string): Promise<void> {
+    return MOVEMENTS.remove(type);
+  }
+
+  senseOptions(): SelectOption[] {
+    return SENSES.options();
+  }
+
+  addSense(value: string, note: string): Promise<void> {
+    return SENSES.add(value, note);
+  }
+
+  setSenseNote(type: string, note: string): Promise<void> {
+    return SENSES.update(type, note);
+  }
+
+  removeSense(type: string): Promise<void> {
+    return SENSES.remove(type);
   }
 
   damageAdjustmentOptions(): SelectOption[] {
@@ -771,39 +646,6 @@ export class DdbMonsterAdapter implements PageAdapter {
 
   setConditionImmunities(values: string[]): void {
     setMultiSelect(SELECTORS.conditionImmunity, values);
-  }
-
-  senseOptions(): SelectOption[] {
-    const taken = new Set(listingRows(SELECTORS.senseTable).map((r) => r.name));
-    return Object.entries(SENSE_ID).map(([text, value]) => ({
-      value,
-      text,
-      selected: taken.has(text),
-    }));
-  }
-
-  async addSense(value: string, note: string): Promise<void> {
-    const url = createUrl("senses");
-    if (!url) throw new Error("sense create URL not found");
-    await submitListingForm(url, SELECTORS.senseTable, {
-      sense: value,
-      "sense-note": note,
-    });
-  }
-
-  async setSenseNote(type: string, note: string): Promise<void> {
-    const row = listingRows(SELECTORS.senseTable).find((r) => r.name === type);
-    if (!row?.editUrl) return;
-    const value = SENSE_ID[type];
-    if (!value) return;
-    await submitListingForm(row.editUrl, SELECTORS.senseTable, {
-      sense: value,
-      "sense-note": note,
-    });
-  }
-
-  async removeSense(type: string): Promise<void> {
-    await deleteListingRow(SELECTORS.senseTable, type);
   }
 
   setPassivePerception(value: number): void {
