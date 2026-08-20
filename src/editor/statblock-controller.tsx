@@ -21,6 +21,7 @@ import type { IslandName } from "../preview/island.js";
 import { TextRow } from "../ui/fields/TextRow.js";
 import { SkillsRow } from "../ui/fields/SkillsRow.js";
 import { SavingThrowsRow } from "../ui/fields/SavingThrowsRow.js";
+import { AdjustmentsRow } from "../ui/fields/AdjustmentsRow.js";
 import { unreveal } from "../state/session.js";
 import { hiddenFields } from "../preview/optional-fields.js";
 import { unarmoredAc } from "../statblock/armor-class.js";
@@ -33,7 +34,6 @@ import { wireMetaControls } from "./meta-editing.js";
 import { OptionPicker } from "./option-picker.js";
 import { wireSaveToggles } from "./saves-editing.js";
 import { wireMovements } from "./speed-editing.js";
-import { wireAdjustments } from "./adjustments-editing.js";
 import { wireSenses } from "./senses-editing.js";
 import { ProseEditor } from "./prose-editor.js";
 import { applySaveState, HEADER_ORIGIN } from "./save-indicator.js";
@@ -295,14 +295,6 @@ export class StatBlockController {
     // to a table that is still drawn by hand. The 5e chip row is a component.
     wireSaveToggles(block, this.editing);
 
-    // Damage adjustments and condition immunities are multi-selects on the form,
-    // so they commit whole and ride autosave like the saving throws.
-    this.menus.push(
-      // The third argument is the module's own "I committed something" hook;
-      // persistence is the command's job now, so there is nothing to do with it.
-      ...wireAdjustments(block, this.editing, () => {}),
-    );
-
     // Skills and movements are the edits that don't go through autosave: DDB
     // keeps them as separate records, so the adapter persists each change
     // itself and updates the listing table, which re-renders us via observe().
@@ -411,6 +403,19 @@ export class StatBlockController {
             monster={monster}
             adapter={this.editing}
             autoOpen={pending === "add:savingThrows"}
+          />
+        );
+      case "damageVulnerabilities":
+      case "damageResistances":
+      case "damageImmunities":
+      case "conditionImmunities":
+      case "immunities":
+        return (
+          <AdjustmentsRow
+            monster={monster}
+            field={name}
+            adapter={this.editing}
+            autoOpen={pending === `add:${name}`}
           />
         );
       case "skills":

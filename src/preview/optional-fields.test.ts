@@ -118,11 +118,10 @@ test("5.5e prints damage and condition immunities as one row", () => {
     conditionImmunities: ["Charmed"],
   });
 
-  const chips = block.querySelectorAll<HTMLElement>('.sb-chips[data-field="immunities"] .sb-chip');
-  assert.deepEqual(
-    [...chips].map((c) => [c.dataset.value, c.dataset.source]),
-    [["Poison", "damage"], ["Charmed", "condition"]],
-  );
+  // One row, not two. Which values it draws from either select, and where a
+  // removal is written back to, is AdjustmentsRow.test.tsx's business.
+  assert.deepEqual(rows(block), ["immunities"]);
+  assert.ok(block.querySelector('[data-island="immunities"]'));
 });
 
 test("5e prints damage and condition immunities as two rows", () => {

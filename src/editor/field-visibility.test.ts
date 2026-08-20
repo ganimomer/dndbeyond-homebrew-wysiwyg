@@ -11,7 +11,6 @@ const jsdom = new JSDOM("<!doctype html><html><body></body></html>");
 const { render55e } = await import("../preview/render-55e.js");
 const { basicsFields, hiddenFields } = await import("../preview/optional-fields.js");
 const { wireAddField } = await import("./field-visibility.js");
-const { wireAdjustments } = await import("./adjustments-editing.js");
 const { wireMetaControls } = await import("./meta-editing.js");
 const { emptyMonster } = await import("../statblock/model.js");
 
@@ -110,26 +109,6 @@ test("the wired controls answer to the focus keys the table promises", () => {
   const block = render55e(monster, { revealed });
   const keyFor = (key: OptionalField) =>
     basicsFields(monster.ruleset).find((spec) => spec.key === key)?.focusKey;
-
-  const rows = wireAdjustments(
-    block,
-    {
-      // One of each kind, or the row with nothing left to offer drops its ＋.
-      damageAdjustmentOptions: () => [
-        { value: "9", text: "Fire - Resistance", selected: false },
-        { value: "41", text: "Fire - Vulnerability", selected: false },
-        { value: "25", text: "Fire - Immunity", selected: false },
-      ],
-      setDamageAdjustments: () => {},
-      conditionImmunityOptions: () => [{ value: "1", text: "Charmed", selected: false }],
-      setConditionImmunities: () => {},
-    },
-    () => {},
-  );
-  assert.deepEqual(
-    rows.map((picker) => picker.focusKey).sort(),
-    ["damageResistances", "damageVulnerabilities", "immunities"].map(keyFor).sort(),
-  );
 
   const meta = wireMetaControls(block, {
     sizeOptions: () => [{ value: "4", text: "Medium", selected: true }],
