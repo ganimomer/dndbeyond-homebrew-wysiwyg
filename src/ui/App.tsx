@@ -8,8 +8,9 @@
  * loop it is replacing. Fields move across it one at a time; when the last one
  * has, the container and the controller both go.
  */
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useLayoutEffect, useMemo, useRef } from "preact/hooks";
 import type { PageAdapter } from "../adapter/types.js";
+import { EditorStore } from "../state/store.js";
 import { StatBlockController } from "../editor/statblock-controller.js";
 import panelCss from "../editor/panel.css";
 import contextMenuCss from "../editor/context-menu.css";
@@ -34,16 +35,21 @@ export interface AppProps {
 
 export function App({ adapter, onClose }: AppProps) {
   const stage = useRef<HTMLDivElement>(null);
+  const store = useMemo(() => new EditorStore(adapter), [adapter]);
 
   // A layout effect, not an ordinary one: the block has to be in the DOM by the
   // time the mounting render returns, the way it was when the panel built it
-  // by hand. `onClose` is stable for the overlay's lifetime, so the controller
-  // is created once per adapter and not restarted underneath itself.
+  // by hand. `onClose` is stable for the overlay's lifetime, so this runs once
+  // per adapter and is not restarted underneath itself.
   useLayoutEffect(() => {
-    const controller = new StatBlockController(adapter, stage.current!, { onClose });
+    store.start();
+    const controller = new StatBlockController(store, stage.current!, { onClose });
     controller.start();
-    return () => controller.stop();
-  }, [adapter]);
+    return () => {
+      controller.stop();
+      store.stop();
+    };
+  }, [store]);
 
   return (
     <>

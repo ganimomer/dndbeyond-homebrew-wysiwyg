@@ -12,16 +12,17 @@
  * the block. It is handed a container that the Preact tree owns, renders into
  * it, and stops when told.
  */
-import type { PageAdapter } from "../adapter/types.js";
-import type { Ability, Monster } from "../statblock/model.js";
+import type { Monster } from "../statblock/model.js";
+import type { EditorStore } from "../state/store.js";
+import { markChanged, reveal, unreveal } from "../state/session.js";
 import { renderStatBlock } from "../preview/statblock-view.js";
-import { basicsFields, hiddenFields, type OptionalField } from "../preview/optional-fields.js";
+import { hiddenFields } from "../preview/optional-fields.js";
 import { unarmoredAc } from "../statblock/armor-class.js";
 import { saveSlot } from "../preview/dom.js";
 import { ContextMenu, makeIcon } from "./context-menu.js";
 import { applyDependencyHighlights, wireAbilityInputs } from "./ability-editing.js";
-import { wireHitPoints, type HitPointsEditing } from "./hit-points-editing.js";
-import { wireArmorClass, type ArmorClassEditing } from "./armor-class-editing.js";
+import { wireHitPoints } from "./hit-points-editing.js";
+import { wireArmorClass } from "./armor-class-editing.js";
 import { wireMetaControls } from "./meta-editing.js";
 import { OptionPicker } from "./option-picker.js";
 import { wireSkills } from "./skills-editing.js";
@@ -64,37 +65,6 @@ export class StatBlockController {
    */
   private formTeardowns: (() => void)[] = [];
   /**
-   * A `data-focus-key` to focus once, on the next render — set when we add a
-   * field the user is expected to type into straight away (a new movement's
-   * speed), since the write-back re-renders the whole block underneath them.
-   */
-  private pendingFocus: string | null = null;
-  /** Abilities the user has edited this session; drives dependency highlights. */
-  private changedAbilities = new Set<Ability>();
-  /**
-   * Optional fields the user added from the "Add…" menu that have nothing in
-   * them yet — the stat block prints only the rows a creature actually has, so
-   * these are the exception that keeps an empty row on screen to be filled in.
-   * Session-only: nothing about it reaches D&D Beyond, and a field drops out of
-   * the set the moment it has a value of its own (see `pruneRevealed`).
-   */
-  private revealed = new Set<OptionalField>();
-  /**
-   * The open hit-points form, or null while it's a chip. The block is rebuilt on
-   * every form mutation, so the half-typed draft can't live in the DOM — it's
-   * held here and handed back to `wireHitPoints` on each render.
-   */
-  private hpEditing: HitPointsEditing | null = null;
-  /** The open armor-class form, or null while it's a chip. */
-  private acEditing: ArmorClassEditing | null = null;
-  /**
-   * What the creature's armor is worth over its unarmored class. Read once from
-   * the pristine form and re-read whenever the user sets an armor class, so it
-   * always holds the last figure they actually stood behind — which is what a
-   * Dexterity change is measured against.
-   */
-  private armorBonus: number | null = null;
-  /**
    * The live editor for the Traits section (the first prose section wired for
    * editing). Persists across re-renders — its host is re-parented into each
    * freshly rendered block rather than rebuilt, so the caret and undo survive.
@@ -114,7 +84,7 @@ export class StatBlockController {
   };
 
   constructor(
-    private readonly adapter: PageAdapter,
+    private readonly store: EditorStore,
     /** The element to render into. Owned by the Preact tree, not by us. */
     private readonly container: HTMLElement,
     private readonly options: StatBlockControllerOptions = {},
@@ -123,10 +93,21 @@ export class StatBlockController {
     this.autosave = new AutosaveController(() => this.adapter.save());
   }
 
+  private get adapter() {
+    return this.store.adapter;
+  }
+
   /** Renders the block and starts tracking the form. */
   start(): void {
     this.render();
-    this.unobserve = this.adapter.observe(() => this.scheduleRender());
+    // Form mutations arrive in bursts — one edit can touch four fields — so
+    // they coalesce into a frame. Session changes must not: a mini-form's
+    // click-away depends on the re-render landing inside the click that caused
+    // it, while that click is still in its capture phase.
+    this.unobserve = this.store.subscribe((change) => {
+      if (change === "monster") this.scheduleRender();
+      else this.render();
+    });
     // Save state changes on its own schedule — a request starting or finishing
     // doesn't touch the form — so it repaints the indicators directly rather
     // than waiting for a render.
@@ -182,13 +163,13 @@ export class StatBlockController {
     // rebuilding would swallow the word being typed and shut the picker.
     if (this.filteringPicker()) return;
 
-    const monster = this.adapter.read();
+    const monster = this.store.getMonster();
     if (!monster) return;
+    const session = this.store.getSession();
 
-    this.pruneRevealed(monster);
     this.destroyMenus();
     this.destroyForms();
-    const block = renderStatBlock(monster, { revealed: this.revealed });
+    const block = renderStatBlock(monster, { revealed: session.revealed });
 
     const slot = block.querySelector<HTMLElement>(".name-menu");
     if (slot) {
@@ -222,40 +203,43 @@ export class StatBlockController {
     // records it so its dependents stay flagged across renders. Scores commit
     // on `change`, i.e. on blur — never per keystroke.
     wireAbilityInputs(block, monster, (ability, score) => {
-      this.changedAbilities.add(ability);
       this.adapter.setAbility(ability, score);
       this.autosave.request(HEADER_ORIGIN);
+      this.store.update({ changedAbilities: markChanged(this.store.getSession(), ability) });
     });
-    applyDependencyHighlights(block, this.changedAbilities);
+    applyDependencyHighlights(block, session.changedAbilities);
 
     // Armor class is one stored number the form splits into "what Dexterity
     // gives you" and "what your armor adds". Remember the armor's worth from
     // the pristine form so a later DEX edit has something to preserve.
-    this.armorBonus ??= monster.armorClass.value - unarmoredAc(monster);
     this.keepForm(
       wireArmorClass(block, monster, {
-        state: this.acEditing,
-        dexChanged: this.changedAbilities.has("dex"),
-        armorBonus: this.armorBonus,
+        state: session.armorClass,
+        dexChanged: session.changedAbilities.has("dex"),
+        armorBonus: session.armorBonus,
         onOpen: () => {
-          this.acEditing = { draft: { ...monster.armorClass } };
-          this.pendingFocus = "ac:bonus";
-          this.render();
+          this.store.update({
+            armorClass: { draft: { ...monster.armorClass } },
+            pendingFocus: "ac:bonus",
+          });
         },
         onChange: (draft) => {
-          if (this.acEditing) this.acEditing.draft = draft;
+          const open = this.store.getSession().armorClass;
+          if (open) open.draft = draft;
         },
         onCommit: (armorClass) => {
-          this.acEditing = null;
-          // Re-anchor against the Dexterity in force now: the user has reconciled
-          // the two, so this is the bonus a *future* DEX edit should preserve.
-          this.armorBonus = armorClass.value - unarmoredAc(monster);
           this.adapter.setArmorClass(armorClass);
           this.autosave.request(HEADER_ORIGIN);
+          this.store.update({
+            armorClass: null,
+            // Re-anchor against the Dexterity in force now: the user has
+            // reconciled the two, so this is the bonus a *future* DEX edit
+            // should preserve.
+            armorBonus: armorClass.value - unarmoredAc(monster),
+          });
         },
         onCancel: () => {
-          this.acEditing = null;
-          this.render();
+          this.store.update({ armorClass: null });
         },
       }),
     );
@@ -265,25 +249,29 @@ export class StatBlockController {
     // fire and we re-render by hand; committing writes and rides autosave.
     this.keepForm(
       wireHitPoints(block, monster, {
-        state: this.hpEditing,
-        conChanged: this.changedAbilities.has("con"),
+        state: session.hitPoints,
+        conChanged: session.changedAbilities.has("con"),
         dieOptions: () => this.adapter.hitDieOptions(),
         onOpen: () => {
-          this.hpEditing = { draft: { ...monster.hitPoints }, baseline: { ...monster.hitPoints } };
-          this.pendingFocus = "hp:average";
-          this.render();
+          this.store.update({
+            hitPoints: {
+              draft: { ...monster.hitPoints },
+              baseline: { ...monster.hitPoints },
+            },
+            pendingFocus: "hp:average",
+          });
         },
         onChange: (draft) => {
-          if (this.hpEditing) this.hpEditing.draft = draft;
+          const open = this.store.getSession().hitPoints;
+          if (open) open.draft = draft;
         },
         onCommit: (hitPoints) => {
-          this.hpEditing = null;
           this.adapter.setHitPoints(hitPoints);
           this.autosave.request(HEADER_ORIGIN);
+          this.store.update({ hitPoints: null });
         },
         onCancel: () => {
-          this.hpEditing = null;
-          this.render();
+          this.store.update({ hitPoints: null });
         },
       }),
     );
@@ -351,13 +339,14 @@ export class StatBlockController {
         this.autosave.request(HEADER_ORIGIN);
       },
       onClear: (field) => {
-        this.revealed.delete(field);
         if (monster[field] === "") {
           // Nothing to write — it was an empty row the user changed their mind
-          // about, so no form mutation will come back to re-render us.
-          this.render();
+          // about, so no form mutation will come back to re-render us. The
+          // session update is what repaints.
+          this.store.update({ revealed: unreveal(this.store.getSession(), field) });
           return;
         }
+        this.store.update({ revealed: unreveal(this.store.getSession(), field) });
         if (field === "gear") this.adapter.setGear("");
         else this.adapter.setLanguages("");
         this.autosave.request(HEADER_ORIGIN);
@@ -375,7 +364,7 @@ export class StatBlockController {
         // The chip doesn't exist yet — queue its input for the render that the
         // write-back triggers, so the default is selected and ready to type over.
         onAdd: (type) => {
-          this.pendingFocus = `speed:${type}`;
+          this.store.update({ pendingFocus: `speed:${type}` });
         },
         onError: (error) => console.error("[microbrewery] movement update failed", error),
       }),
@@ -383,7 +372,7 @@ export class StatBlockController {
       // an ordinary field and rides autosave instead.
       ...wireSenses(block, monster, this.adapter, {
         onAdd: (type) => {
-          this.pendingFocus = `sense:${type}`;
+          this.store.update({ pendingFocus: `sense:${type}` });
         },
         onPassivePerception: () => this.autosave.request(HEADER_ORIGIN),
         onError: (error) => console.error("[microbrewery] sense update failed", error),
@@ -393,18 +382,18 @@ export class StatBlockController {
     // The "Add…" menu at the foot of the section. Revealing a field changes
     // nothing in the form, so `observe()` won't fire — re-render by hand.
     this.menus.push(
-      ...wireAddField(block, hiddenFields(monster, this.revealed, monster.ruleset), (spec) => {
-        this.revealed.add(spec.key);
-        this.pendingFocus = spec.focusKey;
-        this.render();
+      ...wireAddField(block, hiddenFields(monster, session.revealed, monster.ruleset), (spec) => {
+        this.store.update({
+          revealed: reveal(this.store.getSession(), spec.key),
+          pendingFocus: spec.focusKey,
+        });
       }),
     );
 
     // Preserve caret focus across the blur→re-render so tabbing between inputs
     // stays usable. A field we just added (pendingFocus) wins, and gets its
     // default value selected so the user can type straight over it.
-    const pending = this.pendingFocus;
-    this.pendingFocus = null;
+    const pending = this.store.takePendingFocus();
     const focusKey = pending ?? this.focusedKey();
     this.container.replaceChildren(block);
     if (!this.openPending(pending)) this.restoreFocus(block, focusKey, pending !== null);
@@ -452,17 +441,6 @@ export class StatBlockController {
     // early while focused).
     holder.replaceChildren(this.traitsHost);
     this.traitsEditor.setContent(initialHtml);
-  }
-
-  /**
-   * Forgets the reveal of any field that now has a value: it renders on its own
-   * merit from here on, so when its last value is removed the row goes away
-   * rather than lingering as an empty one.
-   */
-  private pruneRevealed(monster: Monster): void {
-    for (const spec of basicsFields(monster.ruleset)) {
-      if (spec.hasValue(monster)) this.revealed.delete(spec.key);
-    }
   }
 
   private destroyMenus(): void {
