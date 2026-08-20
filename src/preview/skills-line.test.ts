@@ -1,15 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { JSDOM } from "jsdom";
-
-// The renderers build DOM via the global `document`; back it with jsdom.
-const jsdom = new JSDOM("<!doctype html><html><body></body></html>");
-(globalThis as Record<string, unknown>).document = jsdom.window.document;
-(globalThis as Record<string, unknown>).window = jsdom.window;
-
-const { render5e } = await import("./render-5e.js");
-const { render55e } = await import("./render-55e.js");
-const { emptyMonster } = await import("../statblock/model.js");
+// The DOM these renderers build against is installed process-wide by
+// scripts/dom-setup.mjs, so this needs no jsdom preamble of its own.
+import { render5e } from "./render-5e.js";
+import { render55e } from "./render-55e.js";
+import { emptyMonster } from "../statblock/model.js";
 
 for (const [name, render] of [
   ["5e", render5e],

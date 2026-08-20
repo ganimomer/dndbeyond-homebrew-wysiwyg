@@ -3,6 +3,10 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    // Preact's automatic JSX runtime: no import needed in .tsx files, and no
+    // React anywhere. Mirrored in build.mjs and scripts/test.mjs.
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "strict": true,
     "noUnusedLocals": true,
@@ -20,6 +24,13 @@
   "include": ["src", "build.mjs"],
   // Test files run through esbuild + node:test (their own toolchain, with Node
   // and jsdom types the extension code deliberately excludes), so keep them out
-  // of the app typecheck.
-  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
+  // of the app typecheck. `test-support/` is their shared harness, so it goes
+  // with them.
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/test-support"
+  ]
 }
