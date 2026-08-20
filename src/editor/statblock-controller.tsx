@@ -37,9 +37,8 @@ import { OptionPicker } from "./option-picker.js";
 import { wireSaveToggles } from "./saves-editing.js";
 import { ProseEditor } from "./prose-editor.js";
 import { applySaveState, HEADER_ORIGIN } from "./save-indicator.js";
-import { wireName } from "./name-editing.js";
 import { wireAddField } from "./field-visibility.js";
-import { NAME_FOCUS_KEY } from "../preview/name-row.js";
+import { NameField, NAME_FOCUS_KEY } from "../ui/fields/NameField.js";
 
 export interface StatBlockControllerOptions {
   /** Called when the user closes the overlay (to restore the launcher). */
@@ -212,6 +211,10 @@ export class StatBlockController {
     });
     applyDependencyHighlights(block, session.changedAbilities);
 
+    // 5.5e prints every save as a dot in the ability tables; those cells belong
+    // to a table that is still drawn by hand. The 5e chip row is a component.
+    wireSaveToggles(block, this.editing);
+
     // Armor class is one stored number the form splits into "what Dexterity
     // gives you" and "what your armor adds". Remember the armor's worth from
     // the pristine form so a later DEX edit has something to preserve.
@@ -276,18 +279,6 @@ export class StatBlockController {
         },
       }),
     );
-
-    // The creature name is a contenteditable in the header row; it commits on
-    // blur or Enter, and rides autosave like the rest of the header.
-    wireName(block, monster, {
-      onCommit: (name) => {
-        this.editing.setName(name);
-      },
-    });
-
-    // 5.5e prints every save as a dot in the ability tables; those cells belong
-    // to a table that is still drawn by hand. The 5e chip row is a component.
-    wireSaveToggles(block, this.editing);
 
     // The "Add…" menu at the foot of the section. Revealing a field changes
     // nothing in the form, so `observe()` won't fire — re-render by hand.
@@ -388,6 +379,8 @@ export class StatBlockController {
             autoOpen={pending === `add:${name}`}
           />
         );
+      case "name":
+        return <NameField name={monster.name} onCommit={(next) => this.editing.setName(next)} />;
       case "meta":
         return (
           <MetaLine
