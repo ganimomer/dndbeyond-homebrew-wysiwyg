@@ -16,7 +16,10 @@ with a thin per-browser layer for each extension format.
 > condition immunities, senses, gear and languages — and **every description
 > section** — traits and actions through to the Description below the block —
 > is a [Lexical](https://lexical.dev) rich-text editor that writes back to the
-> form. **Autosave** persists all of it without a page reload. This pulls
+> form, an **entry at a time**: a blank line ends a trait and starts the next,
+> the gap between two offers to merge them, and a drag handle moves one within
+> its section or into another. **Autosave** persists all of it without a page
+> reload. This pulls
 > Lexical + Preact into the content script (~400 KB minified); release builds
 > are minified.
 >
@@ -65,6 +68,24 @@ unticked, so tick the box there and the section appears on its own merit. In the
 2014 layout, where Traits prints with no heading at all, its trash rides the top
 right of the body on hover instead.
 
+Inside a section, an author edits **one entry at a time**. Traits and actions
+aren't prose — they're lists, and D&D Beyond stores each list as a single run of
+paragraphs whose only structure is that an entry opens with its name in bold. So
+the section is cut there on the way in and concatenated on the way out, and what
+the author gets hold of is a trait rather than the wall of text it sits in: its
+own editor, its own trash, an **"Add trait"** at the foot of the section, and a
+new entry that opens with the caret in it and bold italic already switched on.
+
+Three ways to change what the entries *are*. **A blank line ends one** — press
+Enter twice and the entry closes, a new one opens under it with the caret in it,
+and anything that was below the cut comes with it. **Merge**, offered in the gap
+between two entries when it's pointed at, says the two are really one; D&D
+Beyond learns nothing, because joining two entries back up produces the very
+string it already has. And a **drag handle** in the block's own margin picks an
+entry up: reorder it within its section, or drop it into another one to turn an
+action into a bonus action. The same move is on the keyboard — ↑/↓ on the
+handle, Alt+↑/↓ to the section above or below.
+
 A kebab **context menu** on the name row (styled after the Encounters tool)
 switches ruleset — **Use 5e / Use 5.5e stat block**, which writes back to the
 form's Stat Block Type field. Closing is its own button beside it: leaving is
@@ -107,8 +128,13 @@ src/
 │   ├── fields/             one component per field, each with its own styles
 │   │   ├── registry.ts       which rows are optional, and what the "Add…" menu offers
 │   │   └── Field.tsx         picks a row's control by which field it is
-│   ├── prose/              ProseSection (Lexical) + the DDB-HTML plumbing
+│   ├── prose/              the description sections, an entry at a time
 │   │   ├── section-registry.ts  the sections' names, and which can be added
+│   │   ├── section-items.ts     cutting a section into entries, and back again
+│   │   ├── SectionList.tsx      a section as its list of entries (+ ItemGap, Merge)
+│   │   ├── ProseItem.tsx        one entry: a Lexical editor and its format bar
+│   │   ├── drag-context.tsx     where the sections meet, so an entry can cross
+│   │   ├── item-drag.ts         where a dragged entry would land, in numbers
 │   │   └── RemoveSection.tsx    the trash that takes one back off
 │   └── shared/            Chip, OptionPicker, ContextMenu, MiniForm, SaveSlot, icons
 └── editor/               what hasn't found a better home yet
@@ -116,7 +142,7 @@ src/
     ├── panel.tsx           the host element + shadow root the tree mounts into
     ├── autosave.ts         debounced, single-flight save controller + retry
     ├── save-indicator.ts   paints save state into the components' slots
-    ├── prose-editor.ts     a section's Lexical editor (mount, edit, commit)
+    ├── prose-editor.ts     one entry's Lexical editor (mount, edit, split, commit)
     └── nodes.ts            RollNode / RefNode — DDB roll & reference tokens
 
 targets/                 the thin per-browser layer — just manifests
