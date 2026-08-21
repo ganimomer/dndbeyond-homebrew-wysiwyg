@@ -32,7 +32,14 @@ export interface ProseItemProps {
   autoFocus?: boolean;
   /** Formats to switch on when autofocusing — a new entry opens bold italic. */
   focusFormats?: readonly TextFormat[];
+  /** Which end of the box the caret lands on when autofocusing. */
+  focusCaret?: "start" | "end";
   onCommit: (html: string) => void;
+  /**
+   * The author ended this box with a blank line: what is left of it, and what
+   * should open in a new box below. Left off, Enter is just Enter.
+   */
+  onSplit?: (remainingHtml: string, movedHtml: string) => void;
   /** Called when focus leaves the box entirely and there's nothing in it. */
   onEmptyBlur?: () => void;
   /** Anything the owner hangs in the corner — the entry's trash, in practice. */
@@ -45,7 +52,9 @@ export function ProseItem({
   placeholder,
   autoFocus,
   focusFormats,
+  focusCaret,
   onCommit,
+  onSplit,
   onEmptyBlur,
   children,
 }: ProseItemProps) {
@@ -58,6 +67,8 @@ export function ProseItem({
   commit.current = onCommit;
   const emptyBlur = useRef(onEmptyBlur);
   emptyBlur.current = onEmptyBlur;
+  const split = useRef(onSplit);
+  split.current = onSplit;
 
   useLayoutEffect(() => {
     const node = host.current;
@@ -67,13 +78,16 @@ export function ProseItem({
       initialHtml: html,
       onCommit: (edited) => commit.current(edited),
       onFormat: setFormat,
+      // Only where the owner wants one: a list section ends an entry on a blank
+      // line, the Description is prose and keeps its blank lines.
+      onSplit: onSplit && ((remaining, moved) => split.current?.(remaining, moved)),
     });
     created.mount(node);
     editor.current = created;
     // Read once, on mount: it says how this box came to be on the block, and a
     // later re-render must never steal the caret back.
     if (autoFocus) {
-      created.focus(focusFormats);
+      created.focus(focusFormats, focusCaret);
       // A new entry is appended at the foot of a section that may well be off
       // the bottom of the overlay's scroller by now.
       wrapper.current?.scrollIntoView({ block: "nearest" });

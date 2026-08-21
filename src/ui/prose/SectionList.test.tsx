@@ -89,6 +89,37 @@ test("the added entry takes the caret, with bold and italic already on", async (
   }
 });
 
+/** The editable box of an entry — where the caret goes and what Lexical owns. */
+const box = (entry: HTMLElement) => entry.querySelector<HTMLElement>('[contenteditable="true"]')!;
+
+/** Enter, as the DOM delivers it to the editor with the caret in it. */
+const pressEnter = async (target: HTMLElement) => {
+  target.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+  await settle();
+};
+
+test("a blank line ends the entry and opens the next, with the caret in it", async (t) => {
+  // Two Enters is how an editor of this shape has always been told an entry is
+  // finished, and an author who ends one is about to start the next.
+  //
+  // The entry is added rather than clicked into because jsdom has no layout and
+  // so no way to put a caret anywhere; what the caret then does to the *content*
+  // of an item is `editor/prose-split.test.ts`'s subject.
+  const monster = creature(MISTY);
+  const { wrote, adapter } = recorder(monster);
+  const { root } = renderBlock(t, monster, { adapter });
+  fireEvent.click(addButton(root)!);
+  await settle();
+
+  const added = box(entries(root)[1]!);
+  await pressEnter(added);
+  await pressEnter(added);
+
+  assert.equal(entries(root).length, 3);
+  assert.ok(root.activeElement === box(entries(root)[2]!), "the caret moved to the new entry");
+  assert.deepEqual(wrote, [["traits", MISTY]], "and the section itself is unchanged");
+});
+
 test("an entry blurred while empty is taken off the section", (t) => {
   const monster = creature(MISTY + CLIMB);
   const { wrote, adapter } = recorder(monster);

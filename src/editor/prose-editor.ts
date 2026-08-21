@@ -25,11 +25,16 @@ import {
   $createParagraphNode,
   $getRoot,
   $getSelection,
+  $isParagraphNode,
   $isRangeSelection,
+  $setSelection,
+  COMMAND_PRIORITY_HIGH,
   COMMAND_PRIORITY_LOW,
   FORMAT_TEXT_COMMAND,
+  KEY_ENTER_COMMAND,
   SELECTION_CHANGE_COMMAND,
   type EditorState,
+  type ElementNode,
   type LexicalEditor,
 } from "lexical";
 import { $generateNodesFromDOM, $generateHtmlFromNodes } from "@lexical/html";
@@ -58,6 +63,12 @@ export interface ProseEditorOptions {
   onCommit: (editorHtml: string) => void;
   /** Called whenever the caret moves into or out of bold/italic text. */
   onFormat?: (format: FormatState) => void;
+  /**
+   * The author ended this item with a blank line: what is left of it, and what
+   * belongs to the item that should open below it. Leave it off and Enter is
+   * just Enter, which is what the Description wants.
+   */
+  onSplit?: (remainingHtml: string, movedHtml: string) => void;
 }
 
 export class ProseEditor {
@@ -105,6 +116,14 @@ export class ProseEditor {
         },
         COMMAND_PRIORITY_LOW,
       ),
+      // Above rich text's own handler (which registers at editor priority), so
+      // that returning true takes the Enter instead of it inserting a third
+      // paragraph nobody asked for.
+      this.editor.registerCommand(
+        KEY_ENTER_COMMAND,
+        (event) => this.onEnter(event),
+        COMMAND_PRIORITY_HIGH,
+      ),
     );
     this.load(this.opts.initialHtml);
     this.markEmptiness();
@@ -119,16 +138,29 @@ export class ProseEditor {
    * selection the format command sets what the *next* typed character gets,
    * which is the whole trick.
    */
-  focus(formats: readonly TextFormat[] = []): void {
+  focus(formats: readonly TextFormat[] = [], caret: "start" | "end" = "end"): void {
     // Lexical's own `focus()` only sets the *editor's* selection and trusts the
     // reconciler to push that into the DOM selection. That is enough to type
     // into, but it doesn't reliably give the host element DOM focus — and the
     // format toolbar hangs off `:focus-within`, so a caret the browser hasn't
     // acknowledged would leave the author typing bold with nothing saying so.
     this.editor.getRootElement()?.focus({ preventScroll: true });
-    // Establishes the selection; synchronous, so the formats below have
-    // something to apply to. Dispatching them here rather than from `focus()`'s
-    // completion callback, which only runs if that update had work to do.
+    // Placed rather than left to Lexical's own `defaultSelection`, which only
+    // applies when the editor has no selection at all — and loading content
+    // gives it one. `caret` matters for an item that opens with text already in
+    // it: the half of an entry a blank line cut loose, whose author had the
+    // caret at the head of that text when they made the cut.
+    this.editor.update(
+      () => {
+        const root = $getRoot();
+        if (caret === "start") root.selectStart();
+        else root.selectEnd();
+      },
+      { discrete: true },
+    );
+    // Synchronous, so the formats below have something to apply to. Dispatched
+    // here rather than from `focus()`'s completion callback, which only runs if
+    // that update had work to do.
     this.editor.focus();
     for (const format of formats) {
       this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, format);
@@ -177,6 +209,77 @@ export class ProseEditor {
     this.dispose?.();
     this.dispose = null;
     this.editor.setRootElement(null);
+  }
+
+  /**
+   * Enter on a blank line ends the item.
+   *
+   * The caret sitting in an empty paragraph that has something above it means
+   * the author pressed Enter twice, which is how an editor of this shape has
+   * always been told "that entry is finished". Everything else — Enter in the
+   * middle of a sentence, Enter in an item that is empty to begin with,
+   * Shift+Enter's soft break — is left to rich text to handle as usual.
+   */
+  private onEnter(event: KeyboardEvent | null): boolean {
+    const report = this.opts.onSplit;
+    if (!report) return false;
+    if (event?.shiftKey) return false;
+    const selection = $getSelection();
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false;
+    const blank = selection.anchor.getNode().getTopLevelElement();
+    if (!$isParagraphNode(blank) || blank.getTextContentSize() !== 0) return false;
+    // Without something above it this is the first Enter, not the second.
+    if (blank.getPreviousSibling() === null) return false;
+    event?.preventDefault();
+
+    // Cut here, not in an `editor.update()` of our own: a command is dispatched
+    // *inside* an update already, and a nested one is deferred — we would read
+    // both halves back before either had changed.
+    const halves = this.cut(blank);
+
+    // Reported a microtask later, once this update has committed and drawn. The
+    // owner answers by mounting an editor and putting the caret in it, and that
+    // must not land while this one is still reconciling its own selection.
+    queueMicrotask(() => {
+      // The pending commit is of content that no longer exists; the report
+      // carries both halves and the owner writes the section once.
+      window.clearTimeout(this.commitTimer);
+      report(halves.remaining, halves.moved);
+    });
+    return true;
+  }
+
+  /**
+   * Takes `blank` and everything under it out of the item, and says what the
+   * item is left with and what left with it.
+   *
+   * Whatever was below the caret comes along rather than being stranded above
+   * the new entry: an author who splits a trait in the middle means the text
+   * under the cut to be the new trait's. It is the exact inverse of Merge.
+   *
+   * The two halves are cut out of one export of the whole item rather than
+   * exported separately, because the exporter's selection-limited mode reports
+   * a partly-selected paragraph as the text inside it and loses the `<p>`. One
+   * export can't disagree with itself: what it prints is the root's blocks in
+   * order, so the blank line's own index is where to cut.
+   *
+   * Runs inside an active editor update — see `onEnter`.
+   */
+  private cut(blank: ElementNode): { remaining: string; moved: string } {
+    const index = blank.getIndexWithinParent();
+    const [remaining, moved] = splitBlocksAt($generateHtmlFromNodes(this.editor, null), index);
+    for (const node of blank.getNextSiblings()) node.remove();
+    blank.remove();
+    const root = $getRoot();
+    // An item is never left without a block to put the caret in.
+    if (root.getChildrenSize() === 0) root.append($createParagraphNode());
+    // And this item hasn't got the caret any more — the item below has, as soon
+    // as the owner mounts it. Said out loud, because a selection left behind
+    // here is one this editor's reconciler puts back into the DOM *after* the
+    // new item has taken focus: the author is dragged back to the entry they
+    // just finished, and the new one is reaped as an empty box they left.
+    $setSelection(null);
+    return { remaining, moved };
   }
 
   /**
@@ -248,4 +351,20 @@ export class ProseEditor {
       this.opts.onCommit(html);
     }, COMMIT_DEBOUNCE_MS);
   }
+}
+
+/**
+ * An item's exported HTML as the two halves either side of block `index`, which
+ * is dropped.
+ *
+ * The same partition `ui/prose/section-items.ts` performs on a whole section,
+ * one level down: parse, take the blocks as they are, put them back untouched.
+ * `<template>` content is inert — no network, no script — and the blocks come
+ * straight from our own exporter, so nothing here is rewritten.
+ */
+function splitBlocksAt(html: string, index: number): [string, string] {
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  const blocks = [...template.content.children].map((block) => block.outerHTML);
+  return [blocks.slice(0, index).join(""), blocks.slice(index + 1).join("")];
 }

@@ -112,6 +112,23 @@ export function SectionList({
     setRows(next);
   };
 
+  /**
+   * The author ended an entry with a blank line: it keeps `remaining`, and what
+   * was under the cut opens as the entry below it, with the caret in it.
+   */
+  const splitRow = (id: number, remaining: string, moved: string) => {
+    // An entry with nothing left in it contributes nothing to the section, and
+    // Lexical's empty paragraph is not nothing — it is the very placeholder
+    // markup D&D Beyond leaves in an unused field. Held as "" so the joined
+    // section is what it would be if the entry weren't there at all.
+    const content = (html: string) => (htmlHasContent(html) ? html : "");
+    const row = { id: nextId(), html: content(moved) };
+    focusables.current.add(row.id);
+    write(
+      live.current.flatMap((r) => (r.id === id ? [{ ...r, html: content(remaining) }, row] : [r])),
+    );
+  };
+
   const removeRow = (id: number) => {
     // The last entry stays. An author who clears a section's only trait is
     // usually about to retype it, and pulling the editor out from under them
@@ -135,10 +152,15 @@ export function SectionList({
             // it would be six identical lines of grey italic.
             placeholder={index === 0 ? placeholder : undefined}
             autoFocus={claimFocus}
-            focusFormats={NEW_ENTRY_FORMATS}
+            // An entry opens bold italic because that is how a trait's *name*
+            // is typed — but half an entry cut loose by a blank line arrives
+            // with its own formatting, and the caret belongs at its head.
+            focusFormats={row.html ? undefined : NEW_ENTRY_FORMATS}
+            focusCaret={row.html ? "start" : "end"}
             onCommit={(edited) =>
               write(live.current.map((r) => (r.id === row.id ? { ...r, html: edited } : r)))
             }
+            onSplit={(remaining, moved) => splitRow(row.id, remaining, moved)}
             onEmptyBlur={() => removeRow(row.id)}
           >
             {rows.length > 1 ? (

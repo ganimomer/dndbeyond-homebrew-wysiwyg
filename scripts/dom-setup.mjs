@@ -74,6 +74,15 @@ const BIND = new Set([
 // that keeps a highlighted row on screen calls it, so stub it once here.
 window.Element.prototype.scrollIntoView ??= () => {};
 
+// Same gap, one level down: jsdom gives every *element* a zeroed
+// `getBoundingClientRect` but leaves Range without one at all. Lexical measures
+// a range whenever it moves the caret into text, so without this any test that
+// focuses an item with words in it dies inside the reconciler.
+window.Range.prototype.getBoundingClientRect ??= () => ({
+  x: 0, y: 0, top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0, toJSON: () => ({}),
+});
+window.Range.prototype.getClientRects ??= () => [];
+
 for (const key of Object.getOwnPropertyNames(window)) {
   if (key in globalThis && !OVERRIDE.has(key)) continue;
 
