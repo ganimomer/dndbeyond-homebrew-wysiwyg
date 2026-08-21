@@ -34,6 +34,8 @@ export interface ProseItemProps {
   focusFormats?: readonly TextFormat[];
   /** Which end of the box the caret lands on when autofocusing. */
   focusCaret?: "start" | "end";
+  /** Draw the eye to this entry: a wash that plays once and fades. */
+  spotlight?: boolean;
   onCommit: (html: string) => void;
   /**
    * The author ended this box with a blank line: what is left of it, and what
@@ -51,6 +53,7 @@ export function ProseItem({
   html,
   placeholder,
   autoFocus,
+  spotlight,
   focusFormats,
   focusCaret,
   onCommit,
@@ -107,7 +110,7 @@ export function ProseItem({
 
   return (
     <div
-      class="sb-item"
+      class={spotlight ? "sb-item is-spotlit" : "sb-item"}
       ref={wrapper}
       onFocusOut={(event) => {
         // Only when focus has actually left the entry. Clicking this entry's own

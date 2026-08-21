@@ -10,6 +10,7 @@ import assert from "node:assert/strict";
 import { emptyMonster, type Monster, type SectionKey } from "../../statblock/model.js";
 import { fireEvent } from "../../test-support/render.js";
 import { renderBlock } from "../../test-support/editor.js";
+import { entrySpotlightKey } from "../../state/session.js";
 
 /**
  * Lexical commits a dispatched command a microtask later, so anything that
@@ -392,4 +393,76 @@ test("only the first entry carries the section's placeholder", (t) => {
   );
   assert.ok(prompts[0], "the first says what belongs in the section");
   assert.equal(prompts[1], undefined);
+});
+
+test("a spotlit entry is the one the session named, and only that one", (t) => {
+  const RESIST = "<p><em><strong>Legendary Resistance (3/Day).</strong></em> It succeeds.</p>";
+  const { root, store, repaint } = renderBlock(t, creature(RESIST + MISTY + CLIMB));
+
+  store.update({ pendingSpotlight: entrySpotlightKey("traits", "Legendary Resistance (3/Day)") });
+  repaint();
+
+  const lit = entries(root).map((e) => e.classList.contains("is-spotlit"));
+  assert.deepEqual(lit, [true, false, false]);
+});
+
+test("a spotlight stays on its entry rather than following the index", (t) => {
+  // The wash is a CSS animation: it plays once, and re-renders arrive
+  // constantly from `observe()`. Moving it — or re-applying it — would restart
+  // the fade every time D&D Beyond's form so much as blinks.
+  const RESIST = "<p><em><strong>Legendary Resistance (3/Day).</strong></em> It succeeds.</p>";
+  const { root, store, repaint } = renderBlock(t, creature(RESIST + MISTY));
+
+  store.update({ pendingSpotlight: entrySpotlightKey("traits", "Legendary Resistance (3/Day)") });
+  repaint();
+  repaint();
+
+  assert.deepEqual(
+    entries(root).map((e) => e.classList.contains("is-spotlit")),
+    [true, false],
+  );
+});
+
+test("a spotlight for another section leaves this one dark", (t) => {
+  const { root, store, repaint } = renderBlock(t, creature(MISTY + CLIMB));
+
+  store.update({ pendingSpotlight: entrySpotlightKey("actions", "Misty Escape") });
+  repaint();
+
+  assert.deepEqual(
+    entries(root).map((e) => e.classList.contains("is-spotlit")),
+    [false, false],
+  );
+});
+
+test("content arriving for a list holding one untouched empty entry is taken, not dropped", (t) => {
+  // A creature made legendary again while D&D Beyond still held its old
+  // legendary actions: the section opens empty and focused, and then the
+  // re-read arrives. The focus guard must not win here — an untouched empty
+  // entry has nothing to protect, and the next thing typed into it would be
+  // written back as the *whole* section.
+  const { root, store, repaint } = renderBlock(t, creature(), { revealedSections: ["traits"] });
+  assert.equal(entries(root).length, 1);
+  box(entries(root)[0]!).focus();
+
+  store.getMonster()!.descriptionHtml = { traits: MISTY + CLIMB };
+  repaint();
+
+  const text = entries(root).map((e) => box(e).textContent);
+  assert.equal(entries(root).length, 3, "the two that arrived, and the empty one");
+  assert.match(text[0]!, /Misty Escape/);
+  assert.match(text[1]!, /Spider Climb/);
+  assert.equal(text[2], "", "the caret's own entry, still at the foot");
+});
+
+test("but a list the author has typed into keeps what they typed", (t) => {
+  // The guard's original job, unchanged: an entry with something in it is
+  // never replaced by content arriving from elsewhere.
+  const { root, store, repaint } = renderBlock(t, creature(MISTY));
+  box(entries(root)[0]!).focus();
+
+  store.getMonster()!.descriptionHtml = { traits: CLIMB };
+  repaint();
+
+  assert.match(box(entries(root)[0]!).textContent!, /Misty Escape/);
 });

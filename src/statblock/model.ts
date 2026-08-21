@@ -178,6 +178,14 @@ export interface Monster {
   legendaryActions: NamedEntry[];
   /** Preamble shown above the legendary action list ("The X can take 3…"). */
   legendaryActionsIntro?: string;
+  /**
+   * Whether the creature is legendary — D&D Beyond's "Is Legendary?" checkbox.
+   *
+   * It is a property of the creature rather than of the Legendary Actions
+   * section because DDB treats it as one: the section's text is only read back,
+   * and only kept on save, while this is ticked.
+   */
+  isLegendary?: boolean;
 
   /**
    * Ready-to-render HTML for description sections, keyed by section. Populated

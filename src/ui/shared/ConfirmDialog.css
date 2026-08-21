@@ -1,0 +1,83 @@
+/* The dialog and the sheet behind it. `fixed` against the viewport: the overlay
+ * it sits in is itself fixed and untransformed, so there is nothing in between
+ * to be positioned against by mistake. */
+.sb-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(20, 16, 12, 0.45);
+}
+
+.sb-dialog {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 420px;
+  padding: 20px 22px 16px;
+  border-radius: 6px;
+  background: #fdfaf5;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  /* Says its whole typography rather than inheriting it: the dialog is mounted
+   * wherever the thing that opened it lives, and that was a chip in the meta
+   * row — italic, and `nowrap` so the crown never breaks across two lines. */
+  font-family: "Scala Sans", "Roboto Condensed", sans-serif;
+  color: #1b1b1b;
+  font-size: 15px;
+  font-style: normal;
+  line-height: 1.45;
+  white-space: normal;
+  text-align: left;
+}
+
+.sb-dialog-title {
+  margin: 0 0 8px;
+  font-family: MrsEavesSmallCaps, "Scala Sans", serif;
+  font-size: 21px;
+  font-weight: 400;
+  color: var(--accent, #5b160c);
+}
+
+.sb-dialog-body {
+  margin: 0 0 18px;
+}
+
+.sb-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.sb-dialog-actions button {
+  appearance: none;
+  font: inherit;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.sb-dialog-cancel {
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  background: transparent;
+  color: inherit;
+}
+.sb-dialog-cancel:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* Red, because this is the button that loses the text. */
+.sb-dialog-confirm {
+  border: 1px solid #b00;
+  background: #b00;
+  color: #fff;
+}
+.sb-dialog-confirm:hover {
+  background: #900;
+}
+
+.sb-dialog-actions button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #fdfaf5, 0 0 0 4px var(--accent, #5b160c);
+}

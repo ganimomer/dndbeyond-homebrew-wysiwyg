@@ -80,6 +80,14 @@ export const setRuleset = (monster: Monster, ruleset: Ruleset): Command =>
     write: (adapter, value) => adapter.setRuleset(value),
   });
 
+export const setLegendary = (monster: Monster, on: boolean): Command =>
+  field({
+    label: on ? "Legendary" : "Not legendary",
+    from: !!monster.isLegendary,
+    to: on,
+    write: (adapter, value) => adapter.setLegendary(value),
+  });
+
 export const setAbility = (monster: Monster, ability: Ability, score: number): Command =>
   field({
     label: `${ABILITY_ABBREV[ability]} ${score}`,

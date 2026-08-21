@@ -43,6 +43,7 @@ export function stubAdapter(monster: Monster, overrides: Partial<PageAdapter> = 
     setArmorClass: () => {},
     setHitPoints: () => {},
     setDescription: () => {},
+    setLegendary: () => {},
     setSavingThrows: () => {},
     setDamageAdjustments: () => {},
     setConditionImmunities: () => {},

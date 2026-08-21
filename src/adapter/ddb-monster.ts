@@ -284,6 +284,22 @@ function setMultiSelect(id: string, values: string[]): void {
   select.dispatchEvent(new Event("change", { bubbles: true }));
 }
 /**
+ * Ticks or unticks a checkbox, and the widget DDB paints over it.
+ *
+ * The real `<input type="checkbox">` sits inside a `.hide fc-real` wrapper; what
+ * the author sees and clicks is a `.fc-fake-item` next to it, which carries
+ * `fc-selected` when the box is on. Writing only `.checked` posts correctly but
+ * leaves DDB's own form showing the opposite of what we just did.
+ */
+function setCheckbox(id: string, on: boolean): void {
+  const input = byId<HTMLInputElement>(id);
+  if (!input) return;
+  input.checked = on;
+  document.querySelector(`[data-fc-real-item-id="${id}"]`)?.classList.toggle("fc-selected", on);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+/**
  * The rules an avatar input advertises about what it will take: DDB writes them
  * onto the input itself as `image/png|image/gif|…` and `0..167772160`, and its
  * server enforces them, so this reads them rather than restating them.
@@ -521,6 +537,7 @@ export class DdbMonsterAdapter implements PageAdapter {
     m.languages = val(SELECTORS.languages);
     m.gear = val(SELECTORS.gear);
 
+    m.isLegendary = checked(SELECTORS.isLegendary);
     m.descriptionHtml = readDescriptions();
     // Structured arrays stay empty; the renderers use descriptionHtml.
     return m;
@@ -581,6 +598,16 @@ export class DdbMonsterAdapter implements PageAdapter {
     // but it's also what keeps the two save paths from disagreeing.
     const body = mceBody(entry[1]);
     if (body) body.innerHTML = ddbHtml;
+  }
+
+  setLegendary(on: boolean): void {
+    setCheckbox(SELECTORS.isLegendary, on);
+    // Cosmetic, and only for anyone who closes the overlay: DDB greys its own
+    // Legendary Actions editor out while the box is unticked, and a greyed
+    // editor full of text would read as a bug rather than as our doing.
+    document
+      .querySelector(".ddb-homebrew-create-form-fields-item-legendary-actions-description")
+      ?.classList.toggle("disabled", !on);
   }
 
   /**

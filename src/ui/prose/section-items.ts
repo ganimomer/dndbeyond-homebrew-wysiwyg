@@ -97,3 +97,26 @@ export function splitItems(html: string): string[] {
 export function joinItems(items: readonly string[]): string {
   return items.join("");
 }
+
+/**
+ * The name an entry opens with — its bold lead-in, without the full stop.
+ *
+ * `""` when the entry doesn't open in bold, which by the rule above can only be
+ * the first entry in a section: the unnamed Legendary Actions preamble. Callers
+ * use this to recognise a particular entry ("is there already a Legendary
+ * Resistance?") without having to parse the section themselves.
+ */
+export function entryName(itemHtml: string): string {
+  const template = document.createElement("template");
+  template.innerHTML = itemHtml;
+  const first = Array.from(template.content.childNodes).find(
+    (node) => node.nodeType !== 3 || (node.textContent ?? "").trim(),
+  );
+  if (!first || !leadsWithBold(first)) return "";
+  // `leadsWithBold` has already proved the chain, so this descent terminates.
+  let element = first as Element;
+  while (!BOLD_TAGS.has(element.tagName.toLowerCase())) {
+    element = firstMeaningfulChild(element) as Element;
+  }
+  return (element.textContent ?? "").trim().replace(/\.$/, "").trim();
+}

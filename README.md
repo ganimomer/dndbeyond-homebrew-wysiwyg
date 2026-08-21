@@ -62,11 +62,11 @@ but never rides above the line the sections start on — offers whichever are
 missing and drops the caret straight into the new one. Every section heading
 carries a **trash** that takes it off again: one click while it's still empty,
 and a confirm once there is prose to lose, since removing it clears D&D Beyond's
-field. Legendary, mythic and lair actions aren't on offer — DDB keeps each
-behind a checkbox on the form and won't read the textarea back while it's
-unticked, so tick the box there and the section appears on its own merit. In the
-2014 layout, where Traits prints with no heading at all, its trash rides the top
-right of the body on hover instead.
+field. Mythic and lair actions aren't on offer — DDB keeps each behind a
+checkbox on the form and won't read the textarea back while it's unticked, so
+tick the box there and the section appears on its own merit. In the 2014 layout,
+where Traits prints with no heading at all, its trash rides the top right of the
+body on hover instead.
 
 Inside a section, an author edits **one entry at a time**. Traits and actions
 aren't prose — they're lists, and D&D Beyond stores each list as a single run of
@@ -90,6 +90,31 @@ A kebab **context menu** on the name row (styled after the Encounters tool)
 switches ruleset — **Use 5e / Use 5.5e stat block**, which writes back to the
 form's Stat Block Type field. Closing is its own button beside it: leaving is
 the one action that shouldn't take two clicks to find.
+
+## Legendary
+
+Legendary Actions are the one section D&D Beyond gates: it keeps the status in
+an **"Is Legendary?" checkbox**, and while that box is unticked it won't read
+the textarea back and won't keep what's in it on save. So the checkbox isn't a
+flag beside the section — it is what makes the section exist, and a stat block
+with no way to tick it has no way to write legendary actions at all.
+
+The kebab's **Make legendary** ticks it, and the creature wears a **crown chip**
+at the right of its meta row from then on. Two things come with the crown,
+because they are what the author would otherwise do by hand: a **Legendary
+Resistance** trait at the top of Traits — 3/Day, named after the creature, and
+only if it hasn't got one already — and the **Legendary Actions** section, open
+with an empty entry and the caret in it. Either way, added or already there, the
+resistance trait lights up for a moment: the count is the author's to agree
+with.
+
+The chip's ✕ takes it all back off. With nothing to lose it goes on one click;
+with a resistance trait or any legendary actions written, it **asks first** and
+names what would go, because that reaches into two sections the author isn't
+looking at. While the creature is legendary its Legendary Actions section has no
+trash of its own — the crown put it there, and the crown is what removes it.
+
+Mythic and lair actions still want their boxes ticked in DDB's own form.
 
 ## Architecture
 
@@ -115,6 +140,7 @@ src/
 │   ├── command.ts          Command + CommandStack (batching, coalescing)
 │   ├── commands.ts         one constructor per edit
 │   ├── editing.ts          PageAdapter's shape, dispatched as commands
+│   ├── legendary.ts        what the crown means: the tick, the trait, the section
 │   └── avatar-uploads.ts   the avatars: file picker, save-at-once, outcome
 ├── ui/                   the injected editor, in Preact
 │   ├── App.tsx             overlay chrome; the only store subscriber
@@ -124,9 +150,10 @@ src/
 │   ├── AddSectionButton.tsx  the sticky "Add section" beside the block
 │   ├── StatBlock5e.tsx     the 2014 layout      (+ .css)
 │   ├── StatBlock55e.tsx    the 2024 layout      (+ .css)
-│   ├── NameRow.tsx         name, ruleset menu, close
+│   ├── NameRow.tsx         name, the kebab (ruleset, make legendary), close
 │   ├── fields/             one component per field, each with its own styles
 │   │   ├── registry.ts       which rows are optional, and what the "Add…" menu offers
+│   │   ├── LegendaryChip.tsx the crown, and the confirm that takes it off
 │   │   └── Field.tsx         picks a row's control by which field it is
 │   ├── prose/              the description sections, an entry at a time
 │   │   ├── section-registry.ts  the sections' names, and which can be added
@@ -136,7 +163,8 @@ src/
 │   │   ├── drag-context.tsx     where the sections meet, so an entry can cross
 │   │   ├── item-drag.ts         where a dragged entry would land, in numbers
 │   │   └── RemoveSection.tsx    the trash that takes one back off
-│   └── shared/            Chip, OptionPicker, ContextMenu, MiniForm, SaveSlot, icons
+│   └── shared/            Chip, OptionPicker, ContextMenu, ConfirmDialog, MiniForm,
+│                           SaveSlot, icons
 └── editor/               what hasn't found a better home yet
     ├── fab.ts              the "Open in Microbrewery" launcher
     ├── panel.tsx           the host element + shadow root the tree mounts into

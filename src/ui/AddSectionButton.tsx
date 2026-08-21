@@ -8,13 +8,11 @@
  * row, and because it sits beside the block rather than at the foot of it.
  */
 import type { Monster } from "../statblock/model.js";
-import { revealSection } from "../state/session.js";
+import { revealSection, sectionFocusKey } from "../state/session.js";
 import { useSession, useStore } from "./store-context.js";
 import { ContextMenu } from "./shared/ContextMenu.js";
 import { hiddenSections, SECTION_LABEL } from "./prose/section-registry.js";
 
-/** The `pendingFocus` key a section's editor watches for. */
-export const sectionFocusKey = (section: string) => `section:${section}`;
 
 export function AddSectionButton({ monster }: { monster: Monster }) {
   const store = useStore();

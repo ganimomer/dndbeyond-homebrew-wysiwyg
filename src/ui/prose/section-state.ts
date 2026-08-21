@@ -21,6 +21,14 @@ export interface SectionState {
   readonly editable: boolean;
   /** The author asked for it from the "Add section" button. */
   readonly revealed: boolean;
+  /**
+   * Whether the section takes an editor rather than a read-only fragment.
+   *
+   * Not the same question as `visible`: a sample creature's structured entries
+   * print without being editable, and a legendary creature's empty Legendary
+   * Actions section is editable without D&D Beyond holding a word of it.
+   */
+  readonly writable: boolean;
   /** This section's HTML, or "" for one that was only just revealed. */
   readonly html: string;
   /** The read-only body a sample creature's structured entries make. */
@@ -41,5 +49,10 @@ export function sectionState(
   // to write in.
   const revealed = session.revealedSections.has(section);
   const body = editable ? null : sectionBody(monster, section, entries, intro);
-  return { visible: editable || revealed || !!body, editable, revealed, html: html ?? "", body };
+  // The crown keeps Legendary Actions on the block — see `isSectionVisible` —
+  // and keeps it writable, which is the point: a creature that has just been
+  // made legendary has nothing written yet and needs somewhere to start.
+  const legendary = section === "legendary" && !!monster.isLegendary;
+  const writable = editable || revealed || legendary;
+  return { visible: writable || !!body, editable, revealed, writable, html: html ?? "", body };
 }

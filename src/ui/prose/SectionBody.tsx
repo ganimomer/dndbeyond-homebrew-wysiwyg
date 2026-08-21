@@ -8,7 +8,7 @@
  */
 import type { JSX } from "preact";
 import type { SectionKey } from "../../statblock/model.js";
-import { sectionFocusKey } from "../AddSectionButton.js";
+import { sectionFocusKey } from "../../state/session.js";
 import { useSession } from "../store-context.js";
 import { Raw } from "../shared/Raw.js";
 import { ProseSection } from "./ProseSection.js";
@@ -33,7 +33,7 @@ export function SectionBody({
 }) {
   const session = useSession();
 
-  if (!state.editable && !state.revealed) {
+  if (!state.writable) {
     return <Raw node={state.body} data-section={section} {...readOnly} />;
   }
 

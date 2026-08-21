@@ -67,6 +67,17 @@ export interface SessionState {
 
   /** Transitional: a `data-focus-key` to focus once, on the next render. */
   readonly pendingFocus: string | null;
+  /**
+   * An entry to draw the eye to once, on the next render — see
+   * `entrySpotlightKey`.
+   *
+   * Same one-shot idea as `pendingFocus`, but it names the entry rather than
+   * pointing at a position in the section. It has to: the write that puts the
+   * entry there and the re-read that brings it back land in that order but not
+   * in one paint, so an index recorded now could be pointing at the entry above
+   * by the time anyone looks.
+   */
+  readonly pendingSpotlight: string | null;
 }
 
 export function emptySession(): SessionState {
@@ -78,7 +89,18 @@ export function emptySession(): SessionState {
     avatarPreview: null,
     avatarStatus: new Map(),
     pendingFocus: null,
+    pendingSpotlight: null,
   };
+}
+
+/** The `pendingFocus` key a section's editor watches for. */
+export function sectionFocusKey(section: SectionKey): string {
+  return `section:${section}`;
+}
+
+/** The `pendingSpotlight` key for one entry, by the name it opens with. */
+export function entrySpotlightKey(section: SectionKey, name: string): string {
+  return `${section}:${name}`;
 }
 
 /** `avatarStatus` with one avatar's upload set, or cleared when it's null. */

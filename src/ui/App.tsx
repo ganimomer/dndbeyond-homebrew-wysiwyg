@@ -27,6 +27,7 @@ import avatarToastCss from "./AvatarToast.css";
 import nameRowCss from "./NameRow.css";
 import abilityScoresCss from "./fields/AbilityScores.css";
 import metaLineCss from "./fields/MetaLine.css";
+import legendaryChipCss from "./fields/LegendaryChip.css";
 import chipCss from "./shared/Chip.css";
 import skillsRowCss from "./fields/SkillsRow.css";
 import speedRowCss from "./fields/SpeedRow.css";
@@ -47,6 +48,7 @@ import formatToolbarCss from "./prose/FormatToolbar.css";
 import removeSectionCss from "./prose/RemoveSection.css";
 import removeItemCss from "./prose/RemoveItem.css";
 import contextMenuCss from "./shared/ContextMenu.css";
+import confirmDialogCss from "./shared/ConfirmDialog.css";
 import addButtonCss from "./shared/AddButton.css";
 import optionPickerCss from "./shared/OptionPicker.css";
 import statblock5eCss from "./StatBlock5e.css";
@@ -70,6 +72,7 @@ const STYLES = [
   abilityScoresCss,
   metaLineCss,
   chipCss,
+  legendaryChipCss,
   skillsRowCss,
   speedRowCss,
   hitPointsCss,
@@ -89,6 +92,7 @@ const STYLES = [
   removeSectionCss,
   removeItemCss,
   contextMenuCss,
+  confirmDialogCss,
   // After ContextMenu's: `.sb-add` and `.cm-trigger` tie on specificity, and one
   // of the buttons it styles is a context-menu trigger.
   addButtonCss,

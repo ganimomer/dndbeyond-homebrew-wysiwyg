@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { joinItems, splitItems } from "./section-items.js";
+import { entryName, joinItems, splitItems } from "./section-items.js";
 
 /**
  * The split's contract is that it *partitions* — it never rewrites. Every test
@@ -115,4 +115,29 @@ test("text loose at the top level is kept, attached to its neighbour", () => {
   // partition promise has to hold for whatever a past TinyMCE session left.
   const loose = `${DDB_BOLD}tail text`;
   assert.equal(joinItems(splitItems(loose)), loose);
+});
+
+test("an entry's name is its bold lead-in, without the full stop", () => {
+  assert.equal(entryName(DDB_BOLD), "Misty Escape");
+  assert.equal(entryName(LEXICAL_BOLD), "Misty Escape");
+});
+
+test("a name keeps whatever the author put in parentheses", () => {
+  // "Legendary Resistance (3/Day)" is one name, and the count is the part
+  // anyone looking for it cares about.
+  const trait = `<p><em><strong>Legendary Resistance (3/Day).</strong></em> It succeeds instead.</p>`;
+  assert.equal(entryName(trait), "Legendary Resistance (3/Day)");
+});
+
+test("an entry with no bold lead-in has no name", () => {
+  // The Legendary Actions preamble: an entry, but not a named one.
+  const intro = `<p class="legendary-actions">Legendary Action Uses: 3 (4 in Lair).</p>`;
+  assert.equal(entryName(intro), "");
+  assert.equal(entryName(""), "");
+});
+
+test("only the first block names the entry", () => {
+  // The continuation below it is part of the same entry and says nothing about
+  // what the entry is called.
+  assert.equal(entryName(DDB_BOLD + CONTINUATION), "Misty Escape");
 });

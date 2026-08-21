@@ -96,6 +96,36 @@ test("reads D&D Beyond's own form into the model", () => {
     "traits",
   ]);
   assert.match(monster!.descriptionHtml!.traits!, /Legendary Resistance/);
+  assert.equal(monster!.isLegendary, true);
+});
+
+test("the crown is D&D Beyond's checkbox, and taking it off closes the section", (t) => {
+  // The checkbox is a gate, not a label: with it unticked DDB stops reading the
+  // Legendary Actions textarea back at all, which is why `read()` has to agree.
+  const { adapter } = loadPage();
+
+  adapter.setLegendary(false);
+
+  const box = document.getElementById("field-is-legendary") as HTMLInputElement;
+  assert.equal(box.checked, false);
+  assert.equal(
+    document
+      .querySelector('[data-fc-real-item-id="field-is-legendary"]')!
+      .classList.contains("fc-selected"),
+    false,
+    "and D&D Beyond's own widget agrees, rather than still showing a tick",
+  );
+  const off = adapter.read();
+  assert.equal(off!.isLegendary, false);
+  assert.equal("legendary" in (off!.descriptionHtml ?? {}), false);
+
+  adapter.setLegendary(true);
+
+  const on = adapter.read();
+  assert.equal(on!.isLegendary, true);
+  // The textarea was never cleared, so the prose is still there to come back.
+  assert.match(on!.descriptionHtml!.legendary!, /\S/);
+  t.diagnostic(`legendary actions restored: ${on!.descriptionHtml!.legendary!.length} chars`);
 });
 
 test("renders the creature into the overlay", (t) => {

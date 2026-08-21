@@ -85,8 +85,14 @@ export const SECTION_ITEM_LABEL: Record<SectionKey, string> = {
  * Legendary, mythic and lair are missing on purpose: D&D Beyond keeps each
  * behind a checkbox on the form (`field-is-legendary` and friends) and doesn't
  * read the textarea back while it's unticked, so adding one from here would
- * write prose nothing would ever load again. Tick the box in DDB's own form and
- * the section shows up on its own merit.
+ * write prose nothing would ever load again.
+ *
+ * Legendary Actions is not *unreachable* for that reason, though — it arrives
+ * with the crown, from the name row's menu, which ticks the box on the way
+ * through (see `state/legendary.ts`). It stays off this menu because a section
+ * is not what the author is choosing there: they are deciding what kind of
+ * creature this is. Mythic and lair still want the box ticked in DDB's own
+ * form, after which they show up on their own merit.
  */
 export const ADDABLE_SECTIONS: readonly SectionKey[] = [
   "traits",
@@ -107,6 +113,10 @@ export function isSectionVisible(
   key: SectionKey,
   revealed: ReadonlySet<SectionKey> = new Set(),
 ): boolean {
+  // A legendary creature always has somewhere to write its legendary actions,
+  // even before it has written any: the crown is the thing that put the section
+  // there, so the section outlives a session that emptied it.
+  if (key === "legendary" && monster.isLegendary) return true;
   return hasSectionContent(monster, key) || revealed.has(key);
 }
 

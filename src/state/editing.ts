@@ -60,6 +60,8 @@ export class EditingAdapter {
 
   setRuleset = (ruleset: Ruleset) => this.run(edit.setRuleset(this.current(), ruleset));
 
+  setLegendary = (on: boolean) => this.run(edit.setLegendary(this.current(), on));
+
   setAbility = (ability: Ability, score: number) =>
     this.run(edit.setAbility(this.current(), ability, score));
 

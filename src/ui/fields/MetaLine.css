@@ -6,3 +6,20 @@
   opacity: 0.6;
   font-style: italic;
 }
+
+/* The meta row is the sentence and, on a legendary creature, the crown at its
+ * far end. Only the sentence is italic: the italic is what the line *is*, not
+ * something the row imposes, and scoping it here means the chip never has to
+ * set a value back to normal to escape it. Both layouts keep their own margins
+ * and colour; neither sets `display`, so this is the only rule that does. */
+.statblock .meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.statblock .meta-sentence {
+  font-style: italic;
+  min-width: 0;
+}

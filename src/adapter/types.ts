@@ -81,6 +81,16 @@ export interface PageAdapter {
   setDescription(section: SectionKey, editorHtml: string): void;
 
   /**
+   * Ticks or unticks D&D Beyond's "Is Legendary?" checkbox.
+   *
+   * This is the gate the Legendary Actions section lives behind: `read()`
+   * reports no `legendary` text while it is off, and a save with it off drops
+   * whatever the textarea holds. So it is what makes the section exist at all,
+   * not merely a flag beside it.
+   */
+  setLegendary(on: boolean): void;
+
+  /**
    * Every skill the page offers, with `selected` marking the ones the creature
    * already has. Unlike the other option lists this one isn't read off a
    * `<select>` — see the adapter.

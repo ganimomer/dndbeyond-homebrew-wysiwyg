@@ -21,6 +21,7 @@ import { ArmorClassField } from "./fields/ArmorClassField.js";
 import { Field } from "./fields/Field.js";
 import { HitPointsField } from "./fields/HitPointsField.js";
 import { MetaLine } from "./fields/MetaLine.js";
+import { LegendaryChip } from "./fields/LegendaryChip.js";
 import { NameRow } from "./NameRow.js";
 import { SpeedRow } from "./fields/SpeedRow.js";
 import { useCommitAbility } from "./fields/use-commit-ability.js";
@@ -101,14 +102,21 @@ export function StatBlock5e({ monster, onClose }: { monster: Monster; onClose?: 
       <section class="basics">
         <NameRow monster={monster} onClose={onClose} />
 
-        {visibleMeta(monster, revealed).size ? (
+        {visibleMeta(monster, revealed).size || monster.isLegendary ? (
           <div class="meta">
-            <MetaLine
-              monster={monster}
-              shown={visibleMeta(monster, revealed)}
-              adapter={editing}
-              pendingFocus={session.pendingFocus}
-            />
+            {/* The sentence is wrapped because it isn't one element: `MetaLine`
+                returns a run of slots and the literal separators between them,
+                and each of those would otherwise become a flex item of its
+                own. */}
+            <span class="meta-sentence">
+              <MetaLine
+                monster={monster}
+                shown={visibleMeta(monster, revealed)}
+                adapter={editing}
+                pendingFocus={session.pendingFocus}
+              />
+            </span>
+            <LegendaryChip monster={monster} />
           </div>
         ) : null}
 

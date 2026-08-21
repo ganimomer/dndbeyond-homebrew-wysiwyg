@@ -15,8 +15,8 @@
  */
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { SectionKey } from "../../statblock/model.js";
-import { revealSection } from "../../state/session.js";
-import { useEditing, useStore } from "../store-context.js";
+import { entrySpotlightKey, revealSection } from "../../state/session.js";
+import { useEditing, useSession, useStore } from "../store-context.js";
 import { Icon } from "../shared/Icon.js";
 import { DragHandle } from "./DragHandle.js";
 import { useItemDrag } from "./drag-context.js";
@@ -24,7 +24,7 @@ import { ItemGap } from "./ItemGap.js";
 import { ProseItem } from "./ProseItem.js";
 import { RemoveItem } from "./RemoveItem.js";
 import { moveWithin } from "./item-drag.js";
-import { joinItems, splitItems } from "./section-items.js";
+import { entryName, joinItems, splitItems } from "./section-items.js";
 import { SECTION_ITEM_LABEL } from "./section-registry.js";
 import { htmlHasContent } from "./sections.js";
 
@@ -63,11 +63,23 @@ export function SectionList({
 }) {
   const editing = useEditing();
   const store = useStore();
+  const session = useSession();
   const drag = useItemDrag();
   const listRef = useRef<HTMLDivElement>(null);
   const counter = useRef(0);
   const nextId = () => (counter.current += 1);
   const focusables = useRef(new Set<number>());
+  /**
+   * The entry the session pointed at, and the key that pointed at it.
+   *
+   * Refs rather than state because the wash is a one-shot CSS animation and
+   * `observe()` re-renders this list constantly: recomputing the mark would
+   * restart the fade on every keystroke anywhere on the form. Resolved by
+   * *name*, not by position — the write that adds an entry and the re-read that
+   * brings it back don't land in the same paint.
+   */
+  const spotlit = useRef<number | null>(null);
+  const claimedSpotlight = useRef<string | null>(null);
 
   const [rows, setRows] = useState<Row[]>(() => {
     const initial = splitItems(html);
@@ -101,8 +113,25 @@ export function SectionList({
     const list = listRef.current;
     const scope = list?.getRootNode() as Document | ShadowRoot | undefined;
     const focused = scope?.activeElement;
-    if (focused && list?.contains(focused)) return;
-    const next = reconcile(live.current, splitItems(html), nextId);
+    const inside = !!focused && !!list?.contains(focused);
+    // An untouched empty entry has nothing to protect, so the guard doesn't
+    // apply to it — and mustn't, because the next thing typed in would be
+    // written back as the whole section, over content nobody ever saw. That is
+    // a creature made legendary again while D&D Beyond still held its old
+    // legendary actions: the section opens empty and the re-read follows.
+    const untouched = live.current.every((row) => !row.html);
+    if (inside && !untouched) return;
+    const arriving = splitItems(html);
+    // Nothing actually arrived — a textarea holding only whitespace. Leave the
+    // author's caret where it is rather than remounting the box under it.
+    if (inside && !arriving.length) return;
+    // Keeping the caret's own row means keeping its `key`, and so its editor,
+    // its selection and its history — it just moves to the foot of the section,
+    // which is where "Add legendary action" would have put it anyway.
+    const next =
+      inside && arriving.length
+        ? [...reconcile([], arriving, nextId), ...live.current]
+        : reconcile(live.current, arriving, nextId);
     live.current = next;
     setRows(next.length ? next : [{ id: nextId(), html: "" }]);
   }, [html]);
@@ -226,6 +255,19 @@ export function SectionList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drag, section]);
 
+  const pendingSpotlight = session.pendingSpotlight;
+  if (pendingSpotlight && pendingSpotlight !== claimedSpotlight.current) {
+    const wanted = rows.find(
+      (row) => entrySpotlightKey(section, entryName(row.html)) === pendingSpotlight,
+    );
+    // A key naming another section, or an entry not here yet, is left unclaimed
+    // so a later render can still honour it.
+    if (wanted) {
+      claimedSpotlight.current = pendingSpotlight;
+      spotlit.current = wanted.id;
+    }
+  }
+
   return (
     <div class="sb-section-list" data-section={section} ref={listRef}>
       {rows.flatMap((row, index) => {
@@ -250,6 +292,7 @@ export function SectionList({
             // it would be six identical lines of grey italic.
             placeholder={index === 0 ? placeholder : undefined}
             autoFocus={claimFocus}
+            spotlight={row.id === spotlit.current}
             // An entry opens bold italic because that is how a trait's *name*
             // is typed — but half an entry cut loose by a blank line arrives
             // with its own formatting, and the caret belongs at its head.
