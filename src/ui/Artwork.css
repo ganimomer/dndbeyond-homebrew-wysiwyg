@@ -33,11 +33,11 @@
   pointer-events: auto;
 }
 
-/* The menu, at the artwork's top-left corner. */
+/* The menu, at the artwork's top-right corner. */
 .sb-image-menu {
   position: absolute;
   top: 8px;
-  left: 8px;
+  right: 8px;
 }
 
 /* Light and prominent, against a picture we know nothing else about: a

@@ -48,7 +48,6 @@ export function Artwork({ monster, onLoad }: { monster: Monster; onLoad?: () => 
             <ContextMenu
               triggerLabel="Change artwork"
               triggerClass="on-image"
-              menuClass="start"
               items={[
                 {
                   label: "Upload small avatar…",
