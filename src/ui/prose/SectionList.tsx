@@ -17,6 +17,7 @@ import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { SectionKey } from "../../statblock/model.js";
 import { useEditing } from "../store-context.js";
 import { Icon } from "../shared/Icon.js";
+import { ItemGap } from "./ItemGap.js";
 import { ProseItem } from "./ProseItem.js";
 import { RemoveItem } from "./RemoveItem.js";
 import { joinItems, splitItems } from "./section-items.js";
@@ -129,6 +130,28 @@ export function SectionList({
     );
   };
 
+  /**
+   * Two entries the author says are really one.
+   *
+   * D&D Beyond is told nothing: the section is stored as one string and the
+   * entries are cut out of it at each bold lead-in, so joining two of them back
+   * up produces the very same string. Which is also the limit of it — a merge
+   * lasts as long as the session, and a section re-read from D&D Beyond's own
+   * textarea is cut at the bold lead-ins again.
+   *
+   * The merged entry gets a fresh id so its editor is built anew around both
+   * halves, with an undo history that starts here rather than in one of them.
+   */
+  const mergeRows = (index: number) => {
+    const above = live.current[index - 1];
+    const below = live.current[index];
+    if (!above || !below) return;
+    const merged = { id: nextId(), html: above.html + below.html };
+    const next = [...live.current.slice(0, index - 1), merged, ...live.current.slice(index + 1)];
+    live.current = next;
+    setRows(next);
+  };
+
   const removeRow = (id: number) => {
     // The last entry stays. An author who clears a section's only trait is
     // usually about to retype it, and pulling the editor out from under them
@@ -139,11 +162,18 @@ export function SectionList({
 
   return (
     <div class="sb-section-list" data-section={section} ref={listRef}>
-      {rows.map((row, index) => {
+      {rows.flatMap((row, index) => {
         // Read once per row, the way `autoFocus` has always been read: a later
         // re-render must never steal the caret back.
         const claimFocus = focusables.current.delete(row.id);
-        return (
+        return [
+          // The band above this entry. The one above the *first* entry joins
+          // nothing, so it offers nothing — it is there to be dropped into.
+          <ItemGap
+            key={`gap-${index}`}
+            label={itemLabel}
+            onMerge={index > 0 ? () => mergeRows(index) : undefined}
+          />,
           <ProseItem
             key={row.id}
             name={`${section}-${row.id}`}
@@ -170,9 +200,12 @@ export function SectionList({
                 onRemove={() => removeRow(row.id)}
               />
             ) : null}
-          </ProseItem>
-        );
+          </ProseItem>,
+        ];
       })}
+      {/* The band under the last entry, which is what separates the section
+          from the button that adds another. */}
+      <ItemGap key={`gap-${rows.length}`} label={itemLabel} />
       <button type="button" class="sb-add sb-add-item" onClick={addRow}>
         <Icon name="add" size={16} />
         {`Add ${itemLabel}`}

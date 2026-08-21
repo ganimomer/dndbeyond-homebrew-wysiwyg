@@ -1,17 +1,18 @@
-/* A section's entries, stacked. The gap does the work the paragraph margins used
- * to: each entry is its own box now, so its last paragraph has no margin to
- * separate it from the next entry (see ProseSection.css). */
+/* A section's entries, stacked, with a band between each pair (see
+ * ItemGap.css). The bands do the work the paragraph margins used to and the
+ * list's flex `gap` did until they arrived: each entry is its own box, so its
+ * last paragraph has no margin to separate it from the next entry (see
+ * ProseSection.css). */
 .sb-section-list {
   display: flex;
   flex-direction: column;
-  /* Also the room the format toolbar hangs in, so it isn't only about rhythm. */
-  gap: 12px;
 }
 
 /* "Add trait" at the foot of the section. Its look is `.sb-add` (see
  * shared/AddButton.css), the same one the basics' "Add…" wears; the only thing
  * this section has to say about it is that it sits at the left rather than
- * stretching across the column. */
+ * stretching across the column. What separates it from the last entry is that
+ * entry's own trailing band. */
 .sb-add-item {
   align-self: flex-start;
 }

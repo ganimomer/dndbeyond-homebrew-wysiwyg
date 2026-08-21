@@ -163,6 +163,49 @@ test("focus moving within an entry does not reap it", (t) => {
   assert.equal(entries(root).length, 2);
 });
 
+const mergeButtons = (root: ShadowRoot) => [
+  ...root.querySelectorAll<HTMLElement>('[data-section="traits"] .sb-merge'),
+];
+
+test("the gap between two entries offers to merge them, and no other gap does", (t) => {
+  // A band above the first entry or below the last joins nothing — it is there
+  // to be dropped into, not to be clicked.
+  const { root } = renderBlock(t, creature(MISTY + CLIMB));
+
+  assert.equal(entries(root).length, 2);
+  assert.equal(mergeButtons(root).length, 1);
+  assert.equal(mergeButtons(root)[0]!.getAttribute("aria-label"), "Merge these two traits");
+});
+
+test("merging two entries leaves one editor holding both", (t) => {
+  const monster = creature(MISTY + CLIMB);
+  const { wrote, adapter } = recorder(monster);
+  const { root } = renderBlock(t, monster, { adapter });
+
+  fireEvent.click(mergeButtons(root)[0]!);
+
+  assert.equal(entries(root).length, 1);
+  assert.equal(
+    box(entries(root)[0]!).textContent,
+    "Misty Escape. It becomes mist.Spider Climb. It climbs.",
+  );
+  // The section is stored as one string and cut at the bold lead-ins, so
+  // joining two entries back up produces the very same string. There is
+  // nothing to tell D&D Beyond, and no reason to wake the autosave.
+  assert.deepEqual(wrote, []);
+});
+
+test("a merged entry can be merged again", (t) => {
+  const { root } = renderBlock(t, creature(MISTY + CLIMB + "<p><strong>Regeneration.</strong></p>"));
+  assert.equal(entries(root).length, 3);
+
+  fireEvent.click(mergeButtons(root)[0]!);
+  fireEvent.click(mergeButtons(root)[0]!);
+
+  assert.equal(entries(root).length, 1);
+  assert.equal(mergeButtons(root).length, 0, "and there is nothing left to merge it with");
+});
+
 test("an entry's trash removes it and writes the rest back in order", (t) => {
   const monster = creature(MISTY + TAIL + CLIMB);
   const { wrote, adapter } = recorder(monster);
