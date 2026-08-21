@@ -35,7 +35,7 @@ export function AddFieldMenu({ monster }: { monster: Monster }) {
         triggerText="Add…"
         triggerIcon="add"
         triggerLabel="Add a field"
-        triggerClass="add-field-trigger"
+        triggerClass="sb-add"
         menuClass="compact"
       />
     </div>

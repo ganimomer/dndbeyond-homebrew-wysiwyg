@@ -45,6 +45,7 @@ import formatToolbarCss from "./prose/FormatToolbar.css";
 import removeSectionCss from "./prose/RemoveSection.css";
 import removeItemCss from "./prose/RemoveItem.css";
 import contextMenuCss from "./shared/ContextMenu.css";
+import addButtonCss from "./shared/AddButton.css";
 import optionPickerCss from "./shared/OptionPicker.css";
 import statblock5eCss from "./StatBlock5e.css";
 import statblock55eCss from "./StatBlock55e.css";
@@ -84,6 +85,9 @@ const STYLES = [
   removeSectionCss,
   removeItemCss,
   contextMenuCss,
+  // After ContextMenu's: `.sb-add` and `.cm-trigger` tie on specificity, and one
+  // of the buttons it styles is a context-menu trigger.
+  addButtonCss,
   optionPickerCss,
   statblock5eCss,
   statblock55eCss,

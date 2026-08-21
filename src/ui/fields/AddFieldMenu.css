@@ -1,34 +1,11 @@
 /* The foot of the basics section: what a stat block *could* say but doesn't.
- * Quiet by default — it's an author's tool, not part of the creature. */
+ *
+ * The trigger's own look is `.sb-add` (see shared/AddButton.css), shared with
+ * the "Add trait" at the foot of each description section — the two are the same
+ * offer and used to look like different controls. All that's left here is where
+ * it sits, and the box the meta line types into. */
 .statblock .add-field {
   margin: 8px 0 2px;
-}
-.statblock .sb-add-field,
-.statblock .cm-trigger.add-field-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  appearance: none;
-  border: none;
-  width: auto;
-  height: auto;
-  padding: 2px 8px 2px 5px;
-  border-radius: 4px;
-  background: rgba(91, 22, 12, 0.08);
-  color: inherit;
-  font: inherit;
-  font-size: 0.85em;
-  cursor: pointer;
-  opacity: 0.6;
-}
-.statblock .sb-add-field:hover,
-.statblock .cm-trigger.add-field-trigger:hover {
-  opacity: 1;
-  background: rgba(91, 22, 12, 0.16);
-}
-.statblock .sb-add-field svg,
-.statblock .cm-trigger.add-field-trigger svg {
-  display: block;
 }
 .statblock .meta-add {
   /* Auto-size to the placeholder/typed text so nothing is cropped (the `size`

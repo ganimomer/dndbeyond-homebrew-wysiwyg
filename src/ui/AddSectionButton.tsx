@@ -33,7 +33,10 @@ export function AddSectionButton({ monster }: { monster: Monster }) {
               pendingFocus: sectionFocusKey(section),
             }),
         }))}
-        triggerText="Add section"
+        // The ellipsis is the promise of a menu rather than a deed, the same one
+        // the basics' "Add…" makes. "Add trait" and its kind have none: they add
+        // the thing there and then.
+        triggerText="Add section…"
         triggerIcon="add"
         triggerLabel="Add a description section"
         triggerClass="add-section-trigger"

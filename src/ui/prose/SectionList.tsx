@@ -151,8 +151,8 @@ export function SectionList({
           </ProseItem>
         );
       })}
-      <button type="button" class="sb-add-item" onClick={addRow}>
-        <Icon name="add" size={14} />
+      <button type="button" class="sb-add sb-add-item" onClick={addRow}>
+        <Icon name="add" size={16} />
         {`Add ${itemLabel}`}
       </button>
     </div>
