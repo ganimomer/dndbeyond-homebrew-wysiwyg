@@ -19,8 +19,11 @@ import { applyDependencyHighlights } from "../editor/dependency-highlights.js";
 import { applySaveState } from "../editor/save-indicator.js";
 import { StoreContext } from "./store-context.js";
 import { StatBlock } from "./StatBlock.js";
+import { AvatarToast } from "./AvatarToast.js";
 import appCss from "./App.css";
 import statBlockCss from "./StatBlock.css";
+import artworkCss from "./Artwork.css";
+import avatarToastCss from "./AvatarToast.css";
 import nameRowCss from "./NameRow.css";
 import abilityScoresCss from "./fields/AbilityScores.css";
 import metaLineCss from "./fields/MetaLine.css";
@@ -54,6 +57,8 @@ import statblock55eCss from "./StatBlock55e.css";
 const STYLES = [
   appCss,
   statBlockCss,
+  artworkCss,
+  avatarToastCss,
   nameRowCss,
   abilityScoresCss,
   metaLineCss,
@@ -151,6 +156,8 @@ export function App({ adapter, onClose }: AppProps) {
             {monster ? <StatBlock monster={monster} onClose={onClose} /> : null}
           </div>
         </div>
+        {/* Outside the scrolling page: it reports on something off screen. */}
+        <AvatarToast />
       </div>
     </StoreContext.Provider>
   );

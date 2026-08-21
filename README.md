@@ -93,10 +93,13 @@ src/
 │   ├── session.ts          what the editor knows that the form doesn't
 │   ├── command.ts          Command + CommandStack (batching, coalescing)
 │   ├── commands.ts         one constructor per edit
-│   └── editing.ts          PageAdapter's shape, dispatched as commands
+│   ├── editing.ts          PageAdapter's shape, dispatched as commands
+│   └── avatar-uploads.ts   the avatars: file picker, save-at-once, outcome
 ├── ui/                   the injected editor, in Preact
 │   ├── App.tsx             overlay chrome; the only store subscriber
-│   ├── StatBlock.tsx       artwork + layout + the Description section
+│   ├── StatBlock.tsx       layout + the Description section
+│   ├── Artwork.tsx         the picture, and the menu that uploads a new one
+│   ├── AvatarToast.tsx     what became of a small-avatar upload
 │   ├── AddSectionButton.tsx  the sticky "Add section" beside the block
 │   ├── StatBlock5e.tsx     the 2014 layout      (+ .css)
 │   ├── StatBlock55e.tsx    the 2024 layout      (+ .css)
@@ -228,6 +231,22 @@ the same "renderers mark the spot, the editor supplies behavior" contract as
 `data-mod`/`data-dep` — and `src/editor/save-indicator.ts` fills them. A section
 with no heading to hang a slot on (the 5e Traits block) falls back to the name
 row. A failed save turns its slot into a click-to-retry button.
+
+**Avatars are the exception.** Uploading one is a deliberate act with a slow,
+heavy request behind it, so it doesn't wait out the debounce: `AvatarUploads`
+(`src/state/avatar-uploads.ts`) asks autosave to `flush()` and reports what
+happened. There is still no upload endpoint — the picker is D&D Beyond's own
+`#field-avatar` / `#field-large-avatar`, clicked from inside the author's click,
+so the file lands in the form `save()` already serializes and rides the ordinary
+POST. On success the input is emptied, or every later save would post the image
+again; on failure it stays, and the next save carries it.
+
+The large avatar changes on the block the moment the file is chosen and keeps
+showing it afterwards — DDB's preview `<img>` is server-rendered and never
+updates in place, so re-reading the form would put the old picture back. It
+reverts if the save doesn't land. The small avatar has nowhere to appear on the
+block, so it reports in a toast at the corner of the screen instead. Neither is
+a `Command`: there is no undoing an upload, since the file it replaced is gone.
 
 **TinyMCE.** The description fields are TinyMCE 4 editors that only sync their
 textarea at submit time, so writing the textarea alone would let DDB's own Save

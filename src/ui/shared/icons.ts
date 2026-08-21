@@ -14,7 +14,8 @@ export type IconName =
   | "circle"
   | "radioButtonUnchecked"
   | "add"
-  | "delete";
+  | "delete"
+  | "image";
 
 /** Material UI icon name → its 24×24 path data. */
 const ICON_PATHS: Record<IconName, string> = {
@@ -37,6 +38,9 @@ const ICON_PATHS: Record<IconName, string> = {
   // delete — takes a description section back off the block.
   delete:
     "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
+  // image — the two avatar uploads in the artwork's menu.
+  image:
+    "M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z",
 };
 
 const SVG_NS = "http://www.w3.org/2000/svg";

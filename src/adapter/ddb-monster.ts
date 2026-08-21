@@ -9,7 +9,7 @@
  * trait/action bodies are ready-to-render HTML in `*-description-wysiwyg`
  * textareas. All of that DOM knowledge is centralized here.
  */
-import type { PageAdapter, SelectOption } from "./types.js";
+import type { AvatarSize, PageAdapter, SelectOption } from "./types.js";
 import {
   emptyMonster,
   type Ability,
@@ -53,10 +53,27 @@ export const SELECTORS = {
   isLegendary: "field-is-legendary",
   isMythic: "field-is-mythic",
   hasLair: "field-has-lair",
+  smallAvatar: "field-avatar",
+  largeAvatar: "field-large-avatar",
   movementTable: "table.listing-rpgmonster-movement-mapping",
   skillTable: "table.listing-rpgmonster-skill-mapping",
   senseTable: "table.listing-rpgmonster-sense-mapping",
+  /** Where DDB renders each avatar it already has, once one is uploaded. */
+  largeAvatarPreview: ".ddb-homebrew-create-form-fields-item-large-avatar img",
+  smallAvatarPreview: ".ddb-homebrew-create-form-fields-item-avatar img",
 } as const;
+
+/** Avatar → the `field-*` id of the file input that uploads it. */
+const AVATAR_FIELD: Record<AvatarSize, string> = {
+  small: SELECTORS.smallAvatar,
+  large: SELECTORS.largeAvatar,
+};
+
+/** What the author calls each avatar, for messages about one. */
+const AVATAR_LABEL: Record<AvatarSize, string> = {
+  small: "Small avatar",
+  large: "Large avatar",
+};
 
 const URL_PATTERN = /\/homebrew\/creations\/monsters\/.*\/edit/i;
 
@@ -266,6 +283,25 @@ function setMultiSelect(id: string, values: string[]): void {
   select.dispatchEvent(new Event("input", { bubbles: true }));
   select.dispatchEvent(new Event("change", { bubbles: true }));
 }
+/**
+ * The rules an avatar input advertises about what it will take: DDB writes them
+ * onto the input itself as `image/png|image/gif|…` and `0..167772160`, and its
+ * server enforces them, so this reads them rather than restating them.
+ */
+function fileRules(input: HTMLInputElement): { types: string[]; maxBytes: number } {
+  const types = (input.dataset.validationMimeType ?? "")
+    .split("|")
+    .map((type) => type.trim().toLowerCase())
+    .filter(Boolean);
+  const max = Number((input.dataset.validationContentLength ?? "").split("..")[1]);
+  return { types, maxBytes: Number.isFinite(max) && max > 0 ? max : Infinity };
+}
+
+/** A byte count as the author would write it, for the "too large" message. */
+function megabytes(bytes: number): string {
+  return `${Math.round((bytes / 1048576) * 10) / 10} MB`;
+}
+
 /** Rows of a listing table as arrays of cell text (trailing action cells kept). */
 function tableRows(selector: string): string[][] {
   const table = document.querySelector(selector);
@@ -396,13 +432,23 @@ function readSavingThrows(
   return saves;
 }
 
-/** The monster's artwork URL, if an avatar has been uploaded (large preferred). */
+/** A src that is DDB's "nothing uploaded" chrome rather than a real avatar. */
+const NOT_AN_AVATAR = /gravatar|placeholder|blank|thumbnails\/0\b/i;
+
+/**
+ * The monster's artwork URL, if an avatar has been uploaded.
+ *
+ * The large one is the creature's picture and the small one is its icon, so the
+ * block wants the large and settles for the small. Two queries rather than one
+ * selector list, because a list answers in *document order* — and DDB renders
+ * Small Avatar above Large Avatar, so a list would always hand back the icon.
+ */
 function readImage(): string | undefined {
-  const img = document.querySelector<HTMLImageElement>(
-    ".ddb-homebrew-create-form-fields-item-large-avatar img, .ddb-homebrew-create-form-fields-item-avatar img",
-  );
-  const src = img?.src ?? "";
-  return src && !/gravatar|placeholder|blank|thumbnails\/0\b/i.test(src) ? src : undefined;
+  for (const selector of [SELECTORS.largeAvatarPreview, SELECTORS.smallAvatarPreview]) {
+    const src = document.querySelector<HTMLImageElement>(selector)?.src ?? "";
+    if (src && !NOT_AN_AVATAR.test(src)) return src;
+  }
+  return undefined;
 }
 
 function readDescriptions(): Partial<Record<SectionKey, string>> {
@@ -662,6 +708,58 @@ export class DdbMonsterAdapter implements PageAdapter {
 
   setName(name: string): void {
     setInput(SELECTORS.name, name);
+  }
+
+  /**
+   * Opens the file picker by clicking DDB's own input. Ours is a *content
+   * script*, so that input is ordinary same-document DOM and the click we're
+   * standing in is trusted — which is the whole trick: the file lands in the
+   * form we already serialize, and `save()` posts it with everything else. No
+   * upload endpoint, no token, no `DataTransfer` (which a content script
+   * couldn't hand the page anyway).
+   */
+  chooseAvatar(size: AvatarSize): boolean {
+    const input = byId<HTMLInputElement>(AVATAR_FIELD[size]);
+    if (!input) return false;
+    input.click();
+    return true;
+  }
+
+  avatarProblem(size: AvatarSize, file: File): string | null {
+    const input = byId<HTMLInputElement>(AVATAR_FIELD[size]);
+    if (!input) return `${AVATAR_LABEL[size]} upload isn't available`;
+    const { types, maxBytes } = fileRules(input);
+    // An empty `file.type` means the browser couldn't tell; let the server rule
+    // on those rather than refusing something DDB might well accept.
+    if (file.type && types.length > 0 && !types.includes(file.type.toLowerCase())) {
+      // "WEBP images aren't accepted" — the subtype is the part an author
+      // recognizes, and it reads as a sentence where `image/webp` doesn't.
+      const kind = file.type.split("/").pop()!.toUpperCase();
+      return `${kind} images aren't accepted`;
+    }
+    if (file.size > maxBytes) return `Image is over ${megabytes(maxBytes)}`;
+    return null;
+  }
+
+  onAvatarChosen(handler: (size: AvatarSize, file: File) => void): () => void {
+    const root = document.querySelector(SELECTORS.formRoot) ?? document.body;
+    // Capture, like `observe()`: the same change event DDB's own handlers see,
+    // whether the picker was opened from the overlay or from the form itself.
+    const onChange = (event: Event) => {
+      const input = event.target as HTMLInputElement | null;
+      const size = (Object.keys(AVATAR_FIELD) as AvatarSize[]).find(
+        (candidate) => AVATAR_FIELD[candidate] === input?.id,
+      );
+      const file = input?.files?.[0];
+      if (size && file) handler(size, file);
+    };
+    root.addEventListener("change", onChange, true);
+    return () => root.removeEventListener("change", onChange, true);
+  }
+
+  clearAvatar(size: AvatarSize): void {
+    const input = byId<HTMLInputElement>(AVATAR_FIELD[size]);
+    if (input) input.value = "";
   }
 
   sizeOptions(): SelectOption[] {

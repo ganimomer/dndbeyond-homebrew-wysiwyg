@@ -14,6 +14,7 @@ function stubPage(monster: Monster) {
   let onChange: (() => void) | null = null;
   const adapter = {
     read: () => current,
+    onAvatarChosen: () => () => {},
     observe: (fn: () => void) => {
       onChange = fn;
       return () => {

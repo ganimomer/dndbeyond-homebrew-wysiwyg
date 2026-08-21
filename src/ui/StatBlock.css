@@ -25,19 +25,6 @@
   align-items: stretch;
 }
 
-/* Artwork, top-aligned beside the stat block. */
-.sb-image {
-  flex: none;
-  width: 100%;
-  margin: 0;
-}
-.sb-image img {
-  display: block;
-  width: 100%;
-  height: auto;
-  border-radius: 6px;
-}
-
 /* Free-form "Description" section, below the framed block in plain body type
  * (matches D&D Beyond's monster page: Roboto, black, no accent/small-caps). */
 .sb-description {

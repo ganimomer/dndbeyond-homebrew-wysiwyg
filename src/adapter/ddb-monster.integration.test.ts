@@ -171,3 +171,98 @@ test("closing the overlay persists a debounced edit", async (t) => {
   // t.after would unmount a second time; make it a no-op.
   t.after(() => {});
 });
+
+test("the avatar menu drives D&D Beyond's own file inputs", async (t) => {
+  const { adapter, saves } = loadPage();
+  const { root } = openOverlay(t, adapter);
+
+  // The picker is opened by clicking DDB's real input, inside the click that
+  // asked for it — so the file lands in the form that `save()` serializes.
+  const clicked: string[] = [];
+  for (const id of ["field-avatar", "field-large-avatar"]) {
+    field(id).addEventListener("click", () => clicked.push(id));
+  }
+
+  const menu = root.querySelector<HTMLElement>(".sb-image .cm-trigger");
+  assert.ok(menu, "the artwork carries an upload menu");
+  menu!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  const item = [...root.querySelectorAll<HTMLElement>(".sb-image .cm-item")].find((li) =>
+    (li.textContent ?? "").startsWith("Upload large avatar"),
+  );
+  assert.ok(item, "and offers the large avatar");
+  item!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+  assert.deepEqual(clicked, ["field-large-avatar"]);
+  assert.equal(saves.length, 0, "nothing is saved until a file is actually chosen");
+});
+
+test("the avatar inputs' own validation rules are what a file is held to", () => {
+  const { adapter } = loadPage();
+
+  const png = new File(["x"], "portrait.png", { type: "image/png" });
+  assert.equal(adapter.avatarProblem("large", png), null);
+  assert.equal(adapter.avatarProblem("small", png), null);
+
+  // DDB advertises jpeg/png/gif/svg on the inputs themselves; webp isn't on it.
+  const webp = new File(["x"], "portrait.webp", { type: "image/webp" });
+  assert.equal(adapter.avatarProblem("large", webp), "WEBP images aren't accepted");
+
+  // ...and a 160 MB ceiling, which the same attribute carries.
+  const huge = new File(["x"], "portrait.png", { type: "image/png" });
+  Object.defineProperty(huge, "size", { value: 200 * 1024 * 1024 });
+  assert.equal(adapter.avatarProblem("large", huge), "Image is over 160 MB");
+});
+
+test("a chosen file is announced, and cleared once it is saved", () => {
+  const { adapter } = loadPage();
+
+  const seen: string[] = [];
+  const stop = adapter.onAvatarChosen((size, file) => seen.push(`${size}:${file.name}`));
+  // jsdom won't let a test assign `files`, so define it — what matters is that
+  // the adapter reads the file off the input the change event came from.
+  const input = field("field-avatar");
+  Object.defineProperty(input, "files", {
+    configurable: true,
+    value: [new File(["x"], "icon.png", { type: "image/png" })],
+  });
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+
+  assert.deepEqual(seen, ["small:icon.png"]);
+
+  adapter.clearAvatar("small");
+  assert.equal(field("field-avatar").value, "");
+
+  stop();
+  field("field-avatar").dispatchEvent(new Event("change", { bubbles: true }));
+  assert.equal(seen.length, 1, "and nothing arrives after unsubscribing");
+});
+
+test("the block shows the large avatar, which DDB renders after the small one", () => {
+  const { adapter } = loadPage();
+
+  // The fixture's creature has neither avatar yet, so nothing is rendered for
+  // them and the block falls back to the creature type's stock art.
+  assert.equal(adapter.read()!.image, undefined);
+
+  // DDB puts Small Avatar above Large Avatar in the form, and renders each
+  // uploaded picture inside its own field — so document order is the icon first.
+  const put = (container: string, src: string) => {
+    const img = document.createElement("img");
+    img.src = src;
+    document.querySelector(`.ddb-homebrew-create-form-fields-item-${container}`)!.append(img);
+  };
+  put("avatar", "https://www.dndbeyond.com/avatars/1/2/icon.png");
+  put("large-avatar", "https://www.dndbeyond.com/avatars/1/3/portrait.png");
+
+  assert.equal(adapter.read()!.image, "https://www.dndbeyond.com/avatars/1/3/portrait.png");
+});
+
+test("the small avatar stands in when it is the only one uploaded", () => {
+  const { adapter } = loadPage();
+
+  const img = document.createElement("img");
+  img.src = "https://www.dndbeyond.com/avatars/1/2/icon.png";
+  document.querySelector(".ddb-homebrew-create-form-fields-item-avatar")!.append(img);
+
+  assert.equal(adapter.read()!.image, "https://www.dndbeyond.com/avatars/1/2/icon.png");
+});

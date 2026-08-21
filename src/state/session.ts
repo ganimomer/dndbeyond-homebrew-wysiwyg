@@ -11,8 +11,18 @@
  * throws the DOM away each time; a field that Preact diffs in place keeps its
  * own caret, so it stops meaning anything once the last hand-drawn field goes.
  */
+import type { AvatarSize } from "../adapter/types.js";
 import type { Ability, SectionKey } from "../statblock/model.js";
 import type { OptionalField } from "../ui/fields/registry.js";
+
+/** How an avatar upload is going, for as long as that's worth showing. */
+export interface AvatarStatus {
+  state: "saving" | "success" | "error";
+  /** Object URL of the chosen file — the toast's thumbnail. */
+  thumbUrl: string;
+  /** What went wrong, when something did. */
+  message?: string;
+}
 
 export interface SessionState {
   /**
@@ -43,6 +53,18 @@ export interface SessionState {
    */
   readonly armorBonus: number | null;
 
+  /**
+   * A large avatar uploaded this session, as an object URL.
+   *
+   * The artwork shows it the moment the file is chosen, and goes on showing it
+   * afterwards: D&D Beyond's own preview `<img>` is server-rendered and never
+   * updates in place, so re-reading the form after a successful upload would put
+   * the *old* picture back. This is the truthful one until the page reloads.
+   */
+  readonly avatarPreview: string | null;
+  /** Each avatar's upload, while it's still saving or still being reported. */
+  readonly avatarStatus: ReadonlyMap<AvatarSize, AvatarStatus>;
+
   /** Transitional: a `data-focus-key` to focus once, on the next render. */
   readonly pendingFocus: string | null;
 }
@@ -53,8 +75,22 @@ export function emptySession(): SessionState {
     revealedSections: new Set(),
     changedAbilities: new Set(),
     armorBonus: null,
+    avatarPreview: null,
+    avatarStatus: new Map(),
     pendingFocus: null,
   };
+}
+
+/** `avatarStatus` with one avatar's upload set, or cleared when it's null. */
+export function withAvatarStatus(
+  state: SessionState,
+  size: AvatarSize,
+  status: AvatarStatus | null,
+): ReadonlyMap<AvatarSize, AvatarStatus> {
+  const next = new Map(state.avatarStatus);
+  if (status) next.set(size, status);
+  else next.delete(size);
+  return next;
 }
 
 /** `revealed` with one more field on it. */

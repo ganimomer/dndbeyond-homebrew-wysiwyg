@@ -9,7 +9,7 @@
  */
 import { useLayoutEffect, useRef } from "preact/hooks";
 import type { Monster } from "../statblock/model.js";
-import { defaultImageUrl } from "./default-image.js";
+import { Artwork } from "./Artwork.js";
 import { htmlHasContent, sectionBody } from "./prose/sections.js";
 import { ProseSection } from "./prose/ProseSection.js";
 import { RemoveSection } from "./prose/RemoveSection.js";
@@ -26,21 +26,6 @@ const ACCENT = { "5e": "#822000", "5.5e": "#5b160c" } as const;
 
 /** Never let the button ride up into the artwork, however short the block is. */
 const MIN_OFFSET = 12;
-
-/**
- * The creature artwork, placed beside the block (top-right). Falls back to the
- * creature type's default when no avatar is set, and renders nothing when
- * there's neither.
- */
-function Artwork({ monster, onLoad }: { monster: Monster; onLoad?: () => void }) {
-  const src = monster.image ?? defaultImageUrl(monster.type);
-  if (!src) return null;
-  return (
-    <div class={monster.image ? "sb-image" : "sb-image is-default"}>
-      <img src={src} alt={monster.name} onLoad={onLoad} />
-    </div>
-  );
-}
 
 function Description({ monster }: { monster: Monster }) {
   const session = useSession();

@@ -67,6 +67,13 @@
   display: block;
 }
 
+/* Hangs from the trigger's left edge instead of its right, for a trigger that
+ * sits at the left of what it belongs to (the artwork's kebab). */
+.cm-menu.start {
+  left: 0;
+  right: auto;
+}
+
 /* A long single-column list (all 18 skills) rather than a few actions: no icon
  * gutter, tighter rows, and scrolling once it outgrows the popover. */
 .cm-menu.compact {

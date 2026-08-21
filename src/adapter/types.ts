@@ -16,6 +16,12 @@ import type {
 
 export type HomebrewKind = "monster" | "item" | "spell" | "unknown";
 
+/**
+ * Which of the two avatars an upload is for: the small one on the listing page,
+ * or the large one on the monster's own page (and so in the stat block).
+ */
+export type AvatarSize = "small" | "large";
+
 /** One option of a form `<select>`, for building an editable dropdown. */
 export interface SelectOption {
   /** The form's option value (DDB uses numeric codes). */
@@ -145,6 +151,31 @@ export interface PageAdapter {
 
   /** Writes the creature name back to the form. */
   setName(name: string): void;
+
+  /**
+   * Opens the browser's file picker for one of the page's avatar inputs, and
+   * answers whether there was one to open.
+   *
+   * Must be called synchronously from a user gesture — it clicks the page's own
+   * `<input type=file>`, and a browser only opens a picker for a trusted click.
+   * The file the author chooses stays in that input, which is what `save()`
+   * serializes, so an upload needs no request of its own.
+   */
+  chooseAvatar(size: AvatarSize): boolean;
+  /**
+   * Why the page would refuse this file, phrased for the author — or null when
+   * it wouldn't. Checked here rather than left to the server because an invalid
+   * upload comes back as a *successful* response with errors rendered into a
+   * page we discard, which would read as a save that worked.
+   */
+  avatarProblem(size: AvatarSize, file: File): string | null;
+  /** Notifies when a file is chosen for either avatar. Returns unsubscribe. */
+  onAvatarChosen(handler: (size: AvatarSize, file: File) => void): () => void;
+  /**
+   * Empties an avatar input once its file is saved, so that every later save
+   * doesn't post the image again.
+   */
+  clearAvatar(size: AvatarSize): void;
 
   /** The size options from the form's size `<select>`. */
   sizeOptions(): SelectOption[];

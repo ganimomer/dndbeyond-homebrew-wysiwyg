@@ -22,6 +22,7 @@ import type { Monster } from "../statblock/model.js";
 // Autosave and the command stack both belong to the session, so they live here
 // rather than with whatever happens to be drawing the block.
 import { AutosaveController } from "../editor/autosave.js";
+import { AvatarUploads } from "./avatar-uploads.js";
 import { CommandStack } from "./command.js";
 import { EditingAdapter } from "./editing.js";
 // The registry of which rows are optional. It moves under `ui/` when the fields
@@ -49,11 +50,14 @@ export class EditorStore {
    * but each call dispatched as a command.
    */
   readonly editing: EditingAdapter;
+  /** The avatars: a file picker, a save of its own timing, and its outcome. */
+  readonly avatars: AvatarUploads;
 
   constructor(readonly adapter: PageAdapter) {
     this.autosave = new AutosaveController(() => adapter.save());
     this.commands = new CommandStack(adapter, (origin) => this.autosave.request(origin));
     this.editing = new EditingAdapter(adapter, this.commands, () => this.requireMonster());
+    this.avatars = new AvatarUploads(adapter, this.autosave, this);
   }
 
   /**
@@ -70,11 +74,13 @@ export class EditorStore {
   start(): void {
     this.refresh();
     this.unobserve = this.adapter.observe(() => this.refresh());
+    this.avatars.start();
   }
 
   stop(): void {
     this.unobserve?.();
     this.unobserve = null;
+    this.avatars.destroy();
     this.listeners.clear();
     // Persist anything still inside the debounce window before letting go. The
     // form keeps the edits either way, but this is what makes closing the
