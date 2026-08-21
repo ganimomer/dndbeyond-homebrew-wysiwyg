@@ -7,13 +7,11 @@
 import type { ComponentChildren } from "preact";
 import type { Monster, NamedEntry, SectionKey } from "../statblock/model.js";
 import { formatModifier, initiativeText, proficiencyBonus, xpForCr } from "../statblock/compute.js";
-import { htmlHasContent, sectionBody } from "./prose/sections.js";
-import { ProseSection } from "./prose/ProseSection.js";
+import { SectionBody } from "./prose/SectionBody.js";
+import { sectionState } from "./prose/section-state.js";
 import { RemoveSection } from "./prose/RemoveSection.js";
-import { SECTION_LABEL, SECTION_PLACEHOLDER } from "./prose/section-registry.js";
-import { sectionFocusKey } from "./AddSectionButton.js";
+import { SECTION_LABEL } from "./prose/section-registry.js";
 import { useEditing, useSession } from "./store-context.js";
-import { Raw } from "./shared/Raw.js";
 import { SaveSlot } from "./shared/SaveSlot.js";
 import { AbilityScores } from "./fields/AbilityScores.js";
 import { AddFieldMenu } from "./fields/AddFieldMenu.js";
@@ -64,33 +62,17 @@ function DescriptionBlock({
   intro?: string;
 }) {
   const session = useSession();
-  const html = monster.descriptionHtml?.[section];
-  const editable = htmlHasContent(html);
-  const body = editable ? null : sectionBody(monster, section, entries, intro);
-  // A section the creature has no text for isn't printed — unless the author
-  // asked for it from the "Add section" button, which holds an empty editor
-  // open to write in.
-  const revealed = session.revealedSections.has(section);
-  if (!editable && !body && !revealed) return null;
-  const heading = SECTION_LABEL[section];
+  const state = sectionState(monster, section, session, entries, intro);
+  if (!state.visible) return null;
   return (
     <section class="description-block">
       <div class="heading">
-        {heading}
+        {SECTION_LABEL[section]}
         {/* The autosave spinner rides the right end of the section's heading. */}
         <SaveSlot origin={section} />
         <RemoveSection section={section} />
       </div>
-      {editable || revealed ? (
-        <ProseSection
-          section={section}
-          html={html ?? ""}
-          autoFocus={session.pendingFocus === sectionFocusKey(section)}
-          placeholder={SECTION_PLACEHOLDER[section]}
-        />
-      ) : (
-        <Raw class="content" node={body} data-section={section} />
-      )}
+      <SectionBody section={section} state={state} readOnly={{ class: "content" }} />
     </section>
   );
 }

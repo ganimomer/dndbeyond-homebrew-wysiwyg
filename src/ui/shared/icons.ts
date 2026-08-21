@@ -15,7 +15,9 @@ export type IconName =
   | "radioButtonUnchecked"
   | "add"
   | "delete"
-  | "image";
+  | "image"
+  | "formatBold"
+  | "formatItalic";
 
 /** Material UI icon name → its 24×24 path data. */
 const ICON_PATHS: Record<IconName, string> = {
@@ -41,6 +43,12 @@ const ICON_PATHS: Record<IconName, string> = {
   // image — the two avatar uploads in the artwork's menu.
   image:
     "M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z",
+  // format_bold — the floating toolbar over an editable entry, which is what
+  // makes a bold lead-in visible as bold before there is any text to see it in.
+  formatBold:
+    "M15.6 10.79c.97-.67 1.65-1.77 1.65-2.79 0-2.26-1.75-4-4-4H7v14h7.04c2.09 0 3.71-1.7 3.71-3.79 0-1.52-.86-2.82-2.15-3.42zM10 6.5h3c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-3v-3zm3.5 9H10v-3h3.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5z",
+  // format_italic — its neighbour in the same toolbar.
+  formatItalic: "M10 4v3h2.21l-3.42 8H6v3h8v-3h-2.21l3.42-8H18V4z",
 };
 
 const SVG_NS = "http://www.w3.org/2000/svg";

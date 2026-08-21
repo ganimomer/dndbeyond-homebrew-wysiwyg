@@ -8,11 +8,10 @@ import type { Monster, NamedEntry, SectionKey } from "../statblock/model.js";
 import { formatModifier, proficiencyBonus, xpForCr } from "../statblock/compute.js";
 import { expandInline } from "./prose/inline.js";
 import { el } from "./shared/dom.js";
-import { htmlHasContent, sectionBody } from "./prose/sections.js";
-import { ProseSection } from "./prose/ProseSection.js";
+import { SectionBody } from "./prose/SectionBody.js";
+import { sectionState } from "./prose/section-state.js";
 import { RemoveSection } from "./prose/RemoveSection.js";
-import { SECTION_LABEL, SECTION_PLACEHOLDER } from "./prose/section-registry.js";
-import { sectionFocusKey } from "./AddSectionButton.js";
+import { SECTION_LABEL } from "./prose/section-registry.js";
 import { useEditing, useSession } from "./store-context.js";
 import { Raw } from "./shared/Raw.js";
 import { SaveSlot } from "./shared/SaveSlot.js";
@@ -71,14 +70,8 @@ function HeadedSection({
   intro?: string;
 }) {
   const session = useSession();
-  const html = monster.descriptionHtml?.[section];
-  const editable = htmlHasContent(html);
-  const body = editable ? null : sectionBody(monster, section, entries, intro);
-  // A section the creature has no text for isn't printed — unless the author
-  // asked for it from the "Add section" button, which holds an empty editor
-  // open to write in.
-  const revealed = session.revealedSections.has(section);
-  if (!editable && !body && !revealed) return null;
+  const state = sectionState(monster, section, session, entries, intro);
+  if (!state.visible) return null;
   return (
     <>
       <h4>
@@ -87,16 +80,7 @@ function HeadedSection({
         <SaveSlot origin={section} />
         <RemoveSection section={section} />
       </h4>
-      {editable || revealed ? (
-        <ProseSection
-          section={section}
-          html={html ?? ""}
-          autoFocus={session.pendingFocus === sectionFocusKey(section)}
-          placeholder={SECTION_PLACEHOLDER[section]}
-        />
-      ) : (
-        <Raw node={body} data-section={section} style="display:contents" />
-      )}
+      <SectionBody section={section} state={state} readOnly={{ style: "display:contents" }} />
     </>
   );
 }
@@ -107,10 +91,7 @@ export function StatBlock5e({ monster, onClose }: { monster: Monster; onClose?: 
   const commitAbility = useCommitAbility();
   const revealed = session.revealed;
 
-  const traitsHtml = monster.descriptionHtml?.traits;
-  const traitsEditable = htmlHasContent(traitsHtml);
-  const traits = traitsEditable ? null : sectionBody(monster, "traits", monster.traits);
-  const traitsRevealed = session.revealedSections.has("traits");
+  const traits = sectionState(monster, "traits", session, monster.traits);
 
   return (
     <div class="statblock v5e">
@@ -190,21 +171,12 @@ export function StatBlock5e({ monster, onClose }: { monster: Monster; onClose?: 
           so there is no heading row for the trash to sit in. It rides the top
           right of the body instead, out of sight until the section is pointed
           at (see RemoveSection.css). */}
-      {traitsEditable || traits || traitsRevealed ? (
+      {traits.visible ? (
         <>
           <hr class="rule" />
           <div class="sb-traits-removable">
             <RemoveSection section="traits" />
-            {traitsEditable || traitsRevealed ? (
-              <ProseSection
-                section="traits"
-                html={traitsHtml ?? ""}
-                autoFocus={session.pendingFocus === sectionFocusKey("traits")}
-                placeholder={SECTION_PLACEHOLDER.traits}
-              />
-            ) : (
-              <Raw class="content" node={traits} data-section="traits" />
-            )}
+            <SectionBody section="traits" state={traits} readOnly={{ class: "content" }} />
           </div>
         </>
       ) : null}

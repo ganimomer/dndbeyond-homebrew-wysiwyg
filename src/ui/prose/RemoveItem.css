@@ -1,0 +1,56 @@
+/* An entry's trash, in its top-right corner. An author's tool and not part of
+ * the creature, so it stays out of sight until the entry is pointed at — the
+ * same treatment the 2014 block's headingless Traits section gets. */
+.sb-remove-item {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.sb-item:hover > .sb-remove-item,
+.sb-item:focus-within > .sb-remove-item,
+.sb-remove-item.is-armed {
+  opacity: 1;
+}
+
+.sb-remove-item button {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.45;
+  /* The entry's text runs under this, so it needs a ground of its own. */
+  background: rgba(255, 255, 255, 0.85);
+}
+.sb-remove-item button:hover,
+.sb-remove-item button:focus-visible {
+  opacity: 1;
+  background: rgba(91, 22, 12, 0.14);
+}
+.sb-remove-item button:focus-visible {
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}
+
+/* Armed: the trash is replaced in the same corner by what it's actually asking.
+ * No "Remove?" prompt — an entry's corner is too small for one, and the red
+ * tick against the ✕ says it. */
+.sb-remove-item .sb-remove-confirm {
+  opacity: 1;
+  color: #b00;
+}
+.sb-remove-item .sb-remove-confirm:hover {
+  background: rgba(187, 0, 0, 0.16);
+}
+.sb-remove-item .sb-remove-cancel {
+  opacity: 0.7;
+}

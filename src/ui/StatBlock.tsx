@@ -10,13 +10,12 @@
 import { useLayoutEffect, useRef } from "preact/hooks";
 import type { Monster } from "../statblock/model.js";
 import { Artwork } from "./Artwork.js";
-import { htmlHasContent, sectionBody } from "./prose/sections.js";
-import { ProseSection } from "./prose/ProseSection.js";
+import { SectionBody } from "./prose/SectionBody.js";
+import { sectionState } from "./prose/section-state.js";
 import { RemoveSection } from "./prose/RemoveSection.js";
-import { SECTION_LABEL, SECTION_PLACEHOLDER } from "./prose/section-registry.js";
-import { AddSectionButton, sectionFocusKey } from "./AddSectionButton.js";
+import { SECTION_LABEL } from "./prose/section-registry.js";
+import { AddSectionButton } from "./AddSectionButton.js";
 import { useSession } from "./store-context.js";
-import { Raw } from "./shared/Raw.js";
 import { SaveSlot } from "./shared/SaveSlot.js";
 import { StatBlock5e } from "./StatBlock5e.js";
 import { StatBlock55e } from "./StatBlock55e.js";
@@ -29,11 +28,8 @@ const MIN_OFFSET = 12;
 
 function Description({ monster }: { monster: Monster }) {
   const session = useSession();
-  const html = monster.descriptionHtml?.characteristics;
-  const editable = htmlHasContent(html);
-  const revealed = session.revealedSections.has("characteristics");
-  const body = editable ? null : sectionBody(monster, "characteristics");
-  if (!editable && !body && !revealed) return null;
+  const state = sectionState(monster, "characteristics", session);
+  if (!state.visible) return null;
   return (
     <div class="sb-description">
       <h3 class="sb-description-heading">
@@ -41,16 +37,11 @@ function Description({ monster }: { monster: Monster }) {
         <SaveSlot origin="characteristics" />
         <RemoveSection section="characteristics" />
       </h3>
-      {editable || revealed ? (
-        <ProseSection
-          section="characteristics"
-          html={html ?? ""}
-          autoFocus={session.pendingFocus === sectionFocusKey("characteristics")}
-          placeholder={SECTION_PLACEHOLDER.characteristics}
-        />
-      ) : (
-        <Raw class="sb-description-content" node={body} data-section="characteristics" />
-      )}
+      <SectionBody
+        section="characteristics"
+        state={state}
+        readOnly={{ class: "sb-description-content" }}
+      />
     </div>
   );
 }

@@ -197,12 +197,50 @@ test("a section D&D Beyond has text for is editable in place", (t) => {
   );
 
   // Every populated section, not just Traits — which is all the old loop could
-  // manage, because each one cost it another editor to hold and guard.
+  // manage, because each one cost it another editor to hold and guard. The
+  // editable box is now one *per entry*, so the section is the container.
   for (const section of ["traits", "actions"]) {
     const body = root.querySelector(`[data-section="${section}"]`);
     assert.ok(body, `${section} is on the block`);
-    assert.equal(body!.getAttribute("contenteditable"), "true", `${section} is editable`);
+    const entries = body!.querySelectorAll('[contenteditable="true"]');
+    assert.equal(entries.length, 1, `${section} has an editor for its one entry`);
   }
+});
+
+test("a list section is cut into one editor per entry", (t) => {
+  // The point of the whole arrangement: an author grabs a trait, not the wall
+  // of text all six of them used to be.
+  const { root } = renderBlock(
+    t,
+    creature("5.5e", {
+      descriptionHtml: {
+        traits: [
+          "<p><em><strong>Misty Escape.</strong></em> It becomes mist.</p>",
+          // No bold lead-in, so this belongs to Misty Escape rather than
+          // starting an entry of its own.
+          "<p>While it has 0 Hit Points it can't return.</p>",
+          "<p><em><strong>Spider Climb.</strong></em> It climbs.</p>",
+        ].join(""),
+      },
+    }),
+  );
+
+  const entries = root.querySelectorAll('[data-section="traits"] .sb-item');
+  assert.equal(entries.length, 2);
+  assert.match(entries[0]!.textContent ?? "", /Misty Escape.*can't return/s);
+  assert.match(entries[1]!.textContent ?? "", /Spider Climb/);
+});
+
+test("the Description is not cut up — it is prose, not a list", (t) => {
+  const { root } = renderBlock(
+    t,
+    creature("5.5e", {
+      descriptionHtml: { characteristics: "<p>A pale figure.</p><p>It hunts by night.</p>" },
+    }),
+  );
+
+  const entries = root.querySelectorAll('[data-section="characteristics"] .sb-item');
+  assert.equal(entries.length, 1, "one editor over the whole thing");
 });
 
 test("a section that only exists as sample entries stays read-only", (t) => {
@@ -236,9 +274,10 @@ for (const ruleset of ["5e", "5.5e"] as const) {
       revealedSections: ["bonusActions"],
     });
 
-    const body = root.querySelector<HTMLElement>('[data-section="bonusActions"]');
-    assert.ok(body, "on the block");
-    assert.equal(body!.getAttribute("contenteditable"), "true");
+    const section = root.querySelector<HTMLElement>('[data-section="bonusActions"]');
+    assert.ok(section, "on the block");
+    const body = section!.querySelector<HTMLElement>('[contenteditable="true"]');
+    assert.ok(body, "holding one empty entry to type into");
     assert.equal(body!.textContent, "", "and empty");
     // An empty contenteditable collapses to nothing; the prompt is what holds
     // the line open and says what belongs there.
@@ -282,9 +321,10 @@ test("the Description below the block is editable, like every other section", (t
     creature("5.5e", { descriptionHtml: { characteristics: "<p>A pale figure.</p>" } }),
   );
 
-  const body = root.querySelector('.sb-description [data-section="characteristics"]');
+  const body = root.querySelector(
+    '.sb-description [data-section="characteristics"] [contenteditable="true"]',
+  );
   assert.ok(body, "on the page");
-  assert.equal(body!.getAttribute("contenteditable"), "true");
   assert.match(body!.textContent ?? "", /A pale figure/);
 });
 

@@ -1,0 +1,5 @@
+/* One editable entry. `relative` is load-bearing: the format toolbar above it
+ * and the trash in its corner are both positioned against this box. */
+.sb-item {
+  position: relative;
+}

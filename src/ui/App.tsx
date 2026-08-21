@@ -39,7 +39,11 @@ import addFieldCss from "./fields/AddFieldMenu.css";
 import addSectionCss from "./AddSectionButton.css";
 import saveSlotCss from "./shared/SaveSlot.css";
 import proseCss from "./prose/ProseSection.css";
+import proseItemCss from "./prose/ProseItem.css";
+import sectionListCss from "./prose/SectionList.css";
+import formatToolbarCss from "./prose/FormatToolbar.css";
 import removeSectionCss from "./prose/RemoveSection.css";
+import removeItemCss from "./prose/RemoveItem.css";
 import contextMenuCss from "./shared/ContextMenu.css";
 import optionPickerCss from "./shared/OptionPicker.css";
 import statblock5eCss from "./StatBlock5e.css";
@@ -74,7 +78,11 @@ const STYLES = [
   addSectionCss,
   saveSlotCss,
   proseCss,
+  proseItemCss,
+  sectionListCss,
+  formatToolbarCss,
   removeSectionCss,
+  removeItemCss,
   contextMenuCss,
   optionPickerCss,
   statblock5eCss,

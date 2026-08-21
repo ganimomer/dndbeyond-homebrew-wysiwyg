@@ -1,0 +1,57 @@
+/* The formatting bar over an editable entry. Out of the way until the entry has
+ * the caret, then a small pill hanging above it — the same "controls float over
+ * the content they belong to" idiom as the artwork's menu, since a stat block
+ * has no chrome to put a permanent toolbar in.
+ *
+ * Hung from the *right*, which is the one place above an entry that is reliably
+ * empty: what sits there is the last line of the entry before, and last lines
+ * rarely reach the margin. Left-aligned it covered the previous trait mid-
+ * sentence. It clears the entry's own trash because it is above the entry, not
+ * inside it. */
+.sb-format-bar {
+  position: absolute;
+  top: -27px;
+  right: 0;
+  z-index: 3;
+  display: inline-flex;
+  gap: 1px;
+  padding: 2px;
+  border-radius: 5px;
+  background: #ffffff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.28);
+  /* Fades with the entry's focus, and takes no clicks while it's invisible. */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+.sb-item:focus-within > .sb-format-bar {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sb-format-button {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #1a1a1a;
+  opacity: 0.6;
+}
+.sb-format-button:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.08);
+}
+/* Lit: this is the state the toolbar exists to report. Strong enough to read at
+ * a glance against the unpressed buttons beside it. */
+.sb-format-button[aria-pressed="true"] {
+  opacity: 1;
+  color: #ffffff;
+  background: var(--accent, #5b160c);
+}
+.sb-format-button:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent, #5b160c);
+}
