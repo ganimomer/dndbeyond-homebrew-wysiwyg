@@ -22,7 +22,7 @@
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { ArmorClass, Monster } from "../../statblock/model.js";
 import { armorBonus, armorClassText, unarmoredAc } from "../../statblock/armor-class.js";
-import { makeIcon } from "../shared/icons.js";
+import { Icon } from "../shared/Icon.js";
 import { HintChip, IconButton, toInt, useCloseOnOutsideClick } from "../shared/MiniForm.js";
 
 /** The name the hint chip announces itself under. */
@@ -54,11 +54,7 @@ export function ArmorClassField(props: ArmorClassFieldProps) {
           onClick={() => setOpen(true)}
         >
           <span class="sb-chip-detail">{armorClassText(props.monster.armorClass)}</span>
-          <span
-            ref={(node) => {
-              if (node && !node.firstChild) node.append(makeIcon("settings", 14));
-            }}
-          />
+          <Icon name="settings" size={14} />
         </button>
       </span>
     );

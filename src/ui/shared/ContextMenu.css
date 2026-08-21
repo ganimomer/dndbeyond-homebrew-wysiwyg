@@ -79,17 +79,13 @@
   background: #f2f5f7;
 }
 
+/* Also worn by the empty <span> a menu item with no icon puts here, so the
+ * labels beside it still line up. */
 .cm-icon {
   width: 18px;
   flex: 0 0 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #1579bc;
-}
-
-.cm-icon svg {
   display: block;
+  color: #1579bc;
 }
 
 .cm-item.danger .cm-icon {

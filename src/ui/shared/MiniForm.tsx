@@ -9,7 +9,7 @@
  */
 import { useLayoutEffect } from "preact/hooks";
 import type { RefObject } from "preact";
-import { makeIcon } from "../shared/icons.js";
+import { Icon } from "./Icon.js";
 
 /**
  * The "←218" a field grows when another edit has left it behind. A real button,
@@ -61,12 +61,9 @@ export function IconButton({
       data-form-action={action}
       aria-label={label}
       onClick={onClick}
-      ref={(node) => {
-        // The icon is an SVG built by hand; Preact only needs to be told where
-        // to put it, and it never changes.
-        if (node && !node.firstChild) node.append(makeIcon(icon, 16));
-      }}
-    />
+    >
+      <Icon name={icon} size={16} />
+    </button>
   );
 }
 

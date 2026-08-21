@@ -66,9 +66,6 @@
 }
 
 .avatar-toast-icon {
-  display: inline-flex;
-  margin-left: auto;
-}
-.avatar-toast-icon svg {
   display: block;
+  margin-left: auto;
 }

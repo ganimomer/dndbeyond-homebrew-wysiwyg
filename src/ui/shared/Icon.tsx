@@ -1,19 +1,33 @@
 /**
- * One of the inlined Material glyphs, as a component.
+ * One of the inlined Material glyphs.
  *
- * The paths are built as real SVG DOM (`makeIcon`) rather than written as JSX,
- * because the renderers that predate Preact need them too — so this is the
- * one-line ref dance that mounts one, in the one place that has to know it.
+ * The `<svg>` itself — no wrapper. It used to be a span with the path appended
+ * by a ref callback, which is what the hand-drawn renderers needed before Preact
+ * owned the tree; now the class lands on the glyph and a changed `name` is one
+ * patched attribute rather than a rebuilt element.
  */
-import { makeIcon, type IconName } from "./icons.js";
+import { DEFAULT_VIEWBOX, ICONS, type IconName } from "./icons.js";
 
-export function Icon({ name, size, class: className }: { name: IconName; size?: number; class?: string }) {
+export function Icon({
+  name,
+  size = 18,
+  class: className,
+}: {
+  name: IconName;
+  size?: number;
+  class?: string;
+}) {
+  const { viewBox = DEFAULT_VIEWBOX, d } = ICONS[name];
   return (
-    <span
+    <svg
       class={className}
-      ref={(node) => {
-        if (node && !node.firstChild) node.append(makeIcon(name, size));
-      }}
-    />
+      viewBox={viewBox}
+      width={size}
+      height={size}
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d={d} />
+    </svg>
   );
 }

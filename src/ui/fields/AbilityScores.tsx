@@ -27,7 +27,7 @@ import {
   proficiencyBonus,
   saveBonus,
 } from "../../statblock/compute.js";
-import { makeIcon } from "../shared/icons.js";
+import { Icon } from "../shared/Icon.js";
 import { blurOnEnter } from "../shared/inline-input.js";
 import { saveCommitter, type SavesAdapter } from "./saving-throws.js";
 
@@ -162,17 +162,8 @@ export function AbilityScores({ monster, ruleset, adapter, onCommit }: AbilitySc
                   aria-pressed={proficient ? "true" : "false"}
                   aria-label={`${ABILITY_ABBREV[ability]} saving throw proficiency`}
                   onClick={() => commit(ability, !proficient)}
-                  ref={(node) => {
-                    // The dot is an SVG built by hand. Replace it whenever
-                    // proficiency changes, and leave it alone otherwise.
-                    if (!node) return;
-                    const want = proficient ? "circle" : "radioButtonUnchecked";
-                    if (node.dataset.dot === want) return;
-                    node.dataset.dot = want;
-                    node.querySelector("svg")?.remove();
-                    node.prepend(makeIcon(want, 13));
-                  }}
                 >
+                  <Icon name={proficient ? "circle" : "radioButtonUnchecked"} size={13} />
                   {/* The number lives in its own span so the icon beside it
                       isn't part of the same text node. */}
                   <span data-save={ability}>{formatModifier(saveFor(ability, scoreOf(ability)))}</span>
