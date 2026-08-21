@@ -37,7 +37,7 @@ function recorder() {
   };
 }
 
-const chip = (root: ShadowRoot) => root.querySelector<HTMLElement>(".legendary-chip");
+const chip = (root: ShadowRoot) => root.querySelector<HTMLElement>('[data-status="legendary"]');
 const removeButton = (root: ShadowRoot) =>
   chip(root)!.querySelector<HTMLElement>(".sb-chip-remove")!;
 const dialog = (root: ShadowRoot) => root.querySelector<HTMLElement>(".sb-dialog");

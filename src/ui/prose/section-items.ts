@@ -109,14 +109,75 @@ export function joinItems(items: readonly string[]): string {
 export function entryName(itemHtml: string): string {
   const template = document.createElement("template");
   template.innerHTML = itemHtml;
+  const bold = leadIn(template);
+  return bold ? nameOf(bold) : "";
+}
+
+/** The entry's bold lead-in element, or null when it doesn't open in bold. */
+function leadIn(template: HTMLTemplateElement): Element | null {
   const first = Array.from(template.content.childNodes).find(
     (node) => node.nodeType !== 3 || (node.textContent ?? "").trim(),
   );
-  if (!first || !leadsWithBold(first)) return "";
+  if (!first || !leadsWithBold(first)) return null;
   // `leadsWithBold` has already proved the chain, so this descent terminates.
   let element = first as Element;
   while (!BOLD_TAGS.has(element.tagName.toLowerCase())) {
     element = firstMeaningfulChild(element) as Element;
   }
-  return (element.textContent ?? "").trim().replace(/\.$/, "").trim();
+  return element;
+}
+
+/** A lead-in element's text as a name: trimmed, without its full stop. */
+function nameOf(bold: Element): string {
+  return (bold.textContent ?? "").trim().replace(/\.$/, "").trim();
+}
+
+/**
+ * An entry with its bold lead-in renamed, and nothing else touched.
+ *
+ * `rewrite` is handed the name `entryName` reads and returns the new one, or
+ * null to leave the entry alone. The edit lands on the *text node* the name
+ * lives in rather than on the element around it: an entry that has been through
+ * Lexical carries `<i><b><strong style="white-space: pre-wrap;">`, and setting
+ * `textContent` anywhere up that chain would flatten it into something that
+ * renders the same and diffs differently.
+ *
+ * Conservative in every direction it can't be sure about — an entry with no
+ * bold lead-in, or a name spread across more than one text node, comes back
+ * exactly as it went in. This module partitions rather than rewrites, and a
+ * rename is the one exception; it had better be a surgical one.
+ */
+export function rewriteEntryName(
+  itemHtml: string,
+  rewrite: (name: string) => string | null,
+): string {
+  const template = document.createElement("template");
+  template.innerHTML = itemHtml;
+  const bold = leadIn(template);
+  if (!bold) return itemHtml;
+
+  const name = nameOf(bold);
+  const next = rewrite(name);
+  if (next === null || next === name) return itemHtml;
+
+  const holder = textNodes(bold).find((node) => node.data.includes(name));
+  if (!holder) return itemHtml;
+  const at = holder.data.indexOf(name);
+  // Splicing rather than reassigning keeps the full stop, and whatever spacing
+  // the author's editor left around it.
+  holder.data = holder.data.slice(0, at) + next + holder.data.slice(at + name.length);
+
+  const out = document.createElement("div");
+  out.append(template.content);
+  return out.innerHTML;
+}
+
+/** Every text node under an element, in document order. */
+function textNodes(root: Element): Text[] {
+  const found: Text[] = [];
+  for (const node of root.childNodes) {
+    if (node.nodeType === 3) found.push(node as Text);
+    else if (node.nodeType === 1) found.push(...textNodes(node as Element));
+  }
+  return found;
 }

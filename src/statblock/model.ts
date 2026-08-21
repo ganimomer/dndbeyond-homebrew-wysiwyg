@@ -186,6 +186,12 @@ export interface Monster {
    * and only kept on save, while this is ticked.
    */
   isLegendary?: boolean;
+  /**
+   * Whether the creature has a lair — D&D Beyond's "Has Lair?" checkbox, and
+   * the same kind of gate as `isLegendary` above: Lair Actions are only read
+   * back, and only kept on save, while this is ticked.
+   */
+  hasLair?: boolean;
 
   /**
    * Ready-to-render HTML for description sections, keyed by section. Populated

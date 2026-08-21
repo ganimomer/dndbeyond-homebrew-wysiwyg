@@ -13,7 +13,7 @@ import type { SectionKey } from "../../statblock/model.js";
 import { unrevealSection } from "../../state/session.js";
 import { useEditing, useMonster, useStore } from "../store-context.js";
 import { Icon } from "../shared/Icon.js";
-import { hasSectionContent, SECTION_LABEL } from "./section-registry.js";
+import { hasSectionContent, isSectionOwned, SECTION_LABEL } from "./section-registry.js";
 
 export function RemoveSection({ section }: { section: SectionKey }) {
   const store = useStore();
@@ -22,10 +22,10 @@ export function RemoveSection({ section }: { section: SectionKey }) {
   const [armed, setArmed] = useState(false);
   const label = SECTION_LABEL[section];
   const hasContent = hasSectionContent(monster, section);
-  // A legendary creature's Legendary Actions section isn't the author's to take
-  // off: the crown chip put it there and the crown chip is what removes it.
-  // Two trashes doing different amounts of the same thing would be a trap.
-  const owned = section === "legendary" && monster.isLegendary;
+  // A section a meta-row chip owns isn't the author's to take off here: the chip
+  // put it there and the chip's ✕ is what removes it. Two trashes doing
+  // different amounts of the same thing would be a trap.
+  const owned = isSectionOwned(monster, section);
 
   // Disarms on Escape or a click anywhere else, the way `ContextMenu` closes.
   // `composedPath()` because this lives in a shadow root, where a listener on

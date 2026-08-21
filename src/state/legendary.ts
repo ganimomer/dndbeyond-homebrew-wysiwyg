@@ -11,11 +11,15 @@
  * legendary creature wants a Legendary Resistance trait, and it wants somewhere
  * to type its legendary actions. Both gestures go through the command stack as
  * a single batch, so the whole change is one thing to undo.
+ *
+ * The trait itself lives in `legendary-resistance.ts`, because the lair amends
+ * it too and neither feature is the other's business.
  */
 import type { Command } from "./command.js";
-import type { Monster, Ruleset } from "../statblock/model.js";
 import type { EditorStore } from "./store.js";
 import * as edit from "./commands.js";
+import { findLegendaryResistance, legendaryResistanceHtml } from "./legendary-resistance.js";
+import type { Monster } from "../statblock/model.js";
 import { entryName, joinItems, splitItems } from "../ui/prose/section-items.js";
 import { htmlHasContent } from "../ui/prose/sections.js";
 import {
@@ -24,61 +28,6 @@ import {
   sectionFocusKey,
   unrevealSection,
 } from "./session.js";
-
-/**
- * What counts as the Legendary Resistance trait.
- *
- * Loose on purpose: authors write the count into the name ("Legendary
- * Resistance (3/Day)", "…(3/Day, or 4/Day in Lair)"), and a creature that has
- * any of those already has the trait. Adding a second one is the failure this
- * guards against.
- */
-const LEGENDARY_RESISTANCE = /^legendary resistance\b/i;
-
-/** The name an added trait is given. Three uses a day is the usual grant. */
-const RESISTANCE_NAME = "Legendary Resistance (3/Day)";
-
-/**
- * The trait's sentence, per ruleset.
- *
- * The two read the same today — the SRD wording didn't change between 2014 and
- * 2024, and the one difference the 2024 books do have ("3/Day, or 4/Day in
- * Lair") belongs to creatures with a lair rather than to the ruleset. The table
- * is here so a divergence has somewhere obvious to go, instead of arriving as a
- * conditional at the call site.
- */
-const RESISTANCE_BODY: Record<Ruleset, (subject: string) => string> = {
-  "5e": (subject) => `If ${subject} fails a saving throw, it can choose to succeed instead.`,
-  "5.5e": (subject) => `If ${subject} fails a saving throw, it can choose to succeed instead.`,
-};
-
-/** Text destined for markup we're assembling by hand rather than parsing. */
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-/**
- * The Legendary Resistance trait, as one entry.
- *
- * `<em><strong>` because that is the shape the section is cut on and the shape
- * Lexical's bold-italic new entry exports — an entry we write has to be
- * indistinguishable from one the author typed.
- */
-export function legendaryResistanceHtml(monster: Monster): string {
-  const subject = monster.name.trim() ? `the ${monster.name.trim()}` : "the creature";
-  const body = RESISTANCE_BODY[monster.ruleset](escapeHtml(subject));
-  return `<p><em><strong>${RESISTANCE_NAME}.</strong></em> ${body}</p>`;
-}
-
-/** Where the creature's Legendary Resistance trait is, if it has one. */
-export function findLegendaryResistance(monster: Monster): { index: number; name: string } | null {
-  const items = splitItems(monster.descriptionHtml?.traits ?? "");
-  for (const [index, item] of items.entries()) {
-    const name = entryName(item);
-    if (LEGENDARY_RESISTANCE.test(name)) return { index, name };
-  }
-  return null;
-}
 
 /** What taking legendary status off would take with it. */
 export function legendaryCasualties(monster: Monster): { resistance: boolean; actions: boolean } {
@@ -109,9 +58,13 @@ export function makeLegendary(store: EditorStore): Promise<void> {
 
   const commands: Command[] = [];
   const existing = findLegendaryResistance(monster);
-  let name = existing?.name ?? RESISTANCE_NAME;
+  let name = existing?.name ?? "";
   if (!existing) {
-    const trait = legendaryResistanceHtml(monster);
+    // A 2024 creature that already has a lair resists more often at home, so
+    // the trait is born saying so — otherwise the result would depend on which
+    // of the two chips the author reached for first.
+    const inLair = monster.ruleset === "5.5e" && !!monster.hasLair;
+    const trait = legendaryResistanceHtml(monster, { inLair });
     name = entryName(trait);
     const items = splitItems(monster.descriptionHtml?.traits ?? "");
     commands.push(edit.setDescription(monster, "traits", joinItems([trait, ...items])));

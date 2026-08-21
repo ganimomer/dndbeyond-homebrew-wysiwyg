@@ -1,18 +1,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import type { PageAdapter } from "../adapter/types.js";
 import { emptyMonster, type Monster, type SectionKey } from "../statblock/model.js";
+import { recordingPage as page, type Write } from "../test-support/recording-page.js";
 import { joinItems, splitItems } from "../ui/prose/section-items.js";
 import {
-  findLegendaryResistance,
   legendaryCasualties,
   legendaryHasContent,
-  legendaryResistanceHtml,
   makeLegendary,
   removeLegendary,
 } from "./legendary.js";
 import { entrySpotlightKey, sectionFocusKey } from "./session.js";
-import { EditorStore } from "./store.js";
+
+const written = (wrote: Write[], key: string) =>
+  wrote.filter(([k]) => k === key).map(([, value]) => value);
 
 /**
  * These are the two gestures — crown on, crown off — and what an author would
@@ -30,32 +30,6 @@ const vampire = (descriptionHtml: Partial<Record<SectionKey, string>> = {}): Mon
   descriptionHtml,
 });
 
-/** A page that records every write and reads back what it was told. */
-function page(monster: Monster) {
-  const wrote: Array<[string, unknown]> = [];
-  let current = monster;
-  const adapter = {
-    read: () => current,
-    observe: () => () => {},
-    onAvatarChosen: () => () => {},
-    save: () => Promise.resolve(),
-    setDescription: (section: SectionKey, html: string) => {
-      wrote.push([section, html]);
-      current = { ...current, descriptionHtml: { ...current.descriptionHtml, [section]: html } };
-    },
-    setLegendary: (on: boolean) => {
-      wrote.push(["isLegendary", on]);
-      current = { ...current, isLegendary: on };
-    },
-  } as unknown as PageAdapter;
-
-  const store = new EditorStore(adapter);
-  store.start();
-  return { store, wrote };
-}
-
-const written = (wrote: Array<[string, unknown]>, key: string) =>
-  wrote.filter(([k]) => k === key).map(([, v]) => v);
 
 test("making a creature legendary gives it a Legendary Resistance trait, at the top", async (t) => {
   const { store, wrote } = page(vampire({ traits: MISTY }));
@@ -149,19 +123,6 @@ test("making a creature legendary is one thing to undo, not three", async (t) =>
   assert.equal(store.commands.canUndo, false);
 });
 
-test("the trait names the creature, in either ruleset", () => {
-  for (const ruleset of ["5e", "5.5e"] as const) {
-    const html = legendaryResistanceHtml({ ...vampire(), ruleset });
-    assert.match(html, /Dread Vampire/);
-    assert.match(html, /can choose to succeed instead/);
-  }
-});
-
-test("a nameless creature is still described, rather than left with a hole", () => {
-  const html = legendaryResistanceHtml({ ...vampire(), name: "" });
-  assert.match(html, /If the creature fails a saving throw/);
-});
-
 test("nothing to lose: an empty Legendary Actions section and no trait", () => {
   for (const legendary of ["", "   ", `<p><br data-mce-bogus="1"></p>`, "<p>\n</p>"]) {
     assert.equal(legendaryHasContent(vampire({ traits: MISTY, legendary })), false, legendary);
@@ -179,12 +140,6 @@ test("something to lose: either the trait or text in the section is enough", () 
     resistance: false,
     actions: true,
   });
-});
-
-test("finding the trait reports where it is, so removing it takes the right one", () => {
-  const found = findLegendaryResistance(vampire({ traits: MISTY + RESIST }));
-  assert.equal(found?.index, 1);
-  assert.equal(findLegendaryResistance(vampire({ traits: MISTY })), null);
 });
 
 test("removing legendary takes the trait, the section and the tick, in one step", async (t) => {
@@ -210,4 +165,28 @@ test("removing legendary from a creature with nothing in it writes only the tick
   await removeLegendary(store);
 
   assert.deepEqual(wrote, [["isLegendary", false]]);
+});
+
+test("a 2024 creature that already has a lair gets a trait that says so", async (t) => {
+  // Otherwise the trait would depend on which chip the author reached for
+  // first, and only one of the two orders would come out right.
+  const { store, wrote } = page({ ...vampire({ traits: MISTY }), ruleset: "5.5e", hasLair: true });
+  t.after(() => store.stop());
+
+  await makeLegendary(store);
+
+  const [traits] = written(wrote, "traits") as string[];
+  assert.match(traits!, /Legendary Resistance \(3\/Day, or 4\/Day in Lair\)/);
+});
+
+test("but a 2014 creature with a lair keeps the plain count", async (t) => {
+  // The in-lair grant is a 2024 rule; the 2014 books don't write it.
+  const { store, wrote } = page({ ...vampire({ traits: MISTY }), ruleset: "5e", hasLair: true });
+  t.after(() => store.stop());
+
+  await makeLegendary(store);
+
+  const [traits] = written(wrote, "traits") as string[];
+  assert.match(traits!, /Legendary Resistance \(3\/Day\)/);
+  assert.doesNotMatch(traits!, /in Lair/);
 });

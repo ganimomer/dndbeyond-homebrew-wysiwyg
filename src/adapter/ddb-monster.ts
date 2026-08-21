@@ -300,6 +300,21 @@ function setCheckbox(id: string, on: boolean): void {
   input.dispatchEvent(new Event("change", { bubbles: true }));
 }
 /**
+ * Greys a gated description in or out, the way D&D Beyond's own form does.
+ *
+ * Cosmetic, and only for anyone who closes the overlay: DDB greys the editor
+ * behind an unticked checkbox, and a greyed editor full of text would read as a
+ * bug rather than as our doing. `part` is the middle of the class name, which
+ * follows DDB's *label* rather than the section ("legendary-actions", but plain
+ * "lair").
+ */
+function setDescriptionEnabled(part: string, on: boolean): void {
+  document
+    .querySelector(`.ddb-homebrew-create-form-fields-item-${part}`)
+    ?.classList.toggle("disabled", !on);
+}
+
+/**
  * The rules an avatar input advertises about what it will take: DDB writes them
  * onto the input itself as `image/png|image/gif|…` and `0..167772160`, and its
  * server enforces them, so this reads them rather than restating them.
@@ -538,6 +553,7 @@ export class DdbMonsterAdapter implements PageAdapter {
     m.gear = val(SELECTORS.gear);
 
     m.isLegendary = checked(SELECTORS.isLegendary);
+    m.hasLair = checked(SELECTORS.hasLair);
     m.descriptionHtml = readDescriptions();
     // Structured arrays stay empty; the renderers use descriptionHtml.
     return m;
@@ -602,12 +618,14 @@ export class DdbMonsterAdapter implements PageAdapter {
 
   setLegendary(on: boolean): void {
     setCheckbox(SELECTORS.isLegendary, on);
-    // Cosmetic, and only for anyone who closes the overlay: DDB greys its own
-    // Legendary Actions editor out while the box is unticked, and a greyed
-    // editor full of text would read as a bug rather than as our doing.
-    document
-      .querySelector(".ddb-homebrew-create-form-fields-item-legendary-actions-description")
-      ?.classList.toggle("disabled", !on);
+    setDescriptionEnabled("legendary-actions-description", on);
+  }
+
+  setHasLair(on: boolean): void {
+    setCheckbox(SELECTORS.hasLair, on);
+    // Not "lair-actions-description": DDB's label calls this "Lair and Lair
+    // Actions Description" and its class follows the label, not the section.
+    setDescriptionEnabled("lair-description", on);
   }
 
   /**

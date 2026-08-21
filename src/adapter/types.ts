@@ -91,6 +91,16 @@ export interface PageAdapter {
   setLegendary(on: boolean): void;
 
   /**
+   * Ticks or unticks D&D Beyond's "Has Lair?" checkbox.
+   *
+   * The same gate as `setLegendary`, over the Lair Actions textarea. DDB spells
+   * this field `has-lair` rather than `is-lair`, and names its description
+   * wrapper `lair-description` rather than `lair-actions-description` — the
+   * adapter absorbs both inconsistencies so nothing above it has to know.
+   */
+  setHasLair(on: boolean): void;
+
+  /**
    * Every skill the page offers, with `selected` marking the ones the creature
    * already has. Unlike the other option lists this one isn't read off a
    * `<select>` — see the adapter.

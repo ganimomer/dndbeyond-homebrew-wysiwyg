@@ -27,7 +27,7 @@ import avatarToastCss from "./AvatarToast.css";
 import nameRowCss from "./NameRow.css";
 import abilityScoresCss from "./fields/AbilityScores.css";
 import metaLineCss from "./fields/MetaLine.css";
-import legendaryChipCss from "./fields/LegendaryChip.css";
+import statusChipCss from "./fields/StatusChip.css";
 import chipCss from "./shared/Chip.css";
 import skillsRowCss from "./fields/SkillsRow.css";
 import speedRowCss from "./fields/SpeedRow.css";
@@ -72,7 +72,7 @@ const STYLES = [
   abilityScoresCss,
   metaLineCss,
   chipCss,
-  legendaryChipCss,
+  statusChipCss,
   skillsRowCss,
   speedRowCss,
   hitPointsCss,

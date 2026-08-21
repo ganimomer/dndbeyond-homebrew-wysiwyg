@@ -12,6 +12,7 @@
  */
 import type { Monster, NamedEntry, SectionKey } from "../../statblock/model.js";
 import type { SessionState } from "../../state/session.js";
+import { isSectionOwned } from "./section-registry.js";
 import { htmlHasContent, sectionBody } from "./sections.js";
 
 export interface SectionState {
@@ -49,10 +50,10 @@ export function sectionState(
   // to write in.
   const revealed = session.revealedSections.has(section);
   const body = editable ? null : sectionBody(monster, section, entries, intro);
-  // The crown keeps Legendary Actions on the block — see `isSectionVisible` —
-  // and keeps it writable, which is the point: a creature that has just been
-  // made legendary has nothing written yet and needs somewhere to start.
-  const legendary = section === "legendary" && !!monster.isLegendary;
-  const writable = editable || revealed || legendary;
+  // A chip in the meta row keeps its section on the block — see
+  // `isSectionOwned` — and keeps it writable, which is the point: a creature
+  // that has just been made legendary has nothing written yet and needs
+  // somewhere to start.
+  const writable = editable || revealed || isSectionOwned(monster, section);
   return { visible: writable || !!body, editable, revealed, writable, html: html ?? "", body };
 }

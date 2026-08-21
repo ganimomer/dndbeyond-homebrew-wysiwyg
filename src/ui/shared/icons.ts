@@ -24,7 +24,8 @@ export type IconName =
   | "formatItalic"
   | "dragIndicator"
   | "cellMerge"
-  | "crown";
+  | "crown"
+  | "castle";
 
 export interface IconSpec {
   /** Only when it isn't the legacy set's 24×24 grid. */
@@ -45,6 +46,13 @@ export const ICONS: Record<IconName, IconSpec> = {
   // one <path>; nonzero fill takes them both.
   crown: {
     d: "M4 19h16v2H4zM2 7l5.5 3.5L12 4l4.5 6.5L22 7l-2 10H4L2 7z",
+  },
+  // castle — a creature with a lair, beside the crown. Two crenellated towers
+  // and a taller keep, drawn as one closed outline: the gate is a notch cut out
+  // of the bottom edge rather than a second subpath, so it needs no winding
+  // rule to punch through.
+  castle: {
+    d: "M2 21V7h2v2h2V7h2v6h1V3h2v2h2V3h2v10h1V7h2v2h2V7h2v14H14v-5h-4v5H2Z",
   },
   close: {
     d: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z",

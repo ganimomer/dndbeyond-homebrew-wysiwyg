@@ -87,12 +87,13 @@ export const SECTION_ITEM_LABEL: Record<SectionKey, string> = {
  * read the textarea back while it's unticked, so adding one from here would
  * write prose nothing would ever load again.
  *
- * Legendary Actions is not *unreachable* for that reason, though — it arrives
- * with the crown, from the name row's menu, which ticks the box on the way
- * through (see `state/legendary.ts`). It stays off this menu because a section
- * is not what the author is choosing there: they are deciding what kind of
- * creature this is. Mythic and lair still want the box ticked in DDB's own
- * form, after which they show up on their own merit.
+ * Two of the three are not *unreachable* for that reason, though. Legendary
+ * Actions arrives with the crown and Lair Actions with the castle, from the
+ * name row's menu, which ticks the box on the way through (see
+ * `state/legendary.ts` and `state/lair.ts`). They stay off this menu because a
+ * section is not what the author is choosing there: they are deciding what kind
+ * of creature this is. Mythic still wants its box ticked in DDB's own form,
+ * after which it shows up on its own merit.
  */
 export const ADDABLE_SECTIONS: readonly SectionKey[] = [
   "traits",
@@ -101,6 +102,25 @@ export const ADDABLE_SECTIONS: readonly SectionKey[] = [
   "reactions",
   "characteristics",
 ];
+
+/**
+ * The sections a chip in the meta row owns, and the flag that owns each.
+ *
+ * D&D Beyond gates these behind a checkbox, and the editor turns the checkbox
+ * into a chip. An owned section is on the block for exactly as long as its chip
+ * is: it needs neither content nor a reveal to show, it is writable from the
+ * moment it appears, and it has no trash of its own, because the chip's ✕ is
+ * how it goes. Mythic joins this table the day it gets a chip.
+ */
+const SECTION_OWNER: Partial<Record<SectionKey, (monster: Monster) => boolean>> = {
+  legendary: (monster) => !!monster.isLegendary,
+  lair: (monster) => !!monster.hasLair,
+};
+
+/** True when a chip in the meta row is holding this section open. */
+export function isSectionOwned(monster: Monster, key: SectionKey): boolean {
+  return SECTION_OWNER[key]?.(monster) ?? false;
+}
 
 /** True when D&D Beyond holds prose for the section. */
 export function hasSectionContent(monster: Monster, key: SectionKey): boolean {
@@ -113,10 +133,7 @@ export function isSectionVisible(
   key: SectionKey,
   revealed: ReadonlySet<SectionKey> = new Set(),
 ): boolean {
-  // A legendary creature always has somewhere to write its legendary actions,
-  // even before it has written any: the crown is the thing that put the section
-  // there, so the section outlives a session that emptied it.
-  if (key === "legendary" && monster.isLegendary) return true;
+  if (isSectionOwned(monster, key)) return true;
   return hasSectionContent(monster, key) || revealed.has(key);
 }
 

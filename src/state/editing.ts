@@ -62,6 +62,8 @@ export class EditingAdapter {
 
   setLegendary = (on: boolean) => this.run(edit.setLegendary(this.current(), on));
 
+  setHasLair = (on: boolean) => this.run(edit.setHasLair(this.current(), on));
+
   setAbility = (ability: Ability, score: number) =>
     this.run(edit.setAbility(this.current(), ability, score));
 

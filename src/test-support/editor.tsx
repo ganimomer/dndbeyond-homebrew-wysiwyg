@@ -44,6 +44,7 @@ export function stubAdapter(monster: Monster, overrides: Partial<PageAdapter> = 
     setHitPoints: () => {},
     setDescription: () => {},
     setLegendary: () => {},
+    setHasLair: () => {},
     setSavingThrows: () => {},
     setDamageAdjustments: () => {},
     setConditionImmunities: () => {},

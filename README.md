@@ -62,11 +62,11 @@ but never rides above the line the sections start on — offers whichever are
 missing and drops the caret straight into the new one. Every section heading
 carries a **trash** that takes it off again: one click while it's still empty,
 and a confirm once there is prose to lose, since removing it clears D&D Beyond's
-field. Mythic and lair actions aren't on offer — DDB keeps each behind a
-checkbox on the form and won't read the textarea back while it's unticked, so
-tick the box there and the section appears on its own merit. In the 2014 layout,
-where Traits prints with no heading at all, its trash rides the top right of the
-body on hover instead.
+field. Mythic actions aren't on offer — DDB keeps them behind a checkbox on the
+form and won't read the textarea back while it's unticked, so tick the box there
+and the section appears on its own merit. In the 2014 layout, where Traits prints
+with no heading at all, its trash rides the top right of the body on hover
+instead.
 
 Inside a section, an author edits **one entry at a time**. Traits and actions
 aren't prose — they're lists, and D&D Beyond stores each list as a single run of
@@ -91,13 +91,14 @@ switches ruleset — **Use 5e / Use 5.5e stat block**, which writes back to the
 form's Stat Block Type field. Closing is its own button beside it: leaving is
 the one action that shouldn't take two clicks to find.
 
-## Legendary
+## Legendary, and lairs
 
-Legendary Actions are the one section D&D Beyond gates: it keeps the status in
-an **"Is Legendary?" checkbox**, and while that box is unticked it won't read
-the textarea back and won't keep what's in it on save. So the checkbox isn't a
-flag beside the section — it is what makes the section exist, and a stat block
-with no way to tick it has no way to write legendary actions at all.
+Legendary and Lair Actions are the sections D&D Beyond gates: it keeps each
+status in a checkbox — **"Is Legendary?"** and **"Has Lair?"** — and while a box
+is unticked it won't read that textarea back and won't keep what's in it on
+save. So a checkbox isn't a flag beside its section — it is what makes the
+section exist, and a stat block with no way to tick one has no way to write
+those actions at all.
 
 The kebab's **Make legendary** ticks it, and the creature wears a **crown chip**
 at the right of its meta row from then on. Two things come with the crown,
@@ -108,13 +109,25 @@ with an empty entry and the caret in it. Either way, added or already there, the
 resistance trait lights up for a moment: the count is the author's to agree
 with.
 
-The chip's ✕ takes it all back off. With nothing to lose it goes on one click;
-with a resistance trait or any legendary actions written, it **asks first** and
-names what would go, because that reaches into two sections the author isn't
-looking at. While the creature is legendary its Legendary Actions section has no
-trash of its own — the crown put it there, and the crown is what removes it.
+**Add lair** is the same gesture one checkbox over, and wears a **castle chip**
+beside the crown. It opens Lair Actions the same way — and, on a **2024**
+creature that has a Legendary Resistance trait, it grows the trait's
+parenthetical: `(3/Day)` becomes `(3/Day, or 4/Day in Lair)`, because a creature
+resists more often at home and that is the detail an author forgets. The in-lair
+figure is **one more than whatever count the author actually wrote**, not a flat
+four, so a 5/Day creature doesn't end up weaker on its own ground; a
+parenthetical with no count to scale is left alone. Either way the trait lights
+up, and the two gestures commute — making a creature legendary while it already
+has a lair writes the clause in from the start.
 
-Mythic and lair actions still want their boxes ticked in DDB's own form.
+Either chip's ✕ takes its own back off. With nothing to lose it goes on one
+click; with a resistance trait, in-lair uses, or any actions written, it **asks
+first** and names what would go, because that reaches into sections the author
+isn't looking at. A section a chip owns has no trash of its own — the chip put
+it there, and the chip is what removes it.
+
+Mythic actions still want their box ticked in DDB's own form, and the **Lair XP**
+field beside the lair checkbox isn't read at all.
 
 ## Architecture
 
@@ -141,6 +154,8 @@ src/
 │   ├── commands.ts         one constructor per edit
 │   ├── editing.ts          PageAdapter's shape, dispatched as commands
 │   ├── legendary.ts        what the crown means: the tick, the trait, the section
+│   ├── lair.ts             what the castle means, including the in-lair uses
+│   ├── legendary-resistance.ts  the trait itself: finding, writing, its parenthetical
 │   └── avatar-uploads.ts   the avatars: file picker, save-at-once, outcome
 ├── ui/                   the injected editor, in Preact
 │   ├── App.tsx             overlay chrome; the only store subscriber
@@ -150,10 +165,12 @@ src/
 │   ├── AddSectionButton.tsx  the sticky "Add section" beside the block
 │   ├── StatBlock5e.tsx     the 2014 layout      (+ .css)
 │   ├── StatBlock55e.tsx    the 2024 layout      (+ .css)
-│   ├── NameRow.tsx         name, the kebab (ruleset, make legendary), close
+│   ├── NameRow.tsx         name, the kebab (ruleset, legendary, lair), close
 │   ├── fields/             one component per field, each with its own styles
 │   │   ├── registry.ts       which rows are optional, and what the "Add…" menu offers
-│   │   ├── LegendaryChip.tsx the crown, and the confirm that takes it off
+│   │   ├── StatusChip.tsx    a checkbox as a chip, and the confirm that takes it off
+│   │   ├── LegendaryChip.tsx the crown, and what goes with it
+│   │   ├── LairChip.tsx      the castle, and what goes with it
 │   │   └── Field.tsx         picks a row's control by which field it is
 │   ├── prose/              the description sections, an entry at a time
 │   │   ├── section-registry.ts  the sections' names, and which can be added

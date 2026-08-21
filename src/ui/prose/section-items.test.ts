@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { entryName, joinItems, splitItems } from "./section-items.js";
+import { entryName, joinItems, rewriteEntryName, splitItems } from "./section-items.js";
 
 /**
  * The split's contract is that it *partitions* — it never rewrites. Every test
@@ -140,4 +140,44 @@ test("only the first block names the entry", () => {
   // The continuation below it is part of the same entry and says nothing about
   // what the entry is called.
   assert.equal(entryName(DDB_BOLD + CONTINUATION), "Misty Escape");
+});
+
+// --- renaming an entry ------------------------------------------------------
+
+/** The shape an entry comes back in once Lexical has exported it once. */
+const EXPORTED = `<p><i><b><strong style="white-space: pre-wrap;">Legendary Resistance (3/Day).</strong></b></i> It succeeds instead.</p>`;
+
+const shout = (name: string) => name.toUpperCase();
+
+test("renaming an entry changes the name and nothing else", () => {
+  assert.equal(
+    entryName(rewriteEntryName(DDB_BOLD, shout)),
+    "MISTY ESCAPE",
+  );
+  assert.match(rewriteEntryName(DDB_BOLD, shout), /It becomes mist\.<\/p>$/);
+});
+
+test("the markup around the name survives the rename untouched", () => {
+  // An entry that has been through Lexical carries `<i><b><strong style=…>`.
+  // Setting `textContent` anywhere up that chain would flatten it into
+  // something that renders the same and diffs differently.
+  const renamed = rewriteEntryName(EXPORTED, (name) => name.replace("(3/Day)", "(4/Day)"));
+  assert.match(renamed, /<i><b><strong style="white-space: pre-wrap;">Legendary Resistance \(4\/Day\)\.<\/strong><\/b><\/i>/);
+});
+
+test("a renamed entry is still one entry", () => {
+  // It has to keep leading with bold, or the section would fold it into
+  // whatever sits above it on the next split.
+  const renamed = rewriteEntryName(DDB_BOLD, shout);
+  assert.deepEqual(splitItems(renamed + DDB_BOLD), [renamed, DDB_BOLD]);
+  assert.equal(joinItems(splitItems(renamed)), renamed);
+});
+
+test("a rewrite that declines leaves the entry exactly as it came in", () => {
+  assert.equal(rewriteEntryName(DDB_BOLD, () => null), DDB_BOLD);
+});
+
+test("an entry with no bold lead-in has no name to rewrite", () => {
+  const intro = `<p class="legendary-actions">Legendary Action Uses: 3 (4 in Lair).</p>`;
+  assert.equal(rewriteEntryName(intro, shout), intro);
 });

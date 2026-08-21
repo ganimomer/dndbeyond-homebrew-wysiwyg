@@ -81,6 +81,7 @@ export function sampleVampire55e(): Monster {
       },
     ],
     reactions: [],
+    hasLair: true,
     isLegendary: true,
     legendaryActionsIntro:
       "Legendary Action Uses: 3 (4 in Lair). Immediately after another creature's turn, the vampire can expend a use to take one of the following actions. The vampire regains all expended uses at the start of each of its turns.",

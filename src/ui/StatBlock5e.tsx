@@ -22,6 +22,7 @@ import { Field } from "./fields/Field.js";
 import { HitPointsField } from "./fields/HitPointsField.js";
 import { MetaLine } from "./fields/MetaLine.js";
 import { LegendaryChip } from "./fields/LegendaryChip.js";
+import { LairChip } from "./fields/LairChip.js";
 import { NameRow } from "./NameRow.js";
 import { SpeedRow } from "./fields/SpeedRow.js";
 import { useCommitAbility } from "./fields/use-commit-ability.js";
@@ -102,7 +103,7 @@ export function StatBlock5e({ monster, onClose }: { monster: Monster; onClose?: 
       <section class="basics">
         <NameRow monster={monster} onClose={onClose} />
 
-        {visibleMeta(monster, revealed).size || monster.isLegendary ? (
+        {visibleMeta(monster, revealed).size || monster.isLegendary || monster.hasLair ? (
           <div class="meta">
             {/* The sentence is wrapped because it isn't one element: `MetaLine`
                 returns a run of slots and the literal separators between them,
@@ -116,7 +117,12 @@ export function StatBlock5e({ monster, onClose }: { monster: Monster; onClose?: 
                 pendingFocus={session.pendingFocus}
               />
             </span>
-            <LegendaryChip monster={monster} />
+            {/* One group, so the two chips travel together to the far end
+                rather than one of them landing in the middle of the row. */}
+            <span class="status-chips">
+              <LegendaryChip monster={monster} />
+              <LairChip monster={monster} />
+            </span>
           </div>
         ) : null}
 

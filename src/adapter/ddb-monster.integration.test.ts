@@ -97,6 +97,28 @@ test("reads D&D Beyond's own form into the model", () => {
   ]);
   assert.match(monster!.descriptionHtml!.traits!, /Legendary Resistance/);
   assert.equal(monster!.isLegendary, true);
+  assert.equal(monster!.hasLair, true);
+});
+
+test("the castle is D&D Beyond's other checkbox, and reads back the same way", (t) => {
+  // This creature's lair textarea is empty, so the flag is the whole story
+  // here — but it is the flag that decides whether anything typed into that
+  // textarea would ever be read back or kept.
+  const { adapter } = loadPage();
+  const fake = document.querySelector('[data-fc-real-item-id="field-has-lair"]')!;
+
+  adapter.setHasLair(false);
+
+  assert.equal((document.getElementById("field-has-lair") as HTMLInputElement).checked, false);
+  assert.equal(fake.classList.contains("fc-selected"), false, "and DDB's own widget agrees");
+  assert.equal(adapter.read()!.hasLair, false);
+
+  adapter.setHasLair(true);
+
+  assert.equal((document.getElementById("field-has-lair") as HTMLInputElement).checked, true);
+  assert.equal(fake.classList.contains("fc-selected"), true);
+  assert.equal(adapter.read()!.hasLair, true);
+  t.diagnostic("has-lair round-trips through the fake widget as well as the input");
 });
 
 test("the crown is D&D Beyond's checkbox, and taking it off closes the section", (t) => {

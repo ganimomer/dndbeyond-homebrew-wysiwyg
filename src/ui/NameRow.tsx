@@ -8,6 +8,7 @@
  */
 import type { MenuItem } from "./shared/ContextMenu.js";
 import type { Monster } from "../statblock/model.js";
+import { addLair } from "../state/lair.js";
 import { makeLegendary } from "../state/legendary.js";
 import { useEditing, useStore } from "./store-context.js";
 import { ContextMenu } from "./shared/ContextMenu.js";
@@ -37,6 +38,9 @@ export function NameRow({ monster, onClose }: { monster: Monster; onClose?: () =
       icon: "crown",
       onClick: () => void makeLegendary(store),
     });
+  }
+  if (!monster.hasLair) {
+    items.push({ label: "Add lair", icon: "castle", onClick: () => void addLair(store) });
   }
 
   return (

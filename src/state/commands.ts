@@ -88,6 +88,14 @@ export const setLegendary = (monster: Monster, on: boolean): Command =>
     write: (adapter, value) => adapter.setLegendary(value),
   });
 
+export const setHasLair = (monster: Monster, on: boolean): Command =>
+  field({
+    label: on ? "Lair" : "No lair",
+    from: !!monster.hasLair,
+    to: on,
+    write: (adapter, value) => adapter.setHasLair(value),
+  });
+
 export const setAbility = (monster: Monster, ability: Ability, score: number): Command =>
   field({
     label: `${ABILITY_ABBREV[ability]} ${score}`,
