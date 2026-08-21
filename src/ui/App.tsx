@@ -42,6 +42,7 @@ import proseCss from "./prose/ProseSection.css";
 import proseItemCss from "./prose/ProseItem.css";
 import sectionListCss from "./prose/SectionList.css";
 import itemGapCss from "./prose/ItemGap.css";
+import dragHandleCss from "./prose/DragHandle.css";
 import formatToolbarCss from "./prose/FormatToolbar.css";
 import removeSectionCss from "./prose/RemoveSection.css";
 import removeItemCss from "./prose/RemoveItem.css";
@@ -83,6 +84,7 @@ const STYLES = [
   proseItemCss,
   sectionListCss,
   itemGapCss,
+  dragHandleCss,
   formatToolbarCss,
   removeSectionCss,
   removeItemCss,

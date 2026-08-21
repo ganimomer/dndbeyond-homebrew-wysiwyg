@@ -118,8 +118,13 @@ export function ProseItem({
         if (editor.current?.isEmpty()) emptyBlur.current?.();
       }}
     >
-      <FormatToolbar format={format} onToggle={(f) => editor.current?.toggleFormat(f)} />
       <div class="content sb-prose" data-placeholder={placeholder} ref={host} />
+      {/* After the editor, not before it: the bar reports on the caret, so what
+          reveals it is the *editor* having focus — and an adjacent-sibling rule
+          is the only way to say that without `:has()`, which the Firefox this
+          builds for hasn't got. Since the drag handle became a focusable thing
+          inside the entry, `:focus-within` means something else now. */}
+      <FormatToolbar format={format} onToggle={(f) => editor.current?.toggleFormat(f)} />
       {children}
     </div>
   );

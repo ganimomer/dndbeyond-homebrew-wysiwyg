@@ -228,6 +228,150 @@ test("a lone entry has no trash — that would be removing the section", (t) => 
   assert.ok(root.querySelector('[aria-label="Remove Traits"]'), "the section still has one");
 });
 
+/**
+ * jsdom has no layout, so the drag is handed one: every entry 20 tall, stacked
+ * in order, each section's list wrapped around its own.
+ */
+function layOut(root: ShadowRoot) {
+  const rect = (top: number, bottom: number) =>
+    ({ top, bottom, height: bottom - top, left: 0, right: 100, width: 100, x: 0, y: top,
+       toJSON: () => ({}) }) as DOMRect;
+  let y = 0;
+  for (const list of root.querySelectorAll<HTMLElement>(".sb-section-list")) {
+    const top = y;
+    for (const item of [...list.children].filter((c) => c.classList.contains("sb-item"))) {
+      const box = rect(y, y + 20);
+      item.getBoundingClientRect = () => box;
+      y += 20;
+    }
+    const box = rect(top, y);
+    list.getBoundingClientRect = () => box;
+    y += 10;
+  }
+}
+
+const handleOf = (entry: HTMLElement) => entry.querySelector<HTMLElement>(".sb-drag-handle")!;
+
+/** A press, a move and a release, as the browser delivers them. */
+function dragTo(handle: HTMLElement, y: number) {
+  handle.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 0, clientY: 0 }));
+  window.dispatchEvent(new PointerEvent("pointermove", { clientX: 0, clientY: y }));
+  window.dispatchEvent(new PointerEvent("pointerup", { clientX: 0, clientY: y }));
+}
+
+test("an entry dragged past its neighbour changes places with it", (t) => {
+  const monster = creature(MISTY + CLIMB);
+  const { wrote, adapter } = recorder(monster);
+  const { root } = renderBlock(t, monster, { adapter });
+  layOut(root);
+
+  // Entry 0 is 0–20 and entry 1 is 20–40, so 35 is past the second's middle.
+  dragTo(handleOf(entries(root)[0]!), 35);
+
+  assert.deepEqual(wrote, [["traits", CLIMB + MISTY]]);
+});
+
+test("an entry dropped where it already was leaves the section alone", (t) => {
+  // The smallest twitch of the mouse must not rewrite a creature.
+  const monster = creature(MISTY + CLIMB);
+  const { wrote, adapter } = recorder(monster);
+  const { root } = renderBlock(t, monster, { adapter });
+  layOut(root);
+
+  dragTo(handleOf(entries(root)[0]!), 8);
+
+  assert.deepEqual(wrote, []);
+});
+
+test("a press that never travels is not a drag", (t) => {
+  const monster = creature(MISTY + CLIMB);
+  const { wrote, adapter } = recorder(monster);
+  const { root } = renderBlock(t, monster, { adapter });
+  layOut(root);
+
+  const handle = handleOf(entries(root)[0]!);
+  handle.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 0, clientY: 0 }));
+  window.dispatchEvent(new PointerEvent("pointermove", { clientX: 1, clientY: 1 }));
+  window.dispatchEvent(new PointerEvent("pointerup", { clientX: 1, clientY: 1 }));
+
+  assert.deepEqual(wrote, [], "a click on the handle is just a click");
+});
+
+test("Escape puts the entry back", (t) => {
+  const monster = creature(MISTY + CLIMB);
+  const { wrote, adapter } = recorder(monster);
+  const { root } = renderBlock(t, monster, { adapter });
+  layOut(root);
+
+  const handle = handleOf(entries(root)[0]!);
+  handle.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 0, clientY: 0 }));
+  window.dispatchEvent(new PointerEvent("pointermove", { clientX: 0, clientY: 35 }));
+  window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  window.dispatchEvent(new PointerEvent("pointerup", { clientX: 0, clientY: 35 }));
+
+  assert.deepEqual(wrote, []);
+});
+
+test("the arrow keys move an entry, and the keyboard goes with it", (t) => {
+  const monster = creature(MISTY + CLIMB);
+  const { wrote, adapter } = recorder(monster);
+  const { root } = renderBlock(t, monster, { adapter });
+
+  fireEvent.keyDown(handleOf(entries(root)[0]!), { key: "ArrowDown" });
+
+  assert.deepEqual(wrote, [["traits", CLIMB + MISTY]]);
+  // The entry moved, so the handle under the author's finger has to move too —
+  // otherwise a second press moves a different entry.
+  assert.ok(
+    root.activeElement === handleOf(entries(root)[1]!),
+    "focus followed the entry to its new place",
+  );
+});
+
+test("an entry at the end of a section stays there", (t) => {
+  const monster = creature(MISTY + CLIMB);
+  const { wrote, adapter } = recorder(monster);
+  const { root } = renderBlock(t, monster, { adapter });
+
+  fireEvent.keyDown(handleOf(entries(root)[1]!), { key: "ArrowDown" });
+
+  assert.deepEqual(wrote, []);
+});
+
+test("Alt and an arrow move an entry to the next section, writing both", (t) => {
+  // Which is how an action becomes a bonus action.
+  const monster = creature(MISTY + CLIMB);
+  const { wrote, adapter } = recorder(monster);
+  const { root } = renderBlock(t, monster, { adapter, revealedSections: ["bonusActions"] });
+
+  fireEvent.keyDown(handleOf(entries(root)[1]!), { key: "ArrowDown", altKey: true });
+
+  assert.deepEqual(wrote, [
+    ["traits", MISTY],
+    ["bonusActions", CLIMB],
+  ]);
+  const bonus = [...root.querySelectorAll('[data-section="bonusActions"] .sb-item')];
+  assert.equal(bonus.length, 1, "and it took the place of the empty entry it found there");
+});
+
+test("a section emptied by dragging its last entry away stays on the block", (t) => {
+  // Vanishing mid-gesture would take the heading the author was aiming at with
+  // it — the same reason a revealed section isn't dropped the moment it reads
+  // empty.
+  const monster = creature(MISTY);
+  const { wrote, adapter } = recorder(monster);
+  const { root } = renderBlock(t, monster, { adapter, revealedSections: ["bonusActions"] });
+
+  fireEvent.keyDown(handleOf(entries(root)[0]!), { key: "ArrowDown", altKey: true });
+
+  assert.deepEqual(wrote, [
+    ["traits", ""],
+    ["bonusActions", MISTY],
+  ]);
+  assert.equal(entries(root).length, 1, "with an empty entry to type into");
+  assert.equal(box(entries(root)[0]!).textContent, "");
+});
+
 test("each section names its own entries", (t) => {
   const { root } = renderBlock(t, creature(), {
     revealedSections: ["bonusActions", "legendary"],

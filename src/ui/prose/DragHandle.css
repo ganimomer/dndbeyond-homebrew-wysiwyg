@@ -1,0 +1,56 @@
+/* The handle, in the stat block's own 15px padding gutter: outside the entry's
+ * box, so it costs the creature's text no room and nothing moves when it
+ * appears. Quiet until the entry is pointed at, like the entry's trash. */
+.sb-drag-handle {
+  all: unset;
+  position: absolute;
+  left: -15px;
+  top: 0;
+  width: 14px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  color: inherit;
+  cursor: grab;
+  /* The drag is a pointer gesture; without this a touch would scroll instead. */
+  touch-action: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.sb-item:hover > .sb-drag-handle,
+.sb-item:focus-within > .sb-drag-handle {
+  opacity: 0.5;
+}
+/* Same specificity as the pair above and written after them, so pointing at
+ * the handle itself brings it to full strength rather than tying. */
+.sb-item > .sb-drag-handle:hover,
+.sb-item > .sb-drag-handle:focus-visible {
+  opacity: 1;
+}
+.sb-drag-handle:focus-visible {
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}
+
+.sb-drag-handle svg {
+  display: block;
+}
+
+/* The entry in hand: still in place, still readable, plainly not where it will
+ * end up. The line in the gap says where that is (see ItemGap.css). */
+.sb-item.is-dragging {
+  opacity: 0.4;
+}
+
+/* While a drag is live, the whole document is in the gesture: no text gets
+ * selected by dragging across it, and the cursor says what is happening
+ * wherever it goes. */
+.sb-doc.is-item-dragging {
+  user-select: none;
+  cursor: grabbing;
+}
+.sb-doc.is-item-dragging .sb-drag-handle {
+  cursor: grabbing;
+}

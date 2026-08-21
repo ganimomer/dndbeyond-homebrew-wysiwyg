@@ -10,6 +10,7 @@
 import { useLayoutEffect, useRef } from "preact/hooks";
 import type { Monster } from "../statblock/model.js";
 import { Artwork } from "./Artwork.js";
+import { ItemDragProvider } from "./prose/drag-context.js";
 import { SectionBody } from "./prose/SectionBody.js";
 import { sectionState } from "./prose/section-state.js";
 import { RemoveSection } from "./prose/RemoveSection.js";
@@ -89,19 +90,24 @@ export function StatBlock({ monster, onClose }: { monster: Monster; onClose?: ()
   }, []);
 
   return (
-    <div class="sb-doc">
-      {/* Stat block and the aside side by side; the aside wraps below the block
-          on narrow viewports (see .sb-layout). */}
-      <div class="sb-layout" ref={layout}>
-        <Layout monster={monster} onClose={onClose} />
-        {/* `--accent` is declared on the layouts themselves, and this column is
-            outside them — so it carries the creature's own. */}
-        <div class="sb-aside" ref={aside} style={`--accent:${ACCENT[monster.ruleset]}`}>
-          <Artwork monster={monster} onLoad={measure} />
-          <AddSectionButton monster={monster} />
+    // The provider wraps the whole document rather than either layout: an entry
+    // dragged out of Actions has to arrive somewhere, and the sections only
+    // meet here.
+    <ItemDragProvider>
+      <div class="sb-doc">
+        {/* Stat block and the aside side by side; the aside wraps below the block
+            on narrow viewports (see .sb-layout). */}
+        <div class="sb-layout" ref={layout}>
+          <Layout monster={monster} onClose={onClose} />
+          {/* `--accent` is declared on the layouts themselves, and this column is
+              outside them — so it carries the creature's own. */}
+          <div class="sb-aside" ref={aside} style={`--accent:${ACCENT[monster.ruleset]}`}>
+            <Artwork monster={monster} onLoad={measure} />
+            <AddSectionButton monster={monster} />
+          </div>
         </div>
+        <Description monster={monster} />
       </div>
-      <Description monster={monster} />
-    </div>
+    </ItemDragProvider>
   );
 }

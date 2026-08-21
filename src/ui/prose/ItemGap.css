@@ -69,3 +69,18 @@
 .sb-merge:focus-visible {
   box-shadow: 0 0 0 1px var(--accent, #5b160c);
 }
+
+/* Where the entry in hand would land. A rule across the gap rather than a
+ * highlight on an entry, because what is being chosen is a place between two
+ * entries, not one of them. */
+.sb-item-gap.is-drop-target::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 1px;
+  background: var(--accent, #5b160c);
+}

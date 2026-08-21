@@ -3,6 +3,11 @@
  * the content they belong to" idiom as the artwork's menu, since a stat block
  * has no chrome to put a permanent toolbar in.
  *
+ * Revealed by the editor's own focus rather than the entry's (see ProseItem),
+ * because an entry now holds a drag handle too and grabbing that is not a caret.
+ * The buttons refuse the mousedown, so clicking one leaves the editor focused
+ * and the bar up.
+ *
  * Hung from the *right*, which is the one place above an entry that is reliably
  * empty: what sits there is the last line of the entry before, and last lines
  * rarely reach the margin. Left-aligned it covered the previous trait mid-
@@ -24,7 +29,7 @@
   pointer-events: none;
   transition: opacity 0.12s ease;
 }
-.sb-item:focus-within > .sb-format-bar {
+.sb-prose:focus + .sb-format-bar {
   opacity: 1;
   pointer-events: auto;
 }

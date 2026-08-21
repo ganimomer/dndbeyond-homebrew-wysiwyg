@@ -15,11 +15,15 @@
  */
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { SectionKey } from "../../statblock/model.js";
-import { useEditing } from "../store-context.js";
+import { revealSection } from "../../state/session.js";
+import { useEditing, useStore } from "../store-context.js";
 import { Icon } from "../shared/Icon.js";
+import { DragHandle } from "./DragHandle.js";
+import { useItemDrag } from "./drag-context.js";
 import { ItemGap } from "./ItemGap.js";
 import { ProseItem } from "./ProseItem.js";
 import { RemoveItem } from "./RemoveItem.js";
+import { moveWithin } from "./item-drag.js";
 import { joinItems, splitItems } from "./section-items.js";
 import { SECTION_ITEM_LABEL } from "./section-registry.js";
 import { htmlHasContent } from "./sections.js";
@@ -58,6 +62,8 @@ export function SectionList({
   autoFocus?: boolean;
 }) {
   const editing = useEditing();
+  const store = useStore();
+  const drag = useItemDrag();
   const listRef = useRef<HTMLDivElement>(null);
   const counter = useRef(0);
   const nextId = () => (counter.current += 1);
@@ -160,6 +166,66 @@ export function SectionList({
     write(live.current.filter((row) => row.id !== id));
   };
 
+  /** Puts the keyboard back where the author left it: on the entry that moved. */
+  const focusHandle = (id: number) =>
+    listRef.current?.querySelector<HTMLElement>(`[data-drag-handle="${id}"]`)?.focus();
+
+  /**
+   * What the drag is allowed to do to this section. Registered rather than
+   * passed down because the other end of a drag is *another* section's list,
+   * and the two only meet in the controller.
+   *
+   * Every operation reads `live` rather than `rows`, so the handle registered on
+   * the first render is still telling the truth on the hundredth.
+   */
+  useLayoutEffect(() => {
+    const element = listRef.current;
+    if (!element) return;
+    return drag.register({
+      section,
+      element,
+      count: () => live.current.length,
+      indexOf: (id) => live.current.findIndex((row) => row.id === id),
+      take: (id) => {
+        const row = live.current.find((r) => r.id === id);
+        if (!row) return "";
+        const rest = live.current.filter((r) => r.id !== id);
+        // A section emptied by dragging its last entry away would stop being
+        // printed mid-gesture, taking its heading with it. Held open instead,
+        // the way a section added from the menu is, with somewhere to type.
+        if (rest.length === 0) {
+          store.update({ revealedSections: revealSection(store.getSession(), section) });
+          write([{ id: nextId(), html: "" }]);
+        } else {
+          write(rest);
+        }
+        return row.html;
+      },
+      insert: (html, index, focus) => {
+        const row = { id: nextId(), html };
+        const next = [...live.current];
+        // An entry that arrives is the only thing in a section that was being
+        // held open empty; it takes that row's place rather than sitting under
+        // it.
+        if (next.length === 1 && !next[0]!.html) next.length = 0;
+        next.splice(Math.min(index, next.length), 0, row);
+        write(next);
+        if (focus) focusHandle(row.id);
+      },
+      move: (id, index) => {
+        const from = live.current.findIndex((row) => row.id === id);
+        const next = moveWithin(live.current, from, index);
+        // Dropped back where it was: nothing to write, and nothing to save.
+        if (next.every((row, i) => row === live.current[i])) return;
+        write(next);
+      },
+      focusHandle,
+    });
+    // `section` never changes for a mounted list, and everything else is read
+    // through refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drag, section]);
+
   return (
     <div class="sb-section-list" data-section={section} ref={listRef}>
       {rows.flatMap((row, index) => {
@@ -171,6 +237,8 @@ export function SectionList({
           // nothing, so it offers nothing — it is there to be dropped into.
           <ItemGap
             key={`gap-${index}`}
+            section={section}
+            index={index}
             label={itemLabel}
             onMerge={index > 0 ? () => mergeRows(index) : undefined}
           />,
@@ -193,6 +261,7 @@ export function SectionList({
             onSplit={(remaining, moved) => splitRow(row.id, remaining, moved)}
             onEmptyBlur={() => removeRow(row.id)}
           >
+            <DragHandle section={section} id={row.id} label={itemLabel} />
             {rows.length > 1 ? (
               <RemoveItem
                 label={itemLabel}
@@ -205,7 +274,7 @@ export function SectionList({
       })}
       {/* The band under the last entry, which is what separates the section
           from the button that adds another. */}
-      <ItemGap key={`gap-${rows.length}`} label={itemLabel} />
+      <ItemGap key={`gap-${rows.length}`} section={section} index={rows.length} label={itemLabel} />
       <button type="button" class="sb-add sb-add-item" onClick={addRow}>
         <Icon name="add" size={16} />
         {`Add ${itemLabel}`}
