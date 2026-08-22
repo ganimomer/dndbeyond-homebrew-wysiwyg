@@ -155,6 +155,28 @@ export class RefNode extends TextNode {
   exportJSON(): SerializedRefNode {
     return { ...super.exportJSON(), type: "ddb-ref", ref: this.__ref, slug: this.__slug };
   }
+
+  /**
+   * A character typed against either edge starts a new run of plain text
+   * instead of joining the reference.
+   *
+   * Being a `TextNode` subclass, a reference would otherwise absorb it, and
+   * `[condition]Grappled[/condition] until` would come back out of the codec as
+   * `[condition]Grappled until[/condition]` — a macro pointing at a condition
+   * that doesn't exist. Nothing on screen says where the token ends, so the
+   * author has no way to see it happen.
+   *
+   * Deliberately not `token` mode, which would seal the text too: an author has
+   * to be able to make a spell read "fireballs", or a glossary term
+   * "shape-shifts". Only the edges are sealed.
+   */
+  canInsertTextBefore(): boolean {
+    return false;
+  }
+
+  canInsertTextAfter(): boolean {
+    return false;
+  }
 }
 
 function convertRollSpan(node: HTMLElement): DOMConversionOutput {
