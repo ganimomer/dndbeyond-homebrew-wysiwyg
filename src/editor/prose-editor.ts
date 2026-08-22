@@ -22,29 +22,51 @@
  */
 import {
   createEditor,
+  $createRangeSelection,
   $createParagraphNode,
+  $getNodeByKey,
   $getRoot,
   $getSelection,
+  $isElementNode,
   $isParagraphNode,
   $isRangeSelection,
+  $isTextNode,
   $setSelection,
+  COMMAND_PRIORITY_CRITICAL,
   COMMAND_PRIORITY_HIGH,
   COMMAND_PRIORITY_LOW,
   FORMAT_TEXT_COMMAND,
+  KEY_ARROW_DOWN_COMMAND,
+  KEY_ARROW_UP_COMMAND,
   KEY_ENTER_COMMAND,
+  KEY_ESCAPE_COMMAND,
+  KEY_TAB_COMMAND,
   SELECTION_CHANGE_COMMAND,
   type EditorState,
   type ElementNode,
+  type LexicalCommand,
   type LexicalEditor,
+  type NodeKey,
+  type TextNode,
 } from "lexical";
 import { $generateNodesFromDOM, $generateHtmlFromNodes } from "@lexical/html";
 import { registerRichText } from "@lexical/rich-text";
 import { registerHistory, createEmptyHistoryState } from "@lexical/history";
 import { mergeRegister } from "@lexical/utils";
-import { DDB_NODES } from "./nodes.js";
+import { DDB_NODES, RefNode, RollNode } from "./nodes.js";
+import { slashCommandLength, slashQuery } from "./slash-trigger.js";
 
 /** How long to coalesce keystrokes before writing back to the form. */
 const COMMIT_DEBOUNCE_MS = 400;
+
+/** The keys an open menu is offered, and the name it hears them by. */
+const MENU_KEYS = [
+  [KEY_ARROW_DOWN_COMMAND, "down"],
+  [KEY_ARROW_UP_COMMAND, "up"],
+  [KEY_ENTER_COMMAND, "enter"],
+  [KEY_ESCAPE_COMMAND, "escape"],
+  [KEY_TAB_COMMAND, "tab"],
+] as const;
 
 /** The formats the toolbar offers, and reports on. */
 export type TextFormat = "bold" | "italic";
@@ -53,6 +75,43 @@ export type TextFormat = "bold" | "italic";
 export type FormatState = Readonly<Record<TextFormat, boolean>>;
 
 export const NO_FORMAT: FormatState = { bold: false, italic: false };
+
+/** The caret is in a slash command; what is on screen, and where to hang it. */
+export interface TriggerState {
+  /** What has been typed since the slash. `""` means the slash alone. */
+  query: string;
+  /** Viewport rect of the slash itself, so the menu doesn't chase the caret. */
+  rect: DOMRect;
+}
+
+/**
+ * Where a reference will go once the author has chosen one.
+ *
+ * Both halves, because taking the command out of the prose can destroy the text
+ * node it lived in — a `/con` that was the whole line leaves an empty node
+ * Lexical collects. The block and the child index survive that; the text node
+ * and offset are better when they do survive, because they place the caret
+ * inside a run of words rather than between two of them.
+ */
+export interface InsertionPoint {
+  key: NodeKey;
+  offset: number;
+  blockKey: NodeKey;
+  index: number;
+}
+
+/** What to write into the prose. */
+export interface ReferenceInsertion {
+  /** The macro DDB stores, e.g. `condition`. */
+  macro: string;
+  /** The words that appear on the page. */
+  name: string;
+  /** DDB's link target, where the name doesn't already say it. */
+  slug?: string;
+}
+
+/** The keys a menu takes off the editor while it is open. */
+export type MenuKey = "up" | "down" | "enter" | "escape" | "tab";
 
 export interface ProseEditorOptions {
   /** Distinguishes this editor in Lexical's namespace and in error logs. */
@@ -63,6 +122,16 @@ export interface ProseEditorOptions {
   onCommit: (editorHtml: string) => void;
   /** Called whenever the caret moves into or out of bold/italic text. */
   onFormat?: (format: FormatState) => void;
+  /**
+   * Called when the caret enters, leaves or narrows a slash command. Null means
+   * there is no command under the caret any more.
+   */
+  onTrigger?: (trigger: TriggerState | null) => void;
+  /**
+   * Offered the arrow/Enter/Escape/Tab keys while `setMenuOpen(true)`. Return
+   * true to take the key; the editor then does nothing else with it.
+   */
+  onMenuKey?: (key: MenuKey) => boolean;
   /**
    * The author ended this item with a blank line: what is left of it, and what
    * belongs to the item that should open below it. Leave it off and Enter is
@@ -79,6 +148,10 @@ export class ProseEditor {
   private loading = false;
   /** Last format reported, so an unchanged one isn't reported again. */
   private format: FormatState = NO_FORMAT;
+  /** Last slash command reported, by the same reasoning. */
+  private trigger = "";
+  /** Whether a menu is up and should get first refusal on the arrow keys. */
+  private menuOpen = false;
 
   constructor(private readonly opts: ProseEditorOptions) {
     this.editor = createEditor({
@@ -102,6 +175,7 @@ export class ProseEditor {
       this.editor.registerUpdateListener(({ editorState, dirtyElements, dirtyLeaves }) => {
         this.markEmptiness(editorState);
         this.reportFormat(editorState);
+        this.reportTrigger(editorState);
         if (this.loading) return;
         if (dirtyElements.size === 0 && dirtyLeaves.size === 0) return;
         this.scheduleCommit();
@@ -112,9 +186,22 @@ export class ProseEditor {
         SELECTION_CHANGE_COMMAND,
         () => {
           this.reportFormat();
+          this.reportTrigger();
           return false;
         },
         COMMAND_PRIORITY_LOW,
+      ),
+      // Above everything, including the blank-line split below: while a menu is
+      // up, Enter means "take the highlighted row", and a split that won this
+      // race would end the trait every time an author picked with the keyboard.
+      ...MENU_KEYS.map(([command, key]) =>
+        // Cast because Lexical types Tab's payload as a non-null KeyboardEvent
+        // and Escape's as nullable; the handler wants neither in particular.
+        this.editor.registerCommand(
+          command as LexicalCommand<KeyboardEvent | null>,
+          (event) => this.onMenuKey(key, event),
+          COMMAND_PRIORITY_CRITICAL,
+        ),
       ),
       // Above rich text's own handler (which registers at editor priority), so
       // that returning true takes the Enter instead of it inserting a third
@@ -172,6 +259,79 @@ export class ProseEditor {
     this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, format);
   }
 
+  /** This item's content, as the marker-span HTML the adapter speaks. */
+  html(): string {
+    let html = "";
+    this.editor.read(() => {
+      html = $generateHtmlFromNodes(this.editor, null);
+    });
+    return html;
+  }
+
+  /**
+   * Says whether a menu is up. While it is, the arrows, Enter, Escape and Tab
+   * are the menu's before they are the editor's — see `MENU_KEYS`.
+   */
+  setMenuOpen(open: boolean): void {
+    this.menuOpen = open;
+  }
+
+  /**
+   * Takes the `/query` back out of the prose and says where it was.
+   *
+   * Called the moment the author picks a *type*, which is well before there is
+   * anything to insert: the entity list still has to be shown, and its filter
+   * box takes the caret away to do it. So this hands back a value that outlives
+   * the selection.
+   */
+  takeSlashCommand(): InsertionPoint | null {
+    let point: InsertionPoint | null = null;
+    this.editor.update(
+      () => {
+        const found = this.findSlashCommand();
+        if (!found) return;
+        const { node, start, length } = found;
+        const block = node.getTopLevelElement();
+        if (!block) return;
+        point = {
+          key: node.getKey(),
+          offset: start,
+          blockKey: block.getKey(),
+          index: node.getIndexWithinParent(),
+        };
+        node.spliceText(start, length, "", true);
+      },
+      { discrete: true },
+    );
+    return point;
+  }
+
+  /**
+   * Puts a reference where the command was, and leaves the caret after it.
+   *
+   * The point may have gone stale in the meantime — an empty text node is
+   * collected, and an external re-render could have reloaded the item — so it
+   * degrades rather than throws: the block, then the end of the item.
+   */
+  insertReference(point: InsertionPoint | null, reference: ReferenceInsertion): void {
+    this.editor.update(
+      () => {
+        this.restore(point);
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection)) return;
+        const node = new RefNode(reference.name, reference.macro, reference.slug);
+        selection.insertNodes([node]);
+        // Its edges are sealed (see `nodes.ts`), so the caret sitting at the end
+        // of it is already a caret that starts fresh text. Said out loud anyway,
+        // because `insertNodes` leaves it wherever the last node ended and that
+        // is not a promise.
+        node.selectEnd();
+      },
+      { discrete: true },
+    );
+    this.editor.focus();
+  }
+
   /** True when there is nothing in the item — drives the empty-row reaper. */
   isEmpty(): boolean {
     return this.readEmptiness(this.editor.getEditorState());
@@ -196,11 +356,7 @@ export class ProseEditor {
    * so external re-renders don't reset the editor or wipe its undo history.
    */
   setContent(html: string): void {
-    let current = "";
-    this.editor.read(() => {
-      current = $generateHtmlFromNodes(this.editor, null);
-    });
-    if (current === html) return;
+    if (this.html() === html) return;
     this.load(html);
   }
 
@@ -302,6 +458,102 @@ export class ProseEditor {
   }
 
   /**
+   * The slash command under the caret, as the node holding it and the span it
+   * occupies. Runs inside a read or an update; the caller supplies which.
+   */
+  private findSlashCommand(): { node: TextNode; start: number; length: number } | null {
+    const selection = $getSelection();
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return null;
+    const node = selection.anchor.getNode();
+    // A slash typed *into* a reference or a roll is part of that token's text,
+    // not a command — the author is editing the words, not asking for a menu.
+    if (!$isTextNode(node) || node instanceof RefNode || node instanceof RollNode) return null;
+    const offset = selection.anchor.offset;
+    const query = slashQuery(node.getTextContent().slice(0, offset));
+    if (query === null) return null;
+    const length = slashCommandLength(query);
+    return { node, start: offset - length, length };
+  }
+
+  /**
+   * Tells the owner whether the caret is in a slash command. Only on a change,
+   * for the reason `reportFormat` gives — this fires on every keystroke.
+   *
+   * The rect is measured off the slash rather than the caret, so the menu stays
+   * put while the author narrows it instead of creeping right a character at a
+   * time.
+   */
+  private reportTrigger(state: EditorState = this.editor.getEditorState()): void {
+    const report = this.opts.onTrigger;
+    if (!report) return;
+    const found = state.read(() => {
+      const command = this.findSlashCommand();
+      if (!command) return null;
+      const text = command.node.getTextContent();
+      return {
+        key: command.node.getKey(),
+        start: command.start,
+        query: text.slice(command.start + 1, command.start + command.length),
+      };
+    });
+    // Keyed by where it is as well as what it says, so a command retyped
+    // somewhere else re-anchors the menu instead of leaving it behind.
+    const signature = found ? `${found.key}:${found.start}:${found.query}` : "";
+    if (signature === this.trigger) return;
+    this.trigger = signature;
+    report(found && { query: found.query, rect: this.rectAt(found.key, found.start) });
+  }
+
+  /**
+   * The viewport rect of one character, for something to hang off.
+   *
+   * A `Range` over the DOM text node rather than `document.getSelection()`:
+   * this editor lives in a shadow root, where the document's selection is not
+   * reliably the one in here, and the range needs no selection to exist at all.
+   */
+  private rectAt(key: NodeKey, offset: number): DOMRect {
+    const element = this.editor.getElementByKey(key);
+    const text = element?.firstChild;
+    if (!element) return new DOMRect();
+    if (!text || text.nodeType !== Node.TEXT_NODE) return element.getBoundingClientRect();
+    const range = document.createRange();
+    const at = Math.min(offset, text.nodeValue?.length ?? 0);
+    range.setStart(text, at);
+    range.setEnd(text, at);
+    return range.getBoundingClientRect();
+  }
+
+  /** Offers an open menu one of the keys it asked for. */
+  private onMenuKey(key: MenuKey, event: KeyboardEvent | null): boolean {
+    if (!this.menuOpen) return false;
+    if (!this.opts.onMenuKey?.(key)) return false;
+    event?.preventDefault();
+    return true;
+  }
+
+  /** Puts the caret back where `takeSlashCommand` left off, or as near as. */
+  private restore(point: InsertionPoint | null): void {
+    if (!point) {
+      $getRoot().selectEnd();
+      return;
+    }
+    const node = $getNodeByKey(point.key);
+    if ($isTextNode(node)) {
+      const at = Math.min(point.offset, node.getTextContentSize());
+      const selection = $createRangeSelection();
+      selection.anchor.set(node.getKey(), at, "text");
+      selection.focus.set(node.getKey(), at, "text");
+      $setSelection(selection);
+      return;
+    }
+    // The text node was emptied and collected — a command that was the whole
+    // line. The block it was in is still there, and the index still says where.
+    const block = $getNodeByKey(point.blockKey);
+    if ($isElementNode(block)) block.select(point.index, point.index);
+    else $getRoot().selectEnd();
+  }
+
+  /**
    * Tells the toolbar what the caret is sitting in. Only on a change, because
    * this fires on every keystroke and every caret move, and a toolbar that
    * re-rendered that often would be the most expensive thing on the block.
@@ -344,11 +596,7 @@ export class ProseEditor {
   private scheduleCommit(): void {
     window.clearTimeout(this.commitTimer);
     this.commitTimer = window.setTimeout(() => {
-      let html = "";
-      this.editor.read(() => {
-        html = $generateHtmlFromNodes(this.editor, null);
-      });
-      this.opts.onCommit(html);
+      this.opts.onCommit(this.html());
     }, COMMIT_DEBOUNCE_MS);
   }
 }
