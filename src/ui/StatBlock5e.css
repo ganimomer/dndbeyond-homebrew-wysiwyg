@@ -129,3 +129,12 @@
   text-decoration-color: rgba(130, 32, 0, 0.4);
   text-underline-offset: 2px;
 }
+
+/* Pointing at a reference offers its definition, so say so — and firm the
+ * underline up, since the token is about to do something. Kept to CSS on
+ * purpose: the tooltip controller must never touch this element, or Lexical's
+ * reconciler will fight it for the attributes. */
+.statblock.v5e .ref:hover {
+  cursor: help;
+  text-decoration-color: rgba(130, 32, 0, 0.9);
+}

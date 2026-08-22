@@ -221,3 +221,45 @@ export interface PageAdapter {
    */
   observe(onChange: () => void): () => void;
 }
+
+/**
+ * A `.ref` token exactly as the rendered DOM carries it — the macro type, the
+ * link target when the macro named one, and the words the author actually
+ * wrote. `RefNode.createDOM` and `sanitize-html.ts` are the two places these
+ * attributes are put on an element; both render the same three.
+ */
+export interface RefToken {
+  /** `data-ref` — DDB's macro name: "condition", "spells", "rules"… */
+  ref: string;
+  /** `data-slug` — present only when the macro carried a link target. */
+  slug?: string;
+  /** The displayed text, which is the lookup key when there is no slug. */
+  text: string;
+}
+
+/** What D&D Beyond says a reference means. */
+export interface ReferenceTooltip {
+  /** DDB's own tooltip HTML, ready to drop into the popup body. */
+  html: string;
+  /** DDB's `Type` field: "condition", "spell"… or "blocked" behind a paywall. */
+  type: string;
+  /** The canonical page for the reference, when the response names one. */
+  url?: string;
+}
+
+/**
+ * Where a reference token's definition comes from.
+ *
+ * Deliberately its own interface rather than methods on `PageAdapter`: a
+ * definition needs no monster and no form — it is knowledge about the D&D
+ * Beyond *site*, not about the document being edited — and every content type
+ * we ever adapt wants the identical lookup.
+ */
+export interface ReferenceSource {
+  /**
+   * The token's definition, or null when there isn't one to be had. Never
+   * rejects: a tooltip is an ornament, and a rejected promise inside a hover
+   * handler is a bug report waiting to happen.
+   */
+  lookup(token: RefToken): Promise<ReferenceTooltip | null>;
+}

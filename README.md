@@ -19,7 +19,9 @@ with a thin per-browser layer for each extension format.
 > form, an **entry at a time**: a blank line ends a trait and starts the next,
 > the gap between two offers to merge them, and a drag handle moves one within
 > its section or into another. **Autosave** persists all of it without a page
-> reload. This pulls
+> reload. Every reference in the prose — a condition, a spell, a glossary term
+> — **hovers to D&D Beyond's own definition**, borrowed from their tooltip
+> endpoint and styled by their own stylesheet. This pulls
 > Lexical + Preact into the content script (~400 KB minified); release builds
 > are minified.
 >
@@ -91,6 +93,57 @@ switches ruleset — **Use 5e / Use 5.5e stat block**, which writes back to the
 form's Stat Block Type field. Closing is its own button beside it: leaving is
 the one action that shouldn't take two clicks to find.
 
+## Hover a reference
+
+A stat block is full of references — a condition, a spell, a glossary term —
+and on D&D Beyond's own pages each one is a link you can hover to read the
+definition without leaving the block. In the preview they now are too, and the
+definitions are **D&D Beyond's own**: we don't keep a compendium, we borrow
+theirs.
+
+Not their tooltip *widget*, though. That's CurseTip, a page-world global that
+binds a listener per element, so anything of ours in a shadow root would be
+invisible to it without a main-world bridge. What we reuse is the two things
+underneath it. The **content** comes from `GET /<path>/<id>/tooltip`, the
+endpoint their widget reads, which answers a parenthesised JSON literal left
+over from being consumed as JSONP. The **look** comes from putting the popup in
+the *light* DOM, appended to `document.body` rather than into our shadow root —
+which is where DDB's stylesheet already is, so their markup arrives styled, down
+to the header art and the colour of the type badge. There is no tooltip design
+in this repo.
+
+The awkward part is that a stored macro carries a *name* and the endpoint wants
+a numeric *id*. So `src/adapter/ddb-references.ts` resolves in three tiers,
+cheapest first: a **table shipped with the extension** for the closed
+compendiums — conditions, senses, skills, actions, weapon properties, and the
+127-entry rules glossary, harvested by `npm run harvest:references` and
+committed so a fresh clone works offline; then the **canonical slug URL**, which
+301s to the numbered one (`/spells/detect-magic` → `/spells/2065-detect-magic`),
+read off the redirect with the body cancelled so the page is never downloaded.
+A miss at either tier just means no tooltip. Answers are remembered for the
+session, repeat hovers of the same token share one request, and a *failed*
+request is deliberately not cached — an offline blip that poisoned the cache
+would leave tooltips dead until the panel was reopened.
+
+**You see the books you own.** There's no token and no CSRF header on that
+endpoint, but entitlement rides on the session cookie, and we fetch same-origin
+from a dndbeyond.com page — so a sourcebook you haven't bought shows DDB's own
+paywall tooltip, exactly as it would on their site.
+
+Two rules hold the feature away from the editor it sits on top of. The popup
+lives outside the shadow root, so Lexical's mutation observer — which reverts
+DOM it didn't author — never sees it. And **nothing touches the token**:
+`RefNode.updateDOM` re-asserts a `.ref` element's class and data attributes on
+every reconcile, so the hover affordance is pure CSS and the controller never
+mutates the editable, moves focus, or dispatches into it. Hovering with the
+caret in a trait leaves the caret exactly where it was.
+
+Known edges: a spell resolved from its name lands on the 2014 entry, which DDB's
+own tooltip labels *Legacy*, so a 2024 creature can show 2014 text; the tokens
+aren't focusable, so there's no keyboard route to a definition; the popup takes
+no pointer events, so you can't select its text or follow the links inside it —
+a trade DDB's own tooltips make too. Dice tokens don't hover yet.
+
 ## Legendary, and lairs
 
 Legendary and Lair Actions are the sections D&D Beyond gates: it keeps each
@@ -141,6 +194,9 @@ src/
 │   ├── ddb-monster.ts      reads/writes form#monster-form, saves it via fetch
 │   ├── ddb-listings.ts     skills/movements/senses — DDB's separate records
 │   ├── ddb-markup.ts       bidirectional DDB-macro ⇄ editor-span codec
+│   ├── ddb-reference-map.ts  macro type → compendium path, and name → slug
+│   ├── ddb-reference-ids.ts  the harvested closed-set ids (generated)
+│   ├── ddb-references.ts   what DDB says a reference means, in three tiers
 │   └── __fixtures__/       a real captured edit page, for the end-to-end test
 ├── statblock/            the domain model — no DOM, no D&D Beyond
 │   ├── model.ts            Monster (`ruleset` discriminator, per-section HTML)
@@ -188,6 +244,9 @@ src/
     ├── autosave.ts         debounced, single-flight save controller + retry
     ├── save-indicator.ts   paints save state into the components' slots
     ├── prose-editor.ts     one entry's Lexical editor (mount, edit, split, commit)
+    ├── ref-tooltips.ts     hovering a reference, and the popup in DDB's light DOM
+    ├── tooltip-placement.ts  where the popup goes, as arithmetic
+    ├── tooltip-html.ts     DDB's tooltip markup, made safe to inject
     └── nodes.ts            RollNode / RefNode — DDB roll & reference tokens
 
 targets/                 the thin per-browser layer — just manifests
@@ -223,6 +282,8 @@ npm run build:firefox  # Firefox only
 npm run build:chrome   # Chrome only
 npm run dev:firefox    # rebuild on change
 npm run typecheck
+
+npm run harvest:references   # re-reads DDB's closed-compendium ids (network)
 ```
 
 ## Load the extension

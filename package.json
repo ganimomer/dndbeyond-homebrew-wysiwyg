@@ -12,7 +12,8 @@
     "dev:chrome": "node build.mjs --browser chrome --watch",
     "typecheck": "tsc --noEmit",
     "test": "node scripts/test.mjs",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "harvest:references": "node scripts/harvest-references.mjs"
   },
   "dependencies": {
     "@lexical/history": "^0.49.0",

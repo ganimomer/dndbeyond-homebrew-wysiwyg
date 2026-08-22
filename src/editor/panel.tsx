@@ -9,8 +9,10 @@
  */
 import { render } from "preact";
 import "../ui/sync-rendering.js";
+import { DdbReferenceSource } from "../adapter/ddb-references.js";
 import type { PageAdapter } from "../adapter/types.js";
 import { App } from "../ui/App.js";
+import { RefTooltips } from "./ref-tooltips.js";
 
 const HOST_ID = "microbrewery-panel-host";
 
@@ -22,6 +24,12 @@ export interface EditorPanelOptions {
 export class EditorPanel {
   private readonly host: HTMLDivElement;
   private readonly root: ShadowRoot;
+  /**
+   * Hover definitions. It belongs here rather than in the tree because its
+   * popup goes in the *light* DOM — outside the shadow root, where D&D
+   * Beyond's own tooltip styles are — so it can't be a component.
+   */
+  private readonly tooltips: RefTooltips;
 
   constructor(
     private readonly adapter: PageAdapter,
@@ -30,6 +38,10 @@ export class EditorPanel {
     this.host = document.createElement("div");
     this.host.id = HOST_ID;
     this.root = this.host.attachShadow({ mode: "open" });
+    this.tooltips = new RefTooltips({
+      scope: this.root,
+      source: new DdbReferenceSource(),
+    });
   }
 
   /** Puts the overlay on the page. */
@@ -39,6 +51,7 @@ export class EditorPanel {
     // Freeze the page underneath so only the overlay scrolls.
     document.documentElement.style.overflow = "hidden";
     render(<App adapter={this.adapter} onClose={this.close} />, this.root);
+    this.tooltips.start();
   }
 
   /** Takes it off again. */
@@ -46,6 +59,8 @@ export class EditorPanel {
     // Preact runs the tree's cleanups synchronously as it unmounts, which is
     // what stops the controller observing the form and flushes a save still
     // sitting inside its debounce.
+    // Before the tree goes, so the popup and its listeners leave with it.
+    this.tooltips.stop();
     render(null, this.root);
     document.documentElement.style.overflow = "";
     this.host.remove();
