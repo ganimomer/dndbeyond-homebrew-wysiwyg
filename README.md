@@ -113,17 +113,46 @@ to the header art and the colour of the type badge. There is no tooltip design
 in this repo.
 
 The awkward part is that a stored macro carries a *name* and the endpoint wants
-a numeric *id*. So `src/adapter/ddb-references.ts` resolves in three tiers,
-cheapest first: a **table shipped with the extension** for the closed
-compendiums — conditions, senses, skills, actions, weapon properties, and the
-127-entry rules glossary, harvested by `npm run harvest:references` and
-committed so a fresh clone works offline; then the **canonical slug URL**, which
-301s to the numbered one (`/spells/detect-magic` → `/spells/2065-detect-magic`),
-read off the redirect with the body cancelled so the page is never downloaded.
-A miss at either tier just means no tooltip. Answers are remembered for the
-session, repeat hovers of the same token share one request, and a *failed*
-request is deliberately not cached — an offline blip that poisoned the cache
-would leave tooltips dead until the panel was reopened.
+a numeric *id*. So `src/adapter/ddb-references.ts` resolves in tiers, cheapest
+first: a **table shipped with the extension** for the closed compendiums —
+conditions, senses, skills, actions, weapon properties, and the 127-entry rules
+glossary, harvested by `npm run harvest:references` and committed so a fresh
+clone works offline; then **ids this browser has learned before**, kept in
+`storage.local`; and only then the **canonical slug URL**, which 301s to the
+numbered one (`/spells/detect-magic` → `/spells/2065-detect-magic`), read off
+the redirect with the body cancelled so the page is never downloaded. A miss at
+every tier just means no tooltip.
+
+That last tier is the expensive one — about **a second**, nearly all of it
+spent waiting on D&D Beyond to render a page we throw away — which is why so
+much of the design is about not paying it. Three things keep it off the hover.
+
+**The block warms itself.** `src/editor/ref-preload.ts` scans the rendered stat
+block at idle and resolves every reference in it before anyone points at one,
+at a priority that yields to a real hover. So the second or two after the panel
+opens does the waiting, and by the time an author reaches a spell the answer is
+already in hand. A `MutationObserver` — `childList` only, and read-only, so
+Lexical never sees it — catches references that appear later.
+
+**Asking and showing are separate clocks.** The popup still appears 250 ms after
+the pointer settles, cached or not, because a tooltip that pops instantly when
+warm and slowly when cold reads as a glitch. But the *request* starts at 60 ms,
+so the wait and the network overlap instead of adding up. A pointer sweeping a
+spell list still asks about nothing.
+
+**Ids are remembered between sessions; definitions are not.** An id is public —
+it is literally in a URL — and it never changes, so `reference-id-store.ts`
+keeps it on disk and the slug lookup never repeats for a reference you have seen
+before. A tooltip body stays in memory only: it is entitlement-shaped (see
+below), it is not small, and D&D Beyond errata their text. Note that their
+endpoint answers `no-cache` once the session cookie is attached, so there is no
+HTTP cache doing any of this for us — the one source shared across panel
+open/close is what makes reopening the overlay free.
+
+Repeat hovers of the same reference share one request, and a *failed* request is
+deliberately not remembered — an offline blip that poisoned the cache would
+leave tooltips dead until the panel was reopened. Requests run four at a time
+with one slot always held back, so a hover never queues behind the preloading.
 
 **You see the books you own.** There's no token and no CSRF header on that
 endpoint, but entitlement rides on the session cookie, and we fetch same-origin
@@ -196,7 +225,10 @@ src/
 │   ├── ddb-markup.ts       bidirectional DDB-macro ⇄ editor-span codec
 │   ├── ddb-reference-map.ts  macro type → compendium path, and name → slug
 │   ├── ddb-reference-ids.ts  the harvested closed-set ids (generated)
-│   ├── ddb-references.ts   what DDB says a reference means, in three tiers
+│   ├── ddb-references.ts   what DDB says a reference means, in four tiers
+│   ├── reference-id-store.ts  ids learned from a redirect, kept on disk
+│   ├── reference-source.ts   the page's one source, shared across panel opens
+│   ├── task-queue.ts       two tiers of concurrency, one slot kept for hovers
 │   └── __fixtures__/       a real captured edit page, for the end-to-end test
 ├── statblock/            the domain model — no DOM, no D&D Beyond
 │   ├── model.ts            Monster (`ruleset` discriminator, per-section HTML)
@@ -245,6 +277,8 @@ src/
     ├── save-indicator.ts   paints save state into the components' slots
     ├── prose-editor.ts     one entry's Lexical editor (mount, edit, split, commit)
     ├── ref-tooltips.ts     hovering a reference, and the popup in DDB's light DOM
+    ├── ref-preload.ts      warming the block's definitions before anyone hovers
+    ├── ref-token.ts        reading a .ref element back into a token
     ├── tooltip-placement.ts  where the popup goes, as arithmetic
     ├── tooltip-html.ts     DDB's tooltip markup, made safe to inject
     └── nodes.ts            RollNode / RefNode — DDB roll & reference tokens

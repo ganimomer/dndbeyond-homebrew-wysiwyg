@@ -21,12 +21,32 @@
  * the same tree — and needs no `composedPath`, since retargeting is relative to
  * the listener's own root.
  */
-import type { ReferenceSource, RefToken } from "../adapter/types.js";
+import type { ReferenceSource } from "../adapter/types.js";
+import { readToken, refUnder } from "./ref-token.js";
 import { tooltipFragment } from "./tooltip-html.js";
 import { tooltipPlacement } from "./tooltip-placement.js";
 
-/** Long enough that a pointer crossing a paragraph asks DDB nothing. */
+/**
+ * How long the pointer must rest on a token before the popup appears. This is
+ * a promise about what the author sees, so it holds whether the answer was
+ * already in hand or had to be fetched — a hover that pops instantly when warm
+ * and slowly when cold reads as a glitch, and a pointer crossing a spell list
+ * would strobe a row of them.
+ */
 const OPEN_DELAY_MS = 250;
+/**
+ * How long before we *ask*, which is a different question from when we show.
+ *
+ * These were one number, and that made the delay and the network serial: a cold
+ * spell cost 250 ms of waiting and then a second of fetching. Splitting them
+ * means the author waits for whichever is slower rather than for their sum.
+ *
+ * 60 ms is chosen to sit above a crossing and well below a rest — a pointer
+ * sweeping prose spends 25–100 ms on a short token. Guessing wrong is cheap
+ * now anyway: a mistaken lookup lands in the cache and makes the next hover of
+ * that token instant, which is exactly what preloading does on purpose.
+ */
+const INTENT_DELAY_MS = 60;
 /** Short; it only covers the flicker between two DOM nodes of one token. */
 const CLOSE_DELAY_MS = 120;
 /** One above the overlay's own 2147483000. DDB's 9999 would land underneath. */
@@ -38,8 +58,11 @@ export interface RefTooltipsOptions {
   source: ReferenceSource;
   /** Where the popup goes. The light DOM, for DDB's own stylesheet. */
   container?: HTMLElement;
+  /** When the popup appears. A promise to the author; see the constant. */
   openDelayMs?: number;
   closeDelayMs?: number;
+  /** When we start asking. Clamped to `openDelayMs`; see the constant. */
+  intentDelayMs?: number;
 }
 
 export class RefTooltips {
@@ -49,8 +72,10 @@ export class RefTooltips {
   private readonly openDelayMs: number;
   private readonly closeDelayMs: number;
 
+  private readonly intentDelayMs: number;
+
   private popup: HTMLElement | null = null;
-  private openTimer: ReturnType<typeof setTimeout> | null = null;
+  private intentTimer: ReturnType<typeof setTimeout> | null = null;
   private closeTimer: ReturnType<typeof setTimeout> | null = null;
   /** The token the pointer is on. */
   private hovered: Element | null = null;
@@ -67,6 +92,7 @@ export class RefTooltips {
     this.container = options.container ?? document.body;
     this.openDelayMs = options.openDelayMs ?? OPEN_DELAY_MS;
     this.closeDelayMs = options.closeDelayMs ?? CLOSE_DELAY_MS;
+    this.intentDelayMs = Math.min(options.intentDelayMs ?? INTENT_DELAY_MS, this.openDelayMs);
   }
 
   start(): void {
@@ -96,10 +122,13 @@ export class RefTooltips {
     if (!token || token === this.hovered) return;
     this.cancelTimers();
     this.hovered = token;
-    this.generation++;
-    // Nothing is fetched yet. A pointer sweeping a line of prose crosses a
+    // Captured now rather than read when the timer fires: the async chain below
+    // outlives the timer, and this is what tells "still here" from "left and
+    // came back".
+    const generation = ++this.generation;
+    // Still nothing fetched yet. A pointer sweeping a line of prose crosses a
     // dozen tokens and should cost a dozen timers, not a dozen requests.
-    this.openTimer = setTimeout(() => void this.open(token, this.generation), this.openDelayMs);
+    this.intentTimer = setTimeout(() => void this.open(token, generation), this.intentDelayMs);
   };
 
   private readonly onMouseOut = (event: Event) => {
@@ -129,9 +158,16 @@ export class RefTooltips {
   }
 
   private async open(token: Element, generation: number): Promise<void> {
-    const tooltip = await this.source.lookup(readToken(token));
+    // The request and the rest of the display delay run together, so the author
+    // waits for whichever is slower. An answer that beats the delay still waits
+    // it out; a slow one no longer has 250 ms added to it.
+    const [tooltip] = await Promise.all([
+      this.source.lookup(readToken(token), { priority: "interactive" }),
+      wait(this.openDelayMs - this.intentDelayMs),
+    ]);
     // Two ways to be stale: the intent changed, or the pointer moved on while
-    // the request was out.
+    // the request was out. The generation is what catches a pointer that left
+    // and returned to this very token, which the identity check alone cannot.
     if (!tooltip || generation !== this.generation || this.hovered !== token) return;
 
     const popup = this.ensurePopup();
@@ -161,9 +197,9 @@ export class RefTooltips {
   }
 
   private cancelTimers(): void {
-    if (this.openTimer !== null) clearTimeout(this.openTimer);
+    if (this.intentTimer !== null) clearTimeout(this.intentTimer);
     if (this.closeTimer !== null) clearTimeout(this.closeTimer);
-    this.openTimer = null;
+    this.intentTimer = null;
     this.closeTimer = null;
   }
 
@@ -207,16 +243,6 @@ export class RefTooltips {
   }
 }
 
-/** The `.ref` element an event landed on, if any. */
-function refUnder(target: EventTarget | null): Element | null {
-  return target instanceof Element ? target.closest(".ref") : null;
-}
+const wait = (ms: number) =>
+  ms > 0 ? new Promise<void>((resolve) => setTimeout(resolve, ms)) : Promise.resolve();
 
-/** A token as the DOM carries it — the three attributes `RefNode` writes. */
-function readToken(element: Element): RefToken {
-  return {
-    ref: element.getAttribute("data-ref") ?? "",
-    slug: element.getAttribute("data-slug") ?? undefined,
-    text: element.textContent ?? "",
-  };
-}

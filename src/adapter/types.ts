@@ -13,6 +13,7 @@ import type {
   Ruleset,
   SectionKey,
 } from "../statblock/model.js";
+import type { Priority } from "./task-queue.js";
 
 export type HomebrewKind = "monster" | "item" | "spell" | "unknown";
 
@@ -255,11 +256,20 @@ export interface ReferenceTooltip {
  * Beyond *site*, not about the document being edited — and every content type
  * we ever adapt wants the identical lookup.
  */
+export interface LookupOptions {
+  /**
+   * "background" is a preload nobody is waiting on: it yields its slot to a
+   * hover and asks the browser to deprioritise the request. Defaults to
+   * "interactive", because an omitted option must never be the slow one.
+   */
+  priority?: Priority;
+}
+
 export interface ReferenceSource {
   /**
    * The token's definition, or null when there isn't one to be had. Never
    * rejects: a tooltip is an ornament, and a rejected promise inside a hover
    * handler is a bug report waiting to happen.
    */
-  lookup(token: RefToken): Promise<ReferenceTooltip | null>;
+  lookup(token: RefToken, options?: LookupOptions): Promise<ReferenceTooltip | null>;
 }

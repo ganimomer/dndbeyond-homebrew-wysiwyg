@@ -15,6 +15,24 @@ import { RefTooltips } from "./ref-tooltips.js";
 const POPUP = "#microbrewery-tooltip";
 const OPEN = 250;
 const CLOSE = 120;
+const INTENT = 60;
+
+/**
+ * Runs the clock from a fresh hover to a painted popup: past the intent delay
+ * so the lookup starts, letting its promise settle, then out the rest of the
+ * display delay. Eleven tests would otherwise repeat this by hand.
+ */
+async function settle(t: TestContext): Promise<void> {
+  t.mock.timers.tick(INTENT);
+  await flushMicrotasks();
+  t.mock.timers.tick(OPEN - INTENT);
+  await flushMicrotasks();
+}
+
+/** `Promise.all` in `open()` adds a few ticks before the popup is painted. */
+async function flushMicrotasks(): Promise<void> {
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+}
 
 function tooltipFor(text: string): ReferenceTooltip {
   return { html: `<div class="tooltip tooltip-condition">${text}</div>`, type: "condition" };
@@ -57,6 +75,7 @@ function mount(t: TestContext, source: ReferenceSource, markup = TOKEN) {
     source,
     openDelayMs: OPEN,
     closeDelayMs: CLOSE,
+    intentDelayMs: INTENT,
   });
   controller.start();
   t.after(() => controller.stop());
@@ -67,16 +86,70 @@ function popup(): HTMLElement | null {
   return document.querySelector<HTMLElement>(POPUP);
 }
 
-test("nothing is asked before the open delay elapses", (t) => {
+test("nothing is asked before the intent delay elapses", (t) => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const { source, asked } = stubSource();
   const { token } = mount(t, source);
 
   hover(token);
-  t.mock.timers.tick(OPEN - 1);
+  t.mock.timers.tick(INTENT - 1);
 
   assert.deepEqual(asked, []);
   assert.equal(popup(), null);
+});
+
+test("a pointer crossing several tokens asks about none of them", (t) => {
+  // What the single delay was really protecting, now stated directly: sweeping
+  // a spell list must not fire a request per word.
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const { source, asked } = stubSource();
+  const markup = ["Blinded", "Charmed", "Prone", "Stunned", "Poisoned"]
+    .map((name) => `<span class="ref" data-ref="condition">${name}</span>`)
+    .join(" ");
+  const { root } = mount(t, source, markup);
+
+  for (const token of root.querySelectorAll(".ref")) {
+    hover(token);
+    t.mock.timers.tick(INTENT / 2);
+  }
+
+  assert.deepEqual(asked, [], "a sweep should cost timers, not requests");
+});
+
+test("an answer that beats the delay still waits it out", async (t) => {
+  // The perceptual promise the overlap trades against: warm and cold hovers
+  // must appear at the same moment.
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const { source } = stubSource();
+  const { token } = mount(t, source);
+
+  hover(token);
+  t.mock.timers.tick(INTENT);
+  await flushMicrotasks();
+  t.mock.timers.tick(OPEN - INTENT - 1);
+  await flushMicrotasks();
+
+  assert.notEqual(popup()?.style.display, "block", "the popup jumped the display delay");
+
+  t.mock.timers.tick(1);
+  await flushMicrotasks();
+
+  assert.equal(popup()?.style.display, "block");
+});
+
+test("the request starts during the delay, not after it", async (t) => {
+  // The whole point of the split: a cold lookup overlaps the wait instead of
+  // being added to it.
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const { source, asked } = stubSource();
+  const { token } = mount(t, source);
+
+  hover(token);
+  t.mock.timers.tick(INTENT);
+  await flushMicrotasks();
+
+  assert.equal(asked.length, 1, "the lookup should already be in flight");
+  assert.notEqual(popup()?.style.display, "block", "but nothing painted yet");
 });
 
 test("after the delay the definition appears in the light DOM", async (t) => {
@@ -85,9 +158,7 @@ test("after the delay the definition appears in the light DOM", async (t) => {
   const { token, root } = mount(t, source);
 
   hover(token);
-  t.mock.timers.tick(OPEN);
-  await Promise.resolve();
-  await Promise.resolve();
+  await settle(t);
 
   assert.deepEqual(asked, [{ ref: "condition", slug: undefined, text: "Grappled" }]);
   const shown = popup();
@@ -110,9 +181,7 @@ test("the token's markup is untouched by a full hover cycle", async (t) => {
   const before = token.outerHTML;
 
   hover(token);
-  t.mock.timers.tick(OPEN);
-  await Promise.resolve();
-  await Promise.resolve();
+  await settle(t);
   unhover(token);
   t.mock.timers.tick(CLOSE);
 
@@ -125,9 +194,7 @@ test("leaving the token hides it again", async (t) => {
   const { token } = mount(t, source);
 
   hover(token);
-  t.mock.timers.tick(OPEN);
-  await Promise.resolve();
-  await Promise.resolve();
+  await settle(t);
   assert.equal(popup()?.style.display, "block");
 
   unhover(token);
@@ -143,9 +210,7 @@ test("crossing between a token's own nodes is not a departure", async (t) => {
   const { token } = mount(t, source, markup);
 
   hover(token.querySelector("strong")!);
-  t.mock.timers.tick(OPEN);
-  await Promise.resolve();
-  await Promise.resolve();
+  await settle(t);
 
   // Pointer moves from the bold half to the italic half — same token.
   unhover(token.querySelector("strong")!, token.querySelector("em"));
@@ -163,12 +228,13 @@ test("a definition that arrives after the pointer left is dropped", async (t) =>
   const { token } = mount(t, source);
 
   hover(token);
-  t.mock.timers.tick(OPEN);
+  t.mock.timers.tick(INTENT);
+  await flushMicrotasks();
   unhover(token);
   t.mock.timers.tick(CLOSE);
   resolve(tooltipFor("too late"));
-  await Promise.resolve();
-  await Promise.resolve();
+  t.mock.timers.tick(OPEN);
+  await flushMicrotasks();
 
   assert.notEqual(popup()?.style.display, "block");
 });
@@ -179,9 +245,7 @@ test("Escape dismisses it", async (t) => {
   const { token } = mount(t, source);
 
   hover(token);
-  t.mock.timers.tick(OPEN);
-  await Promise.resolve();
-  await Promise.resolve();
+  await settle(t);
 
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
 
@@ -194,9 +258,7 @@ test("scrolling the block dismisses it, rather than leaving it behind", async (t
   const { token, root } = mount(t, source);
 
   hover(token);
-  t.mock.timers.tick(OPEN);
-  await Promise.resolve();
-  await Promise.resolve();
+  await settle(t);
 
   token.dispatchEvent(new Event("scroll", { bubbles: false }));
   root.dispatchEvent(new Event("scroll"));
@@ -222,7 +284,7 @@ test("a data-slug is passed through as the lookup key", (t) => {
   const { token } = mount(t, source, markup);
 
   hover(token);
-  t.mock.timers.tick(OPEN);
+  t.mock.timers.tick(INTENT);
 
   assert.deepEqual(asked, [{ ref: "rules", slug: "shape-shifting", text: "shape-shifts" }]);
 });
@@ -235,9 +297,7 @@ test("stop() takes the popup off DDB's page and stops listening", async (t) => {
   const { token, controller } = mount(t, source);
 
   hover(token);
-  t.mock.timers.tick(OPEN);
-  await Promise.resolve();
-  await Promise.resolve();
+  await settle(t);
   assert.ok(popup(), "popup should exist before stop()");
 
   controller.stop();
