@@ -21,7 +21,8 @@ with a thin per-browser layer for each extension format.
 > its section or into another. **Autosave** persists all of it without a page
 > reload. Every reference in the prose — a condition, a spell, a glossary term
 > — **hovers to D&D Beyond's own definition**, borrowed from their tooltip
-> endpoint and styled by their own stylesheet. This pulls
+> endpoint and styled by their own stylesheet, and a **`/` slash command** adds
+> a new one without anyone typing a macro. This pulls
 > Lexical + Preact into the content script (~400 KB minified); release builds
 > are minified.
 >
@@ -173,6 +174,54 @@ aren't focusable, so there's no keyboard route to a definition; the popup takes
 no pointer events, so you can't select its text or follow the links inside it —
 a trade DDB's own tooltips make too. Dice tokens don't hover yet.
 
+## Add a reference
+
+Reading a reference and writing one need opposite things. Reading gets the macro
+handed to it, display text and all. Writing starts from nothing — so where the
+tooltip resolver needed a *lookup*, this needs a **catalog**, which is what
+`src/adapter/reference-catalog.ts` makes out of the same harvested tables.
+
+Type **`/`** in any entry and a menu offers the six kinds — Condition, Skill,
+Sense, Action, Weapon property, Rule — narrowed by whatever you type after the
+slash. Pick one and the command comes back out of the prose; a second menu opens
+with that compendium's contents and a filter box. Pick again and the reference
+is in the sentence, already underlined and already hovering for its definition,
+because it lands as the same `RefNode` a reference from D&D Beyond does. The
+**"+"** in the floating format bar reaches the same menu, for a reference you
+didn't think of until after you'd typed the sentence.
+
+What makes the two stages different is **where the caret is**. Choosing a kind
+happens while the command is still in the prose, so the caret must stay in the
+editor — a control that took focus would strand the `/con` being typed. That is
+why the kind list has no filter box of its own (six rows don't need one, and the
+command already narrows them) and why its arrow keys arrive second-hand, through
+commands the editor takes off Lexical and hands over. Choosing an entity happens
+after the command is gone: there is nothing left in the document to type into
+and the glossary runs to 127 rows, so that stage takes the caret into a filter
+box and where the reference goes survives as a saved point rather than as a
+selection.
+
+Only slashes that could be commands count. Stat-block prose is full of the other
+kind — `1d6/round`, `60/120 ft.`, `Melee/Ranged` — so the slash has to start a
+word, and a space after the query closes the menu again.
+
+A reference also stops absorbing what is typed against it. `RefNode` is a
+`TextNode` subclass, so `Grappled` plus an `s` used to become
+`[condition]Grappleds[/condition]` — a macro naming a condition that doesn't
+exist, spelt as a word plausible enough that nobody would look. Its *edges* are
+now sealed and its text is not, because an author still has to be able to write
+"fireballs", or "shape-shifts" where the glossary says "Shape-Shifting".
+
+Spells, monsters and magic items are not here yet, and the reason is worth
+recording: **D&D Beyond has no search endpoint**. `/api/search` and
+`/api/search/typeahead` both 404, and the only entitlement-aware search is their
+listing HTML — 230 KB for one spell query, 750 KB for a magic-item one. It
+works, and it yields the numeric id as well as the name, which would skip the
+resolver's expensive tier outright; it needs its own pass to do it without
+making an author wait. Damage types are not here either, and won't be: there is
+no compendium behind them (`/damage-types/<id>/tooltip` 404s), so a reference to
+one would be underlined, look interactive, and resolve to nothing.
+
 ## Legendary, and lairs
 
 Legendary and Lair Actions are the sections D&D Beyond gates: it keeps each
@@ -224,7 +273,8 @@ src/
 │   ├── ddb-listings.ts     skills/movements/senses — DDB's separate records
 │   ├── ddb-markup.ts       bidirectional DDB-macro ⇄ editor-span codec
 │   ├── ddb-reference-map.ts  macro type → compendium path, and name → slug
-│   ├── ddb-reference-ids.ts  the harvested closed-set ids (generated)
+│   ├── ddb-reference-ids.ts  the harvested closed-set ids and names (generated)
+│   ├── reference-catalog.ts  the same tables as a list you can pick from
 │   ├── ddb-references.ts   what DDB says a reference means, in four tiers
 │   ├── reference-id-store.ts  ids learned from a redirect, kept on disk
 │   ├── reference-source.ts   the page's one source, shared across panel opens
@@ -264,7 +314,9 @@ src/
 │   │   ├── section-registry.ts  the sections' names, and which can be added
 │   │   ├── section-items.ts     cutting a section into entries, and back again
 │   │   ├── SectionList.tsx      a section as its list of entries (+ ItemGap, Merge)
-│   │   ├── ProseItem.tsx        one entry: a Lexical editor and its format bar
+│   │   ├── ProseItem.tsx        one entry: a Lexical editor, its format bar, its menus
+│   │   ├── ReferenceMenu.tsx    picking a reference: what kind, then which one
+│   │   ├── menu-placement.ts    where a menu hangs off what opened it
 │   │   ├── drag-context.tsx     where the sections meet, so an entry can cross
 │   │   ├── item-drag.ts         where a dragged entry would land, in numbers
 │   │   └── RemoveSection.tsx    the trash that takes one back off
@@ -279,6 +331,7 @@ src/
     ├── ref-tooltips.ts     hovering a reference, and the popup in DDB's light DOM
     ├── ref-preload.ts      warming the block's definitions before anyone hovers
     ├── ref-token.ts        reading a .ref element back into a token
+    ├── slash-trigger.ts    which slashes are commands, and which are just prose
     ├── tooltip-placement.ts  where the popup goes, as arithmetic
     ├── tooltip-html.ts     DDB's tooltip markup, made safe to inject
     └── nodes.ts            RollNode / RefNode — DDB roll & reference tokens
