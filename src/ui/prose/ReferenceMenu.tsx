@@ -60,12 +60,15 @@ export function ReferenceMenu(props: ReferenceMenuProps) {
   const panel = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState<{ left: number; top: number } | null>(null);
 
-  // Measured after paint, then placed: one forced layout per open, and the
-  // panel is never drawn in the wrong place — it isn't drawn at all until it
-  // knows where it goes.
+  // Measured, then placed: one forced layout per open, and the panel is never
+  // drawn in the wrong place — it isn't drawn at all until it knows where it
+  // goes. Which is also why `placed` has to reach the filter box below.
   useLayoutEffect(() => {
     const node = panel.current;
-    const wrapper = node?.offsetParent;
+    // The entry, which is `position: relative` and so is what the panel's own
+    // coordinates are relative to. Read as the parent rather than as
+    // `offsetParent`, which is null while the panel is still hidden.
+    const wrapper = node?.parentElement;
     if (!node || !wrapper) return;
     const { left, top } = menuPlacement(
       props.anchor,
@@ -101,7 +104,12 @@ export function ReferenceMenu(props: ReferenceMenuProps) {
       }}
     >
       {props.kind ? (
-        <EntityList kind={props.kind} onChoose={props.onChoose} onDismiss={props.onDismiss} />
+        <EntityList
+          kind={props.kind}
+          placed={offset !== null}
+          onChoose={props.onChoose}
+          onDismiss={props.onDismiss}
+        />
       ) : (
         <KindList
           kinds={props.kinds}
@@ -156,10 +164,13 @@ function KindList({
 /** Everything of one kind, filtered by a box of its own. */
 function EntityList({
   kind,
+  placed,
   onChoose,
   onDismiss,
 }: {
   kind: ReferenceKind;
+  /** Whether the panel has been measured, and so can hold the caret. */
+  placed: boolean;
   onChoose: (entity: ReferenceEntity) => void;
   onDismiss: () => void;
 }) {
@@ -188,8 +199,12 @@ function EntityList({
   // The caret has to come here: the slash command it was in has just been taken
   // out of the prose, so there is nothing left in the document to type into.
   useLayoutEffect(() => {
-    filterEl.current?.focus();
-  }, [kind.path]);
+    // Only once the panel has been placed. Until then it is `visibility:
+    // hidden` so it is never drawn in the wrong spot — and a hidden box cannot
+    // take focus, so a `focus()` here would silently do nothing and the author
+    // would be left typing into the prose behind the menu.
+    if (placed) filterEl.current?.focus();
+  }, [placed, kind.path]);
 
   useLayoutEffect(() => {
     if (active !== -1) rows.current[active]?.scrollIntoView({ block: "nearest" });

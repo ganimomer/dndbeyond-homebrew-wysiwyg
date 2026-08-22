@@ -136,6 +136,9 @@ test("Escape closes the menu and leaves what was typed alone", async (t) => {
   await caretAt(host, "The target is /con".length);
 
   key(host, "Escape");
+  // A microtask, because the key arrives inside an editor update and closing
+  // has to wait for that to commit — see `ProseItem.steer`.
+  await settle();
 
   assert.equal(menu(root), null);
   assert.equal(words(host), "The target is /con");

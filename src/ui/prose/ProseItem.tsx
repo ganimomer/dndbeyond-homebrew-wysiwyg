@@ -129,14 +129,21 @@ export function ProseItem({
       case "enter": {
         const kind = kinds[open.active];
         if (!kind) return true;
-        chooseKind(kind, open.anchor);
+        // Deferred, because this runs inside an editor update: Lexical
+        // dispatches a command from within one, and an update started in there
+        // is queued rather than run — the same trap `ProseEditor.onEnter`
+        // documents. Taken at face value, the insertion point would come back
+        // empty, and the reconciler would take the focus back off the filter
+        // box a moment after it got it.
+        queueMicrotask(() => chooseKind(kind, open.anchor));
         return true;
       }
       case "escape":
       case "tab":
-        // The command itself is left alone: the author asked for the menu to go
-        // away, not for what they typed to be edited out from under them.
-        dismiss();
+        // Same deferral, and the command itself is left alone: the author asked
+        // for the menu to go away, not for what they typed to be edited out
+        // from under them.
+        queueMicrotask(() => dismiss());
         return true;
     }
   };
