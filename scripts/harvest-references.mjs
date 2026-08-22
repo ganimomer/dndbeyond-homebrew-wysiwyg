@@ -107,6 +107,8 @@ function keysFor(path, name) {
 
 async function harvest(path, max) {
   const table = {};
+  /** Canonical slug → the name DDB prints, for the picker's rows. */
+  const names = {};
   const blocked = [];
   for (let id = 1; id <= max; id++) {
     let payload;
@@ -129,37 +131,47 @@ async function harvest(path, max) {
     }
     const name = nameOf(payload.Tooltip ?? "");
     if (!name) continue;
-    for (const key of keysFor(path, name)) table[key] = payload.Id || id;
+    const keys = keysFor(path, name);
+    for (const key of keys) table[key] = payload.Id || id;
+    // Only the first key, which `keysFor` puts in the spelling a stat block
+    // reads — `arcana`, not `intelligence-arcana`. The aliases exist so a macro
+    // written either way still resolves; they are not separate things to pick.
+    if (keys[0]) names[keys[0]] = name;
     await sleep(100);
   }
-  return { table, blocked };
+  return { table, names, blocked };
 }
 
 const tables = {};
+const nameTables = {};
 const problems = [];
 for (const [path, max] of Object.entries(PATHS)) {
-  const { table, blocked } = await harvest(path, max);
+  const { table, names, blocked } = await harvest(path, max);
   tables[path] = table;
+  nameTables[path] = names;
   if (blocked.length) problems.push(`${path}: blocked ids ${blocked.join(", ")}`);
   console.log(`${path.padEnd(18)} ${String(Object.keys(table).length).padStart(4)} keys`);
 }
 
 // Keys sorted and no timestamp, so re-running with nothing changed produces an
 // empty diff — a generated file that churns is one nobody re-runs.
-const body = Object.entries(tables)
-  .map(([path, table]) => {
-    const entries = Object.keys(table)
-      .sort()
-      .map((key) => `    ${JSON.stringify(key)}: ${table[key]},`)
-      .join("\n");
-    return `  ${JSON.stringify(path)}: {\n${entries}\n  },`;
-  })
-  .join("\n");
+function render(byPath, value) {
+  return Object.entries(byPath)
+    .map(([path, table]) => {
+      const entries = Object.keys(table)
+        .sort()
+        .map((key) => `    ${JSON.stringify(key)}: ${value(table[key])},`)
+        .join("\n");
+      return `  ${JSON.stringify(path)}: {\n${entries}\n  },`;
+    })
+    .join("\n");
+}
 
 writeFileSync(
   OUT,
   `/**
- * Slug → id for D&D Beyond's closed compendiums. **Generated — do not edit.**
+ * D&D Beyond's closed compendiums, as slug → id and slug → name.
+ * **Generated — do not edit.**
  *
  *   npm run harvest:references
  *
@@ -167,11 +179,22 @@ writeFileSync(
  * fresh clone resolves a condition or a glossary term with no network at all,
  * and a cold hover costs one request instead of two. A miss just falls through
  * to the live slug lookup, so a stale table degrades rather than breaks.
+ *
+ * The names are what makes these compendiums *pickable* — a slug is a URL
+ * fragment, and "sleight-of-hand" is not what an author wants to read in a
+ * menu. Keyed only by the canonical slug, so the alias keys in \`REFERENCE_IDS\`
+ * (which exist so a macro written either way resolves) don't become duplicate
+ * rows. \`reference-catalog.ts\` title-cases the slug where a name is missing,
+ * so the picker works on a clone that hasn't re-run the harvest.
  */
 import type { DdbPath } from "./ddb-reference-map.js";
 
 export const REFERENCE_IDS: Partial<Record<DdbPath, Readonly<Record<string, number>>>> = {
-${body}
+${render(tables, (id) => id)}
+};
+
+export const REFERENCE_NAMES: Partial<Record<DdbPath, Readonly<Record<string, string>>>> = {
+${render(nameTables, (name) => JSON.stringify(name))}
 };
 `,
 );
