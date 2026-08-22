@@ -56,6 +56,26 @@ export function kindByMacro(macro: string): ReferenceKind | undefined {
 }
 
 /**
+ * The kinds a half-typed slash command could still mean.
+ *
+ * Matched on the start of a word rather than anywhere in the label, because
+ * `/pro` meaning "Weapon property" is a coincidence an author would have to
+ * discover, while `/weapon` and `/property` are both things they might
+ * reasonably try. An empty query matches everything, which is the state a
+ * freshly typed slash is in.
+ */
+export function kindsMatching(query: string): ReferenceKind[] {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return [...REFERENCE_KINDS];
+  return REFERENCE_KINDS.filter((kind) =>
+    kind.label
+      .toLowerCase()
+      .split(/[\s-]+/)
+      .some((word) => word.startsWith(needle)),
+  );
+}
+
+/**
  * Entries DDB serves that are not things anyone would reference. `/senses/5` is
  * their "Unknown" placeholder — it resolves, so the harvester faithfully keeps
  * it, and it would sit in the menu between Truesight and nothing.

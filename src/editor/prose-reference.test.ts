@@ -131,7 +131,7 @@ test("taking the command removes it from the prose", async (t) => {
   const { host, editor } = mount(t, "<p>The target is /con</p>");
   await caretAt(host, "The target is /con".length);
 
-  editor.takeSlashCommand();
+  editor.takeInsertionPoint();
 
   assert.equal(ddb(editor), "<p>The target is </p>");
 });
@@ -140,7 +140,7 @@ test("a reference lands where the command was", async (t) => {
   const { host, editor } = mount(t, "<p>The target is /con</p>");
   await caretAt(host, "The target is /con".length);
 
-  editor.insertReference(editor.takeSlashCommand(), GRAPPLED);
+  editor.insertReference(editor.takeInsertionPoint(), GRAPPLED);
 
   assert.equal(ddb(editor), "<p>The target is [condition]Grappled[/condition]</p>");
 });
@@ -152,7 +152,7 @@ test("a command that was the whole line still knows where the reference goes", a
   const { host, editor } = mount(t, "<p>/con</p>");
   await caretAt(host, "/con".length);
 
-  editor.insertReference(editor.takeSlashCommand(), GRAPPLED);
+  editor.insertReference(editor.takeInsertionPoint(), GRAPPLED);
 
   assert.equal(ddb(editor), "<p>[condition]Grappled[/condition]</p>");
 });
@@ -161,7 +161,7 @@ test("the reference goes mid-sentence, not at the end of it", async (t) => {
   const { host, editor } = mount(t, "<p>while /con it can see</p>");
   await caretAt(host, "while /con".length);
 
-  editor.insertReference(editor.takeSlashCommand(), GRAPPLED);
+  editor.insertReference(editor.takeInsertionPoint(), GRAPPLED);
 
   assert.equal(ddb(editor), "<p>while [condition]Grappled[/condition] it can see</p>");
 });
@@ -170,7 +170,7 @@ test("a reference carries a slug only when its own text doesn't say it", async (
   const { host, editor } = mount(t, "<p>/</p>");
   await caretAt(host, 1);
 
-  editor.insertReference(editor.takeSlashCommand(), {
+  editor.insertReference(editor.takeInsertionPoint(), {
     macro: "rules",
     name: "Shape-Shifts",
     slug: "shape-shifting",
@@ -183,7 +183,7 @@ test("inserting a reference is an edit the form gets told about", async (t) => {
   const { host, editor, committed } = mount(t, "<p>/</p>");
   await caretAt(host, 1);
 
-  editor.insertReference(editor.takeSlashCommand(), GRAPPLED);
+  editor.insertReference(editor.takeInsertionPoint(), GRAPPLED);
   await new Promise((resolve) => setTimeout(resolve, 600));
 
   assert.ok(committed.length > 0, "the reference has to reach DDB's textarea");
@@ -224,4 +224,25 @@ test("Enter picks from the menu rather than ending the entry", async (t) => {
 
   assert.deepEqual(splits, []);
   assert.ok(ddb(editor).includes("Misty Escape."), "the entry is intact");
+});
+
+test("with no command under the caret, the reference goes at the caret", async (t) => {
+  // The toolbar's "+" reaches the same insert without a slash to take.
+  const { host, editor } = mount(t, "<p>The target is now</p>");
+  await caretAt(host, "The target is ".length);
+
+  editor.insertReference(editor.takeInsertionPoint(), GRAPPLED);
+
+  assert.equal(ddb(editor), "<p>The target is [condition]Grappled[/condition]now</p>");
+});
+
+test("dismissing puts the caret back without inserting anything", async (t) => {
+  const { host, editor } = mount(t, "<p>The target is /con</p>");
+  await caretAt(host, "The target is /con".length);
+  const point = editor.takeInsertionPoint();
+
+  editor.restoreCaret(point);
+
+  assert.equal(ddb(editor), "<p>The target is </p>");
+  assert.ok(editor.hasFocus(), "the author is back where they were typing");
 });

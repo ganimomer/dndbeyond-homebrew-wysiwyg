@@ -1,6 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { REFERENCE_KINDS, entitiesOf, kindByMacro } from "./reference-catalog.js";
+import {
+  REFERENCE_KINDS,
+  entitiesOf,
+  kindByMacro,
+  kindsMatching,
+} from "./reference-catalog.js";
 import { refToTarget } from "./ddb-reference-map.js";
 
 /**
@@ -91,4 +96,33 @@ test("every entity's own name slugifies back to its slug", () => {
 test("kindByMacro finds a kind by the macro it writes", () => {
   assert.equal(kindByMacro("condition")?.path, "conditions");
   assert.equal(kindByMacro("spells"), undefined);
+});
+
+test("a half-typed command narrows the kinds to what it could still mean", () => {
+  assert.deepEqual(
+    kindsMatching("con").map((kind) => kind.label),
+    ["Condition"],
+  );
+  assert.deepEqual(
+    kindsMatching("s").map((kind) => kind.label),
+    ["Skill", "Sense"],
+  );
+});
+
+test("a command narrows on any word of a kind's name", () => {
+  // `/property` is as likely a guess as `/weapon`, and neither is the whole
+  // label. Matching mid-word is not: `/pro` meaning "Weapon property" would be
+  // a coincidence nobody could discover.
+  for (const query of ["weapon", "property"]) {
+    assert.deepEqual(
+      kindsMatching(query).map((kind) => kind.path),
+      ["weapon-properties"],
+      query,
+    );
+  }
+  assert.deepEqual(kindsMatching("ondition"), []);
+});
+
+test("a bare slash offers everything", () => {
+  assert.equal(kindsMatching("").length, REFERENCE_KINDS.length);
 });

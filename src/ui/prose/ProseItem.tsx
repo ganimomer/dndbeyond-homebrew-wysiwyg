@@ -18,9 +18,31 @@ import {
   NO_FORMAT,
   ProseEditor,
   type FormatState,
+  type InsertionPoint,
+  type MenuKey,
   type TextFormat,
 } from "../../editor/prose-editor.js";
+import {
+  kindsMatching,
+  slugToWrite,
+  type ReferenceEntity,
+  type ReferenceKind,
+} from "../../adapter/reference-catalog.js";
 import { FormatToolbar } from "./FormatToolbar.js";
+import { ReferenceMenu } from "./ReferenceMenu.js";
+
+/**
+ * The reference menu, while it is up.
+ *
+ * Two shapes because the two stages differ in where the caret is. Choosing a
+ * *kind* leaves it in the editor, so what narrows the list is the `/con` still
+ * on the page and the highlight has to live out here, where the forwarded keys
+ * arrive. Choosing an *entity* happens after the command has been taken back
+ * out of the prose, so `point` is the only record of where the reference goes.
+ */
+type MenuState =
+  | { stage: "kinds"; anchor: DOMRect; query: string; active: number }
+  | { stage: "entities"; anchor: DOMRect; kind: ReferenceKind; point: InsertionPoint | null };
 
 export interface ProseItemProps {
   /** Distinguishes the editor in Lexical's namespace and in error logs. */
@@ -65,6 +87,14 @@ export function ProseItem({
   const wrapper = useRef<HTMLDivElement>(null);
   const editor = useRef<ProseEditor | null>(null);
   const [format, setFormat] = useState<FormatState>(NO_FORMAT);
+  const [menu, setMenu] = useState<MenuState | null>(null);
+  /**
+   * The menu as the editor's key handler sees it. A ref rather than the state,
+   * because that handler is registered once at mount and would otherwise close
+   * over the menu as it was then — permanently closed.
+   */
+  const live = useRef<MenuState | null>(null);
+  live.current = menu;
   /** Held in refs so the editor's one set of callbacks never goes stale. */
   const commit = useRef(onCommit);
   commit.current = onCommit;
@@ -72,6 +102,59 @@ export function ProseItem({
   emptyBlur.current = onEmptyBlur;
   const split = useRef(onSplit);
   split.current = onSplit;
+
+  /** Dismisses the menu and gives the caret back to whoever had it. */
+  const dismiss = (point?: InsertionPoint | null) => {
+    setMenu(null);
+    if (point !== undefined) editor.current?.restoreCaret(point);
+  };
+
+  /**
+   * The keys the editor hands over while the kind list is up. Returning false
+   * gives one back — Escape with nothing open is still the editor's business.
+   */
+  const steer = (key: MenuKey): boolean => {
+    const open = live.current;
+    if (open?.stage !== "kinds") return false;
+    const kinds = kindsMatching(open.query);
+    switch (key) {
+      case "down":
+      case "up": {
+        if (kinds.length === 0) return true;
+        const delta = key === "down" ? 1 : -1;
+        const next = (open.active + delta + kinds.length) % kinds.length;
+        setMenu({ ...open, active: next });
+        return true;
+      }
+      case "enter": {
+        const kind = kinds[open.active];
+        if (!kind) return true;
+        chooseKind(kind, open.anchor);
+        return true;
+      }
+      case "escape":
+      case "tab":
+        // The command itself is left alone: the author asked for the menu to go
+        // away, not for what they typed to be edited out from under them.
+        dismiss();
+        return true;
+    }
+  };
+
+  /** The author has said what kind of thing. Take the command; show the list. */
+  const chooseKind = (kind: ReferenceKind, anchor: DOMRect) => {
+    const point = editor.current?.takeInsertionPoint() ?? null;
+    setMenu({ stage: "entities", anchor, kind, point });
+  };
+
+  const choose = (kind: ReferenceKind, entity: ReferenceEntity, point: InsertionPoint | null) => {
+    setMenu(null);
+    editor.current?.insertReference(point, {
+      macro: kind.macro,
+      name: entity.name,
+      slug: slugToWrite(entity),
+    });
+  };
 
   useLayoutEffect(() => {
     const node = host.current;
@@ -81,6 +164,16 @@ export function ProseItem({
       initialHtml: html,
       onCommit: (edited) => commit.current(edited),
       onFormat: setFormat,
+      // A slash command opens the kind list, and losing the command closes it
+      // — but only the *kind* stage, which is the one the command was steering.
+      // Once an entity list is up the command is already gone from the prose.
+      onTrigger: (trigger) =>
+        setMenu((open) => {
+          if (open?.stage === "entities") return open;
+          if (!trigger) return null;
+          return { stage: "kinds", anchor: trigger.rect, query: trigger.query, active: 0 };
+        }),
+      onMenuKey: (key) => steer(key),
       // Only where the owner wants one: a list section ends an entry on a blank
       // line, the Description is prose and keeps its blank lines.
       onSplit: onSplit && ((remaining, moved) => split.current?.(remaining, moved)),
@@ -102,11 +195,22 @@ export function ProseItem({
     // Created once. `html` seeds it; the effect below keeps up.
   }, [name]);
 
+  // Only the kind stage takes keys off the editor. The entity stage has the
+  // caret in its own filter box and handles its own.
   useLayoutEffect(() => {
-    const live = editor.current;
+    editor.current?.setMenuOpen(menu?.stage === "kinds");
+  }, [menu?.stage]);
+
+  useLayoutEffect(() => {
+    const current = editor.current;
+    if (!current) return;
     // Never while they're typing — that is what the old render guard was for.
-    if (live && !live.hasFocus()) live.setContent(html);
-  }, [html]);
+    // And never while the reference menu is up: the entity stage holds the
+    // caret in its filter box, so `hasFocus` is false there, and reloading
+    // would throw away the insertion point the author is choosing for.
+    if (current.hasFocus() || live.current) return;
+    current.setContent(html);
+  }, [html, menu]);
 
   return (
     <div
@@ -127,7 +231,27 @@ export function ProseItem({
           is the only way to say that without `:has()`, which the Firefox this
           builds for hasn't got. Since the drag handle became a focusable thing
           inside the entry, `:focus-within` means something else now. */}
-      <FormatToolbar format={format} onToggle={(f) => editor.current?.toggleFormat(f)} />
+      <FormatToolbar
+        format={format}
+        onToggle={(f) => editor.current?.toggleFormat(f)}
+        onAdd={(anchor) => setMenu({ stage: "kinds", anchor, query: "", active: 0 })}
+      />
+      {menu ? (
+        <ReferenceMenu
+          anchor={menu.anchor}
+          kind={menu.stage === "entities" ? menu.kind : null}
+          kinds={menu.stage === "kinds" ? kindsMatching(menu.query) : []}
+          active={menu.stage === "kinds" ? menu.active : -1}
+          onHighlight={(index) =>
+            setMenu((open) => (open?.stage === "kinds" ? { ...open, active: index } : open))
+          }
+          onChooseKind={(kind) => chooseKind(kind, menu.anchor)}
+          onChoose={(entity) =>
+            menu.stage === "entities" && choose(menu.kind, entity, menu.point)
+          }
+          onDismiss={() => dismiss(menu.stage === "entities" ? menu.point : undefined)}
+        />
+      ) : null}
       {children}
     </div>
   );

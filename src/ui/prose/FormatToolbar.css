@@ -60,3 +60,10 @@
 .sb-format-button:focus-visible {
   box-shadow: 0 0 0 2px var(--accent, #5b160c);
 }
+
+/* Set apart from the two toggles: it opens a menu rather than reporting a
+ * state, and nothing about it is ever "pressed". */
+.sb-format-add {
+  margin-left: 3px;
+  box-shadow: -3px 0 0 -2px rgba(0, 0, 0, 0.15);
+}

@@ -277,33 +277,61 @@ export class ProseEditor {
   }
 
   /**
-   * Takes the `/query` back out of the prose and says where it was.
+   * Where a reference will go, taking the slash command back out of the prose
+   * if there was one.
    *
-   * Called the moment the author picks a *type*, which is well before there is
+   * Called the moment the author picks a *kind*, which is well before there is
    * anything to insert: the entity list still has to be shown, and its filter
    * box takes the caret away to do it. So this hands back a value that outlives
    * the selection.
+   *
+   * One method for both entry points. From the slash there is a command to
+   * remove and its position to remember; from the toolbar's "+" there is only
+   * a caret to remember, and the difference ends there.
    */
-  takeSlashCommand(): InsertionPoint | null {
+  takeInsertionPoint(): InsertionPoint | null {
     let point: InsertionPoint | null = null;
     this.editor.update(
       () => {
-        const found = this.findSlashCommand();
-        if (!found) return;
-        const { node, start, length } = found;
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection) || !selection.isCollapsed()) return;
+        const anchor = selection.anchor;
+        const node = anchor.getNode();
+        // In an empty block the anchor *is* the block, and `getTopLevelElement`
+        // of a top-level block is itself.
         const block = node.getTopLevelElement();
         if (!block) return;
+
+        const command = this.findSlashCommand();
+        if (command) {
+          point = {
+            key: command.node.getKey(),
+            offset: command.start,
+            blockKey: block.getKey(),
+            index: command.node.getIndexWithinParent(),
+          };
+          command.node.spliceText(command.start, command.length, "", true);
+          return;
+        }
         point = {
           key: node.getKey(),
-          offset: start,
+          offset: anchor.offset,
+          // On an element anchor the offset already *is* the child index, which
+          // is what the fallback in `restore` wants.
           blockKey: block.getKey(),
-          index: node.getIndexWithinParent(),
+          index: $isTextNode(node) ? node.getIndexWithinParent() : anchor.offset,
         };
-        node.spliceText(start, length, "", true);
       },
       { discrete: true },
     );
     return point;
+  }
+
+  /** Puts the caret back where the command was, having inserted nothing. */
+  restoreCaret(point: InsertionPoint | null): void {
+    this.editor.getRootElement()?.focus({ preventScroll: true });
+    this.editor.update(() => this.restore(point), { discrete: true });
+    this.editor.focus();
   }
 
   /**
@@ -329,6 +357,7 @@ export class ProseEditor {
       },
       { discrete: true },
     );
+    this.editor.getRootElement()?.focus({ preventScroll: true });
     this.editor.focus();
   }
 
@@ -531,7 +560,7 @@ export class ProseEditor {
     return true;
   }
 
-  /** Puts the caret back where `takeSlashCommand` left off, or as near as. */
+  /** Puts the caret back where `takeInsertionPoint` left off, or as near as. */
   private restore(point: InsertionPoint | null): void {
     if (!point) {
       $getRoot().selectEnd();
