@@ -8,7 +8,7 @@
  */
 import type { Monster } from "../../statblock/model.js";
 import type { AdjustmentField } from "../../statblock/adjustments.js";
-import { unreveal } from "../../state/session.js";
+import { reveal, unreveal } from "../../state/session.js";
 import { useEditing, useSession, useStore } from "../store-context.js";
 import { AdjustmentsRow } from "./AdjustmentsRow.js";
 import { SavingThrowsRow } from "./SavingThrowsRow.js";
@@ -89,9 +89,16 @@ export function Field({ field, monster }: { field: OptionalField; monster: Monst
           value={monster[field]}
           label={field === "gear" ? "Gear" : "Languages"}
           placeholder={field === "gear" ? "gear…" : "languages…"}
-          onCommit={(name, value) =>
-            name === "gear" ? editing.setGear(value) : editing.setLanguages(value)
-          }
+          onCommit={(name, value) => {
+            // An author who deletes the last word is still standing in the row,
+            // and a row that vanishes out from under the caret takes the
+            // caret with it. Emptying it is therefore a reveal — the same
+            // state the "Add…" menu puts a blank row in. The ✕ below, which is
+            // the deliberate way out, unreveals.
+            if (value === "") store.update({ revealed: reveal(store.getSession(), name) });
+            if (name === "gear") editing.setGear(value);
+            else editing.setLanguages(value);
+          }}
           onClear={clearText}
         />
       );

@@ -183,7 +183,9 @@ handed to it, display text and all. Writing starts from nothing — so where the
 tooltip resolver needed a *lookup*, this needs a **catalog**, which is what
 `src/adapter/reference-catalog.ts` makes out of the same harvested tables.
 
-Type **`/`** in any entry and a menu offers every kind D&D Beyond has a
+Type **`/`** in any entry — and in the **Gear** and **Languages** rows, which
+are one-line editors for the same reason (below) — and a menu offers every kind
+D&D Beyond has a
 definition for — Condition, Skill, Sense, Action, Weapon property, Rule and
 Vehicle from tables shipped in the repo, and Spell, Monster, Magic item and
 Equipment from their own site (their story is below) — narrowed by whatever you
@@ -205,6 +207,20 @@ after the command is gone: there is nothing left in the document to type into
 and the glossary runs to 127 rows, so that stage takes the caret into a filter
 box and where the reference goes survives as a saved point rather than as a
 selection.
+
+**Gear is prose too.** D&D Beyond stores the 5.5e Gear row and the Languages
+note in ordinary `<input>`s, but what it puts in them is macros —
+`[items]Greatsword[/items], [items]splint;Splint Armor[/items]` — which its own
+pages render as links. An `<input>` can hold that string and can only ever show
+it, so those rows used to print the author's markup back at them in the middle
+of a finished stat block. They are the same Lexical editor now, in
+**single-line mode**: references render and hover like every other reference on
+the block, a slash adds one, and Enter commits and lets go the way the input
+always did. `src/adapter/ddb-text.ts` is the two ends of that — the same codec
+as the description sections, with an escape on the way in and, on the way out, a
+flatten to the one line the field can hold. What an author pastes and the field
+can't keep (paragraphs, line breaks, bold) becomes the space between the words
+either side of it, rather than being refused.
 
 Only slashes that could be commands count. Stat-block prose is full of the other
 kind — `1d6/round`, `60/120 ft.`, `Melee/Ranged` — so the slash has to start a
@@ -361,6 +377,7 @@ src/
 │   ├── ddb-monster.ts      reads/writes form#monster-form, saves it via fetch
 │   ├── ddb-listings.ts     skills/movements/senses — DDB's separate records
 │   ├── ddb-markup.ts       bidirectional DDB-macro ⇄ editor-span codec
+│   ├── ddb-text.ts         the same codec for the plain fields (Gear, Languages)
 │   ├── ddb-reference-map.ts  macro type → compendium path, and name → slug
 │   ├── ddb-reference-ids.ts  the harvested closed-set ids and names (generated)
 │   ├── reference-catalog.ts  what an author can reference, and what to write
@@ -398,6 +415,7 @@ src/
 │   │   ├── StatusChip.tsx    a checkbox as a chip, and the confirm that takes it off
 │   │   ├── LegendaryChip.tsx the crown, and what goes with it
 │   │   ├── LairChip.tsx      the castle, and what goes with it
+│   │   ├── TextRow.tsx       Gear / Languages: one line of prose over a plain input
 │   │   └── Field.tsx         picks a row's control by which field it is
 │   ├── lookup/             D&D Beyond's own browse page, as a picker
 │   │   ├── lookup-context.tsx  the request an entry makes and the column answers
@@ -409,6 +427,7 @@ src/
 │   │   ├── section-items.ts     cutting a section into entries, and back again
 │   │   ├── SectionList.tsx      a section as its list of entries (+ ItemGap, Merge)
 │   │   ├── ProseItem.tsx        one entry: a Lexical editor, its format bar, its menus
+│   │   ├── use-reference-menu.tsx  the two-stage "/" menu, shared with the Gear row
 │   │   ├── ReferenceMenu.tsx    picking a reference: what kind, then which one
 │   │   ├── menu-placement.ts    where a menu hangs off what opened it
 │   │   ├── drag-context.tsx     where the sections meet, so an entry can cross

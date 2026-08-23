@@ -1,30 +1,28 @@
 /* Gear and the languages note: one free-text field each, so the row *is* the
- * input. The ✕ clears it, which is also what takes the row off the block. */
+ * editor. The ✕ clears it, which is also what takes the row off the block.
+ *
+ * `relative`, because the reference menu the slash command opens is positioned
+ * against this box the way a prose entry's is against `.sb-item`. */
 .statblock .sb-text {
+  position: relative;
   display: inline-flex;
   align-items: baseline;
   gap: 4px;
 }
-.statblock .sb-text-input {
-  field-sizing: content;
+
+/* The one-line variant of `.sb-prose` (see ProseSection.css, which this reuses
+ * wholesale for the hover ring, the focus ring and the placeholder). What it
+ * overrides is everything that assumes a block of prose: the paragraph's
+ * bottom margin, and the two-line height an empty box holds open. */
+.statblock .sb-text-prose {
   min-width: 12ch;
-  font: inherit;
-  color: inherit;
-  background: transparent;
-  border: none;
-  outline: none;
   padding: 0 2px;
-  border-radius: 3px;
 }
-.statblock .sb-text-input::placeholder {
-  opacity: 0.5;
-  font-style: italic;
+.statblock .sb-text-prose p {
+  margin: 0;
 }
-.statblock .sb-text-input:hover {
-  background: rgba(91, 22, 12, 0.08);
-}
-.statblock .sb-text-input:focus {
-  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+.statblock .sb-text-prose.is-empty {
+  min-height: 1.2em;
 }
 .statblock .sb-text-clear {
   appearance: none;

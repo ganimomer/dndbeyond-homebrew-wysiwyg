@@ -138,6 +138,12 @@ export interface ProseEditorOptions {
    * just Enter, which is what the Description wants.
    */
   onSplit?: (remainingHtml: string, movedHtml: string) => void;
+  /**
+   * The field behind this editor holds one line of text — Gear, the Languages
+   * note. Enter then means "done" rather than "new paragraph": it commits and
+   * lets go, the way the plain `<input>` these rows used to be always did.
+   */
+  singleLine?: boolean;
 }
 
 export class ProseEditor {
@@ -406,6 +412,14 @@ export class ProseEditor {
    * Shift+Enter's soft break — is left to rich text to handle as usual.
    */
   private onEnter(event: KeyboardEvent | null): boolean {
+    if (this.opts.singleLine) {
+      event?.preventDefault();
+      // A microtask later, for the reason the split below gives: this runs
+      // inside an update, and reading the content back from in there would read
+      // it as it was before the key.
+      queueMicrotask(() => this.finish());
+      return true;
+    }
     const report = this.opts.onSplit;
     if (!report) return false;
     if (event?.shiftKey) return false;
@@ -432,6 +446,13 @@ export class ProseEditor {
       report(halves.remaining, halves.moved);
     });
     return true;
+  }
+
+  /** Commits what is in the box now and hands the focus back to the page. */
+  private finish(): void {
+    window.clearTimeout(this.commitTimer);
+    this.opts.onCommit(this.html());
+    this.editor.getRootElement()?.blur();
   }
 
   /**
@@ -603,6 +624,14 @@ export class ProseEditor {
 
   private load(html: string): void {
     this.loading = true;
+    // Whether the caret was ours to begin with. Content loaded while it wasn't
+    // — the initial mount, or an edit arriving from D&D Beyond's own field —
+    // must not take the focus: Lexical writes its selection into the DOM as it
+    // reconciles, and a selection inside a contenteditable *is* focus. Left
+    // alone, the box would then be deaf to the *next* edit from the form,
+    // because the guard that protects an author mid-word (`hasFocus`) would
+    // believe there was an author. Same reasoning as `cut`'s.
+    const wasOurs = this.hasFocus();
     this.editor.update(
       () => {
         const doc = new DOMParser().parseFromString(`<body>${html}</body>`, "text/html");
@@ -612,6 +641,7 @@ export class ProseEditor {
         // An empty section still needs a block to put the caret in: a bare root
         // has nowhere for typing to land.
         root.append(...(nodes.length ? nodes : [$createParagraphNode()]));
+        if (!wasOurs) $setSelection(null);
       },
       {
         discrete: true,

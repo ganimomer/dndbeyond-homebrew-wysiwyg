@@ -1,69 +1,99 @@
+/**
+ * The Gear / Languages row, which is a one-line Lexical editor over a plain
+ * D&D Beyond `<input>`.
+ *
+ * What these are mostly about is the thing an `<input>` could never do: the
+ * macros D&D Beyond stores in those fields have to *read* as the items and
+ * conditions they name, not as the markup that names them.
+ */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { fireEvent, renderInShadowRoot, userEvent } from "../../test-support/render.js";
 import { TextRow, type TextField } from "./TextRow.js";
+
+/** The Gear field of D&D Beyond's own Warrior Veteran, verbatim. */
+const GEAR =
+  "[items]Greatsword[/items], [items]crossbow, heavy;Heavy Crossbow[/items], " +
+  "[items]splint;Splint Armor[/items]";
+
+function row(props: Partial<Parameters<typeof TextRow>[0]> = {}) {
+  return (
+    <TextRow
+      field="languages"
+      value=""
+      label="Languages"
+      placeholder="languages…"
+      onCommit={() => {}}
+      onClear={() => {}}
+      {...props}
+    />
+  );
+}
 
 function setup(t: import("node:test").TestContext, value = "", field: TextField = "languages") {
   const committed: Array<[TextField, string]> = [];
   const cleared: TextField[] = [];
   const view = renderInShadowRoot(
     t,
-    <TextRow
-      field={field}
-      value={value}
-      label="Languages"
-      placeholder="languages…"
-      onCommit={(f, v) => committed.push([f, v])}
-      onClear={(f) => cleared.push(f)}
-    />,
+    row({
+      field,
+      value,
+      label: field === "gear" ? "Gear" : "Languages",
+      placeholder: field === "gear" ? "gear…" : "languages…",
+      onCommit: (f, v) => committed.push([f, v]),
+      onClear: (f) => cleared.push(f),
+    }),
   );
-  const input = view.root.querySelector<HTMLInputElement>(".sb-text-input")!;
-  return { ...view, input, committed, cleared };
+  const box = view.root.querySelector<HTMLElement>(".sb-text-prose")!;
+  return { ...view, box, committed, cleared };
 }
 
 test("shows the value it was given, ready to type over", (t) => {
-  const { input, root } = setup(t, "Common");
+  const { box, root } = setup(t, "Common");
 
-  assert.equal(input.value, "Common");
-  assert.equal(input.placeholder, "languages…");
+  assert.equal(box.textContent, "Common");
+  assert.equal(box.getAttribute("contenteditable"), "true");
+  assert.equal(box.dataset.placeholder, "languages…");
   assert.ok(root.querySelector(".sb-text-clear"), "carries a ✕ to drop it again");
   assert.equal(root.querySelector(".sb-text")?.getAttribute("data-field"), "languages");
 });
 
-test("commits when the user is finished, not as they type", (t) => {
-  const { input, committed } = setup(t, "Common");
+test("a gear macro reads as the item it names, not as the macro", (t) => {
+  // The bug this row was rebuilt for: three references were printing as their
+  // own markup, in the middle of an otherwise finished stat block.
+  const { box } = setup(t, GEAR, "gear");
 
-  input.value = "Common, Elvish";
-  assert.deepEqual(committed, [], "nothing while typing");
-
-  fireEvent.change(input);
-
-  assert.deepEqual(committed, [["languages", "Common, Elvish"]]);
+  assert.equal(box.textContent, "Greatsword, Heavy Crossbow, Splint Armor");
+  const refs = [...box.querySelectorAll(".ref")];
+  assert.deepEqual(
+    refs.map((ref) => [ref.getAttribute("data-ref"), ref.getAttribute("data-slug"), ref.textContent]),
+    [
+      ["items", null, "Greatsword"],
+      ["items", "crossbow, heavy", "Heavy Crossbow"],
+      ["items", "splint", "Splint Armor"],
+    ],
+    "each one carries what the hover controller needs to resolve it",
+  );
 });
 
-test("trims what it commits, and says nothing when unchanged", (t) => {
-  const { input, committed } = setup(t, "Common");
+test("an empty row says what belongs in it", (t) => {
+  const { box } = setup(t, "");
 
-  input.value = "  Common  ";
-  fireEvent.change(input);
-
-  assert.deepEqual(committed, [], "the same value is not an edit");
+  assert.equal(box.textContent, "");
+  assert.ok(box.classList.contains("is-empty"), "so the CSS can draw the placeholder");
 });
 
 test("Enter means the user is done", async (t) => {
-  const user = userEvent.setup();
-  const { input, root } = setup(t, "");
+  const { box, root } = setup(t, "Common");
 
-  input.focus();
-  await user.keyboard("Draconic");
-  await user.keyboard("{Enter}");
+  box.focus();
+  assert.equal(root.activeElement, box, "the caret starts in the row");
 
-  // Enter commits by blurring, because a standalone input with no <form> to
-  // submit fires `change` on blur and nothing else. (jsdom doesn't emulate
-  // blur→change, so the commit itself is covered by the `change` test above;
-  // what matters here is that Enter lets go of the field.)
-  assert.notEqual(root.activeElement, input, "Enter blurs the field");
-  assert.equal(input.value, "Draconic");
+  fireEvent.keyDown(box, { key: "Enter" });
+  // The editor commits and blurs a microtask later — see `ProseEditor.onEnter`.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.notEqual(root.activeElement, box, "Enter lets go of the field");
 });
 
 test("the ✕ drops the field", async (t) => {
@@ -76,41 +106,22 @@ test("the ✕ drops the field", async (t) => {
 });
 
 test("follows the value when it changes underneath", (t) => {
-  const { input, rerender } = setup(t, "Common");
+  const { box, rerender } = setup(t, "Common");
 
-  rerender(
-    <TextRow
-      field="languages"
-      value="Undercommon"
-      label="Languages"
-      placeholder="languages…"
-      onCommit={() => {}}
-      onClear={() => {}}
-    />,
-  );
+  rerender(row({ value: "Undercommon" }));
 
   // An undo, or an edit made in D&D Beyond's own field, has to show here.
-  assert.equal(input.value, "Undercommon");
+  assert.equal(box.textContent, "Undercommon");
 });
 
 test("leaves the box alone while the user is in it", (t) => {
-  const { input, rerender } = setup(t, "Common");
+  const { box, rerender } = setup(t, "Common");
 
-  input.focus();
-  input.value = "Common, Elv";
+  box.focus();
 
-  rerender(
-    <TextRow
-      field="languages"
-      value="Undercommon"
-      label="Languages"
-      placeholder="languages…"
-      onCommit={() => {}}
-      onClear={() => {}}
-    />,
-  );
+  rerender(row({ value: "Undercommon" }));
 
   // This is the whole point of the conversion: a form mutation arriving
   // mid-word used to wipe what they had typed.
-  assert.equal(input.value, "Common, Elv");
+  assert.equal(box.textContent, "Common");
 });

@@ -54,14 +54,14 @@ for (const ruleset of ["5e", "5.5e"] as const) {
     const { root } = renderBlock(t, creature(ruleset, { languages: "Common" }));
 
     assert.deepEqual(rows(root), ["languages"]);
-    assert.equal(root.querySelector<HTMLInputElement>(".sb-text-input")?.value, "Common");
+    assert.equal(root.querySelector(".sb-text-prose")?.textContent, "Common");
   });
 
   test(`${ruleset} prints a revealed row empty, ready to fill in`, (t) => {
     const { root } = renderBlock(t, creature(ruleset), { revealed: ["languages"] });
 
     assert.deepEqual(rows(root), ["languages"]);
-    assert.equal(root.querySelector<HTMLInputElement>(".sb-text-input")?.value, "");
+    assert.equal(root.querySelector(".sb-text-prose")?.textContent, "");
   });
 
   test(`${ruleset} keeps every optional row in the layout's print order`, (t) => {
