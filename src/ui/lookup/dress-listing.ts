@@ -95,10 +95,13 @@ footer.ddb-footer {
 export function rowPick(row: Element): LookupPick | null {
   const numbered = NUMBERED.exec(row.getAttribute("data-slug") ?? "");
   if (!numbered) return null;
-  // The link's own text, not the `.name` cell's: that cell also holds the
-  // "Legacy" badge and the concentration marker, and both would end up in the
-  // sentence.
-  const name = row.querySelector(".name a")?.textContent?.trim();
+  // The row's own link, by where it points — not the `.name` cell's text, which
+  // also holds the concentration marker and a "Legacy" badge whose fine print
+  // is itself a link ("Learn More"). Either would end up in the sentence.
+  const slug = row.getAttribute("data-slug")!;
+  const links = [...row.querySelectorAll(".name a")];
+  const link = links.find((a) => (a.getAttribute("href") ?? "").includes(slug)) ?? links[0];
+  const name = link?.textContent?.trim();
   if (!name) return null;
   return { name, slug: numbered[2]!, id: Number(numbered[1]) };
 }

@@ -112,6 +112,19 @@ test("a legacy spell picks its own id, under a name clean of the badge", async (
   ]);
 });
 
+test("the badge's own link is not the spell's", async (t) => {
+  // A legacy row carries a "Legacy" badge whose fine print links to /legacy,
+  // inside the same cell as the name. The row's link is the one that points at
+  // the row.
+  const page = listing(t);
+  const legacy = rowFor(page.doc, "2062-delayed-blast-fireball");
+  assert.ok(legacy.querySelector(".name a.badge-cta"), "the fixture has one");
+
+  page.click(legacy.querySelector(".name")!);
+
+  assert.equal(page.picks[0]?.name, "Delayed Blast Fireball");
+});
+
 test("a click that isn't on a row is just a click", async (t) => {
   const page = listing(t);
   page.click(page.doc.querySelector("h1.page-title")!);
