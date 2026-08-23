@@ -22,8 +22,9 @@ with a thin per-browser layer for each extension format.
 > reload. Every reference in the prose — a condition, a spell, a glossary term
 > — **hovers to D&D Beyond's own definition**, borrowed from their tooltip
 > endpoint and styled by their own stylesheet, and a **`/` slash command** adds
-> a new one without anyone typing a macro — including a spell, picked off D&D
-> Beyond's own browse page **framed beside the block**. This pulls
+> a new one without anyone typing a macro — including a spell or a monster,
+> picked off D&D Beyond's own browse page **framed beside the block**. This
+> pulls
 > Lexical + Preact into the content script (~400 KB minified); release builds
 > are minified.
 >
@@ -183,8 +184,8 @@ tooltip resolver needed a *lookup*, this needs a **catalog**, which is what
 `src/adapter/reference-catalog.ts` makes out of the same harvested tables.
 
 Type **`/`** in any entry and a menu offers the kinds — Condition, Skill, Sense,
-Action, Weapon property, Rule, and Spell, which is its own story below —
-narrowed by whatever you type after the slash. Pick one and the command comes
+Action, Weapon property, Rule, and the two with a story of their own below,
+Spell and Monster — narrowed by whatever you type after the slash. Pick one and the command comes
 back out of the prose; a second menu opens with that compendium's contents and a
 filter box. Pick again and the reference
 is in the sentence, already underlined and already hovering for its definition,
@@ -218,13 +219,13 @@ Damage types are not among the kinds, and won't be: there is no compendium behin
 them (`/damage-types/<id>/tooltip` 404s), so a reference to one would be
 underlined, look interactive, and resolve to nothing.
 
-## Look a spell up
+## Look a spell or a monster up
 
 A spell can't be listed the way a condition can. **D&D Beyond has no search
 endpoint** — `/api/search` and `/api/search/typeahead` both 404 — and which
 spells exist for an author depends on what they own, so there is no table to
 ship and nothing to ask. Their *browse page* is the only entitlement-aware
-search there is.
+search there is. A monster is the same problem, and gets the same answer.
 
 So a spell is asked for rather than picked. `/spell` opens a box: type the name
 exactly and press Enter, and `[spells]Fireball[/spells]` is in the sentence.
@@ -241,6 +242,14 @@ no longer opens — clicking anywhere on it picks that spell, inserts the
 reference and puts the page away. Closing it without picking abandons the
 reference and gives the caret back to the sentence.
 
+**`/monster` is the same gesture over `/monsters`.** Their two listings are the
+same page with different cells — `.monster-name` where the other has
+`.spell-name` — and nothing the surgery reaches for is either, which is why both
+fixtures run through the same tests. The one new thing a monster row has is a
+portrait with a lightbox bound to it: the only place in a row where a click
+already meant something, and the reason a click is *stopped* rather than merely
+redirected.
+
 Two things make this more than a convenience. Searching inside the frame is a
 plain form submit, so **every search is a whole new document** — undressed,
 navigation bar and all — which is why the surgery runs per load and a cover
@@ -249,15 +258,22 @@ on has been cut down. And a row hands over its **numeric id**, which is the
 expensive half of a tooltip: an unknown name otherwise costs a redirect through
 a whole rendered page, about a second. Handed to the same store the resolver
 reads, the reference an author just inserted hovers immediately. The id also
-says *which* spell — a legacy spell and its 2024 replacement share a name and a
-slug, and differ nowhere else a macro can see.
+says *which* one — a legacy spell or monster and its 2024 replacement share a
+name and a slug, and differ nowhere else a macro can see. Picking the 2014
+Vampire off the list and hovering it gives back the 2014 Vampire, where the
+macro's slug alone would have resolved to the newer one.
+
+The listing shows what D&D Beyond shows, which includes books the author doesn't
+own. Referencing one is allowed and inserts normally; its tooltip is then their
+own "this content is part of the … digital content pack" panel, the same as
+anywhere else on their site.
 
 The moving is animated, and honours `prefers-reduced-motion` — read in JS as
 well as in CSS, because the frame is unmounted on a timer and a timer that
 outlived a transition which never ran would leave a dead panel on screen.
 
-Monsters and magic items are the same page with a different path, so they are a
-table entry away. They are not there yet.
+Magic items, equipment, armor, weapons and vehicles are the same page again,
+each a table entry away. They are not there yet.
 
 ## Legendary, and lairs
 

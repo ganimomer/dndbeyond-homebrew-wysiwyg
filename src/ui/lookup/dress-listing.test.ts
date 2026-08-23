@@ -8,9 +8,10 @@
 import { test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
 import { dressListing, type LookupPick } from "./dress-listing.js";
-import fixture from "./__fixtures__/spell-listing.html";
+import spells from "./__fixtures__/spell-listing.html";
+import monsters from "./__fixtures__/monster-listing.html";
 
-function listing(t: TestContext) {
+function listing(t: TestContext, fixture: string = spells) {
   const frame = document.createElement("iframe");
   document.body.appendChild(frame);
   const doc = frame.contentDocument!;
@@ -50,14 +51,81 @@ function listing(t: TestContext) {
 /** The rows, by the spell each one names. */
 const rowFor = (doc: Document, slug: string) => doc.querySelector(`.info[data-slug="${slug}"]`)!;
 
-test("the top of the page becomes the heading", async (t) => {
-  const page = listing(t);
+/**
+ * The listings this is asked to dress. Their cells differ — `.spell-cast-time`
+ * where the other has `.monster-type` — and nothing the surgery reaches for
+ * does, which is the claim these run over both to make.
+ */
+const LISTINGS = [
+  {
+    what: "the spell list",
+    fixture: spells,
+    heading: "Spells",
+    slug: "2618887-fireball",
+    // Somewhere in the row that is nowhere near its link.
+    cell: ".spell-cast-time",
+    pick: { name: "Fireball", slug: "fireball", id: 2618887 },
+  },
+  {
+    what: "the monster list",
+    fixture: monsters,
+    heading: "Monsters",
+    slug: "1123087-gnoll-vampire",
+    cell: ".monster-type",
+    pick: { name: "Gnoll Vampire", slug: "gnoll-vampire", id: 1123087 },
+  },
+];
 
-  assert.equal(page.shown("#mega-menu-target"), false, "the navigation");
-  assert.equal(page.shown(".ad-container"), false, "the ad slot above it");
-  assert.equal(page.shown(".page-header__extras"), false, "breadcrumbs and Create A Spell");
-  assert.equal(page.shown("footer.ddb-footer"), false, "the site footer");
-  assert.equal(page.doc.querySelector("h1.page-title")?.textContent?.trim(), "Spells");
+for (const listed of LISTINGS) {
+  test(`${listed.what}: the top of the page becomes the heading`, async (t) => {
+    const page = listing(t, listed.fixture);
+
+    assert.equal(page.shown("#mega-menu-target"), false, "the navigation");
+    assert.equal(page.shown(".page-header__extras"), false, "breadcrumbs and the links");
+    assert.equal(page.shown("footer.ddb-footer"), false, "the site footer");
+    assert.equal(page.doc.querySelector("h1.page-title")?.textContent?.trim(), listed.heading);
+    assert.equal(
+      page.doc.querySelector(".page-heading__content > .microbrewery-close")?.textContent,
+      "Close",
+    );
+  });
+
+  test(`${listed.what}: no row offers to open any more`, async (t) => {
+    const page = listing(t, listed.fixture);
+    assert.ok(page.doc.querySelector(".open-indicator"), "they are still there");
+    assert.equal(page.shown(".open-indicator"), false, "and none of them shows");
+  });
+
+  test(`${listed.what}: clicking anywhere in a row picks what it names`, async (t) => {
+    const page = listing(t, listed.fixture);
+    page.click(rowFor(page.doc, listed.slug).querySelector(listed.cell)!);
+
+    assert.deepEqual(page.picks, [listed.pick]);
+  });
+}
+
+test("a monster's portrait doesn't open instead of picking", async (t) => {
+  // The icon cell is an anchor to the full-size image with a lightbox bound to
+  // it — the one place in a row where a click already meant something. Clicking
+  // a row means picking, wherever in the row it lands.
+  const page = listing(t, monsters);
+  const portrait = rowFor(page.doc, "175326-blood-drinker-vampire").querySelector(
+    ".monster-icon a",
+  )!;
+  assert.ok(portrait.getAttribute("data-lightbox"), "the fixture has one");
+
+  const notPrevented = page.click(portrait);
+
+  assert.equal(notPrevented, false);
+  assert.deepEqual(
+    page.picks.map((pick) => pick.name),
+    ["Blood Drinker Vampire"],
+  );
+});
+
+test("the ad slots go with the rest of the chrome", async (t) => {
+  const page = listing(t);
+  assert.equal(page.shown(".ad-container"), false);
 });
 
 test("the heading's row ends in a way out", async (t) => {
@@ -69,22 +137,6 @@ test("the heading's row ends in a way out", async (t) => {
 
   page.click(close!);
   assert.equal(page.closes(), 1);
-});
-
-test("no row offers to open any more", async (t) => {
-  const page = listing(t);
-
-  assert.equal(page.doc.querySelectorAll(".open-indicator").length, 3, "they are still there");
-  assert.equal(page.shown(".open-indicator"), false, "and none of them shows");
-});
-
-test("clicking anywhere in a row picks that spell", async (t) => {
-  const page = listing(t);
-  // The casting-time cell: nowhere near the link, which is the point.
-  const row = rowFor(page.doc, "2618887-fireball");
-  page.click(row.querySelector(".spell-cast-time")!);
-
-  assert.deepEqual(page.picks, [{ name: "Fireball", slug: "fireball", id: 2618887 }]);
 });
 
 test("clicking the name picks it rather than following it", async (t) => {

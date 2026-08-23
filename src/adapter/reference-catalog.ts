@@ -47,9 +47,12 @@ export interface ReferenceEntity {
 }
 
 export const REFERENCE_KINDS: readonly ReferenceKind[] = [
-  // First, because it is the reference a stat block reaches for most — and the
-  // only one here an author can't be shown a list of.
+  // The two open-ended ones first: a spell is the reference a stat block reaches
+  // for most, a monster the next, and they are the two an author can't be shown
+  // a list of. Both macros are plural — the spelling a real homebrew form was
+  // captured containing (`[monsters]Vampire Spawn[/monsters]`).
   { macro: "spells", path: "spells", label: "Spell", source: "listing" },
+  { macro: "monsters", path: "monsters", label: "Monster", source: "listing" },
   { macro: "condition", path: "conditions", label: "Condition", source: "table" },
   { macro: "skill", path: "skills", label: "Skill", source: "table" },
   { macro: "sense", path: "senses", label: "Sense", source: "table" },

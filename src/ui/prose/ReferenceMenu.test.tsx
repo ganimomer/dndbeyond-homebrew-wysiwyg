@@ -94,6 +94,7 @@ test("a slash offers every kind of reference", async (t) => {
 
   assert.deepEqual(rows(root), [
     "Spell…",
+    "Monster…",
     "Condition…",
     "Skill…",
     "Sense…",
@@ -123,7 +124,7 @@ test("the arrows walk the kinds, wrapping at the ends", async (t) => {
   assert.equal(active(root), "Spell…");
 
   key(host, "ArrowDown");
-  assert.equal(active(root), "Condition…");
+  assert.equal(active(root), "Monster…");
 
   key(host, "ArrowUp");
   key(host, "ArrowUp");
