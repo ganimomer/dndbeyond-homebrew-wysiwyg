@@ -23,6 +23,13 @@
   transform: none;
 }
 
+/* Nothing to click on the way out — a row clicked while the page fades would
+ * be a second reference. (It also covers the frame's first paint, which is
+ * behind the loading cover anyway.) */
+.lf:not(.is-open) {
+  pointer-events: none;
+}
+
 .lf-frame {
   flex: 1;
   display: block;

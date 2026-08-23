@@ -52,7 +52,7 @@ export class LookupController {
 
   /** A row was clicked. The reference goes in, and the page goes away. */
   pick(pick: LookupPick): void {
-    const open = this.state?.request;
+    const open = this.live;
     if (!open) return;
     // The row carried the id, and the id is the expensive half of a tooltip —
     // an unknown name otherwise costs a redirect through a whole rendered page.
@@ -64,10 +64,19 @@ export class LookupController {
   }
 
   cancel(): void {
-    const open = this.state?.request;
+    const open = this.live;
     if (!open) return;
     open.onCancel();
     this.dismiss();
+  }
+
+  /**
+   * The request, only while it is still taking answers. A dismissed lookup is
+   * on screen for as long as it takes to fade, and a second click in that time
+   * would otherwise insert a second reference.
+   */
+  private get live(): LookupRequest | null {
+    return this.state?.phase === "open" ? this.state.request : null;
   }
 
   subscribe(listener: (state: LookupState | null) => void): () => void {

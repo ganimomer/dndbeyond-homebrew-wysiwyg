@@ -135,6 +135,22 @@ test("picking puts the page away and gives the column back", async (t) => {
   assert.ok(view.root.querySelector(".artwork"));
 });
 
+test("the page arrives moved, and settles into place", async (t) => {
+  // Mounted in the state it animates *from*: a transition out of a style that
+  // was never rendered doesn't run, so the panel is placed first and moved a
+  // paint later.
+  const view = scene(t);
+  await askForASpell(view, "fireb");
+  fireEvent.click(view.root.querySelector(".rm-lookup")!);
+
+  const panel = view.root.querySelector(".lf")!;
+  assert.equal(panel.className, "lf", "off to the side, to begin with");
+
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await settle();
+  assert.equal(view.root.querySelector(".lf")?.className, "lf is-open");
+});
+
 test("closing without picking abandons the reference", async (t) => {
   const view = scene(t);
   await askForASpell(view, "fireb");
