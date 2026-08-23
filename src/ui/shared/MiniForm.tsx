@@ -5,7 +5,7 @@
  * These forms open in place of a chip, over fields D&D Beyond keeps apart, and
  * they all want the same things: a chip offering a value a related edit has
  * invalidated, the ✕/✓ pair that abandons or applies the edit, and the
- * click-away that abandons it.
+ * click-away that applies it.
  */
 import { useLayoutEffect } from "preact/hooks";
 import type { RefObject } from "preact";
@@ -71,21 +71,26 @@ export function IconButton({
 }
 
 /**
- * Abandons the form when a click lands anywhere but inside it.
+ * Runs `onOutside` when a click lands anywhere but inside the form.
+ *
+ * Both forms use it to *commit*: a click away is the author moving on, and the
+ * numbers they just typed are still on screen as they do. Dropping them there
+ * reads as the edit having been silently thrown out — abandoning is what ✕ and
+ * Escape are for, and both say so.
  *
  * Three choices worth spelling out: the path is read with `composedPath()`
  * because this lives in a shadow root, where a listener out on `window` would
  * otherwise only ever see the host; it listens in the capture phase, so a click
  * on D&D Beyond's own page underneath the overlay counts as outside too; and it
  * listens for `click` rather than `pointerdown`, so the click still reaches
- * whatever it landed on — which is what lets one click close this form and open
+ * whatever it landed on — which is what lets one click commit this form and open
  * the next chip's.
  *
  * The click that *opened* the form can't close it again: the form is rendered
  * synchronously from the chip's own click handler, by which point the capture
  * phase for that click is long past.
  */
-export function useCloseOnOutsideClick(
+export function useOutsideClick(
   form: RefObject<HTMLElement | null>,
   open: boolean,
   onOutside: () => void,

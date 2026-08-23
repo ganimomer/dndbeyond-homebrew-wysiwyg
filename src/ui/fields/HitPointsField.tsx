@@ -21,7 +21,7 @@ import type { HitPoints, Monster } from "../../statblock/model.js";
 import { abilityModifier } from "../../statblock/compute.js";
 import { expectedAverage, expectedModifier, hitPointsText } from "../../statblock/hit-points.js";
 import { Icon } from "../shared/Icon.js";
-import { HintChip, IconButton, toInt, useCloseOnOutsideClick } from "../shared/MiniForm.js";
+import { HintChip, IconButton, toInt, useOutsideClick } from "../shared/MiniForm.js";
 
 /** Which fields are currently offering a better value, and what it is. */
 export function hitPointsHints(
@@ -126,8 +126,6 @@ function HitPointsForm({
     average.current?.select();
   }, []);
 
-  useCloseOnOutsideClick(form, true, onClose);
-
   const conMod = abilityModifier(monster.abilities.con);
   const hints = hitPointsHints(draft, baseline, conMod, conChanged);
 
@@ -135,6 +133,17 @@ function HitPointsForm({
     onCommit(draft);
     onClose();
   };
+
+  /**
+   * A click away applies the draft — see `useOutsideClick` for why — but an
+   * untouched form applies nothing, because opening one to read it is not an
+   * edit: committing anyway would put an "HP 195" nobody made on the undo stack
+   * and send D&D Beyond a write to match.
+   */
+  const edited = (["average", "dieCount", "dieValue", "modifier"] as const).some(
+    (name) => draft[name] !== monster.hitPoints[name],
+  );
+  useOutsideClick(form, true, () => (edited ? commit() : onClose()));
 
   const field = (
     name: "average" | "dieCount" | "modifier",

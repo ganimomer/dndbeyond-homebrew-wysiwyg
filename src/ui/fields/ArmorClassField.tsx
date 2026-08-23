@@ -33,7 +33,7 @@ import type { ArmorClass, Monster } from "../../statblock/model.js";
 import type { ArmorSuggestion } from "../../state/session.js";
 import { armorBonus, armorClassText, unarmoredAc } from "../../statblock/armor-class.js";
 import { Icon } from "../shared/Icon.js";
-import { HintChip, IconButton, toInt, useCloseOnOutsideClick } from "../shared/MiniForm.js";
+import { HintChip, IconButton, toInt, useOutsideClick } from "../shared/MiniForm.js";
 
 /** The names the hint chips announce themselves under. */
 const HINT = "armor class";
@@ -149,8 +149,6 @@ function ArmorClassForm({
     bonusBox.current?.select();
   }, []);
 
-  useCloseOnOutsideClick(form, true, onClose);
-
   /** Adopts a total, re-deriving how much of it the armor accounts for. */
   const setTotal = (next: number) => {
     const bonus = armorBonus(next, base);
@@ -162,6 +160,16 @@ function ArmorClassForm({
     onCommit(draft);
     onClose();
   };
+
+  /**
+   * A click away applies the draft — see `useOutsideClick` for why — but an
+   * untouched form applies nothing, because opening one to read it is not an
+   * edit: committing anyway would put an "AC 16" nobody made on the undo stack
+   * and send D&D Beyond a write to match. Either way a standing offer is still
+   * answered, since both paths end in `onClose`.
+   */
+  const edited = draft.value !== monster.armorClass.value || draft.type !== monster.armorClass.type;
+  useOutsideClick(form, true, () => (edited ? commit() : onClose()));
 
   /**
    * The class on offer, and where it came from.

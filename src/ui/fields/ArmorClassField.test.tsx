@@ -180,11 +180,10 @@ test("Enter in a field commits the whole form", (t) => {
   assert.deepEqual(committed, [{ value: 17, type: "natural armor" }]);
 });
 
-test("✕, Escape and a click away all abandon the edit", (t) => {
+test("✕ and Escape abandon the edit", (t) => {
   const abandonments = [
     (v: ReturnType<typeof setup>) => fireEvent.click(v.action("cancel")),
     (v: ReturnType<typeof setup>) => fireEvent.keyDown(v.field("value"), { key: "Escape" }),
-    () => clickAway(),
   ];
 
   for (const abandon of abandonments) {
@@ -195,6 +194,24 @@ test("✕, Escape and a click away all abandon the edit", (t) => {
     assert.equal(view.root.querySelector(".ac-form"), null, "the form is closed");
     assert.deepEqual(view.committed, []);
   }
+});
+
+test("a click away commits the edit rather than dropping it", (t) => {
+  const view = setup(t, monsterWith(PLATED));
+
+  type(view.field("value"), "99");
+  clickAway();
+
+  assert.equal(view.root.querySelector(".ac-form"), null, "the form is closed");
+  assert.deepEqual(view.committed, [{ value: 99, type: PLATED.type }]);
+});
+
+test("a click away from an untouched form commits nothing", (t) => {
+  const view = setup(t, monsterWith(PLATED));
+
+  clickAway();
+
+  assert.deepEqual(view.committed, [], "opening a form to read it is not an edit");
 });
 
 test("a click inside the form is not a click away from it", (t) => {
