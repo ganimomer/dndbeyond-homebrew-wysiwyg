@@ -18,9 +18,14 @@ import type { ReferenceKind } from "../../adapter/reference-catalog.js";
 import { dressListing } from "./dress-listing.js";
 import { useLookup, type LookupState } from "./lookup-context.js";
 
-/** DDB's own browse URL, already searched for whatever the author typed. */
+/**
+ * DDB's own browse URL, already searched for whatever the author typed.
+ *
+ * Usually the compendium's own path. `listing` is for the one that isn't:
+ * gear, armor and weapons are three compendiums browsed at one `/equipment`.
+ */
 export function listingUrl(kind: ReferenceKind, query: string): string {
-  const path = `/${kind.path}`;
+  const path = `/${kind.listing ?? kind.path}`;
   return query ? `${path}?filter-search=${encodeURIComponent(query)}` : path;
 }
 
@@ -64,7 +69,9 @@ export function LookupFrame({ state }: { state: LookupState }) {
       <iframe
         ref={frame}
         class="lf-frame"
-        title={`${kind.label}s on D&D Beyond`}
+        // Not the label pluralised: "Equipment" has no plural, and "Equipments"
+        // is the sort of thing only a template produces.
+        title={`${kind.label} search on D&D Beyond`}
         src={listingUrl(kind, query)}
         onLoad={onLoad}
       />

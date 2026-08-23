@@ -17,7 +17,8 @@
  * first: the harvested table for the closed compendiums, then the canonical slug
  * URL, which 301s to the numbered one (`/spells/detect-magic` →
  * `/spells/2065-detect-magic`) — we read the id off the redirect and cancel the
- * body, so the page itself is never downloaded.
+ * body, so the page itself is never downloaded. Three of the compendiums have
+ * no page of their own and are browsed somewhere else; the target says where.
  */
 import { REFERENCE_IDS } from "./ddb-reference-ids.js";
 import { refToTarget, type DdbPath, type ReferenceTarget } from "./ddb-reference-map.js";
@@ -146,8 +147,9 @@ export class DdbReferenceSource implements ReferenceSource {
    * target's headers, not for the page.
    */
   private async redirectId(target: ReferenceTarget, priority: Priority): Promise<number | null> {
+    // `browse` where the compendium has no page of its own — see `BROWSED_AT`.
     const res = await this.get(
-      `${this.origin}/${target.path}/${encodeURIComponent(target.slug)}`,
+      `${this.origin}/${target.browse ?? target.path}/${encodeURIComponent(target.slug)}`,
       priority,
     );
     await res.body?.cancel().catch(() => {});

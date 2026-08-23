@@ -80,3 +80,16 @@ test("refToTarget: text that slugifies to nothing resolves to nothing", () => {
   assert.equal(refToTarget({ ref: "condition", text: "   " }), null);
   assert.equal(refToTarget({ ref: "condition", text: "!!!" }), null);
 });
+
+test("the three compendiums with no page of their own say where to browse", () => {
+  // `/adventuring-gear/chain-mail`, `/armor/chain-mail` and `/weapons/club`
+  // all 404 — D&D Beyond browses every one of them at `/equipment`, which is
+  // the only place a name can be turned into an id. Without this an equipment
+  // reference could never resolve at all.
+  for (const macro of ["equipment", "armor", "weapon"]) {
+    assert.equal(refToTarget({ ref: macro, text: "Chain Mail" })?.browse, "equipment", macro);
+  }
+  // Everything else is browsed where it lives, and says nothing.
+  assert.equal(refToTarget({ ref: "spells", text: "Fireball" })?.browse, undefined);
+  assert.equal(refToTarget({ ref: "condition", text: "Grappled" })?.browse, undefined);
+});

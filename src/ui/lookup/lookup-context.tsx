@@ -58,7 +58,15 @@ export class LookupController {
     // an unknown name otherwise costs a redirect through a whole rendered page.
     // It also says *which* spell: a legacy one and its 2024 replacement share a
     // name and a slug, and differ only here.
-    rememberReferenceId({ path: open.kind.path, slug: pick.slug }, pick.id);
+    //
+    // Except where the listing is not the compendium. `/equipment` has an id
+    // space of its own, and it agrees with the compendium's only for items the
+    // author owns — for the rest it points at a *different real item*, so the
+    // reference would resolve, plausibly, to the wrong thing. Better to let the
+    // resolver find it by name, which fails closed.
+    if (!open.kind.listing) {
+      rememberReferenceId({ path: open.kind.path, slug: pick.slug }, pick.id);
+    }
     open.onPick(pick);
     this.dismiss();
   }

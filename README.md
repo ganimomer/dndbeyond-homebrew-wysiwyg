@@ -22,9 +22,9 @@ with a thin per-browser layer for each extension format.
 > reload. Every reference in the prose — a condition, a spell, a glossary term
 > — **hovers to D&D Beyond's own definition**, borrowed from their tooltip
 > endpoint and styled by their own stylesheet, and a **`/` slash command** adds
-> a new one without anyone typing a macro — including a spell or a monster,
-> picked off D&D Beyond's own browse page **framed beside the block**. This
-> pulls
+> a new one without anyone typing a macro — including a spell, monster, magic
+> item or piece of equipment, picked off D&D Beyond's own browse page **framed
+> beside the block**. This pulls
 > Lexical + Preact into the content script (~400 KB minified); release builds
 > are minified.
 >
@@ -183,9 +183,11 @@ handed to it, display text and all. Writing starts from nothing — so where the
 tooltip resolver needed a *lookup*, this needs a **catalog**, which is what
 `src/adapter/reference-catalog.ts` makes out of the same harvested tables.
 
-Type **`/`** in any entry and a menu offers the kinds — Condition, Skill, Sense,
-Action, Weapon property, Rule, and the two with a story of their own below,
-Spell and Monster — narrowed by whatever you type after the slash. Pick one and the command comes
+Type **`/`** in any entry and a menu offers every kind D&D Beyond has a
+definition for — Condition, Skill, Sense, Action, Weapon property, Rule and
+Vehicle from tables shipped in the repo, and Spell, Monster, Magic item and
+Equipment from their own site (their story is below) — narrowed by whatever you
+type after the slash. Pick one and the command comes
 back out of the prose; a second menu opens with that compendium's contents and a
 filter box. Pick again and the reference
 is in the sentence, already underlined and already hovering for its definition,
@@ -219,13 +221,14 @@ Damage types are not among the kinds, and won't be: there is no compendium behin
 them (`/damage-types/<id>/tooltip` 404s), so a reference to one would be
 underlined, look interactive, and resolve to nothing.
 
-## Look a spell or a monster up
+## Look one up on D&D Beyond
 
 A spell can't be listed the way a condition can. **D&D Beyond has no search
 endpoint** — `/api/search` and `/api/search/typeahead` both 404 — and which
 spells exist for an author depends on what they own, so there is no table to
 ship and nothing to ask. Their *browse page* is the only entitlement-aware
-search there is. A monster is the same problem, and gets the same answer.
+search there is. Monsters, magic items and equipment are the same problem, and
+get the same answer.
 
 So a spell is asked for rather than picked. `/spell` opens a box: type the name
 exactly and press Enter, and `[spells]Fireball[/spells]` is in the sentence.
@@ -242,13 +245,28 @@ no longer opens — clicking anywhere on it picks that spell, inserts the
 reference and puts the page away. Closing it without picking abandons the
 reference and gives the caret back to the sentence.
 
-**`/monster` is the same gesture over `/monsters`.** Their two listings are the
-same page with different cells — `.monster-name` where the other has
-`.spell-name` — and nothing the surgery reaches for is either, which is why both
-fixtures run through the same tests. The one new thing a monster row has is a
-portrait with a lightbox bound to it: the only place in a row where a click
-already meant something, and the reason a click is *stopped* rather than merely
-redirected.
+**`/monster`, `/magic item` and `/equipment` are the same gesture** over
+`/monsters`, `/magic-items` and `/equipment`. Four listings, two shapes — the
+first three are one page with different cells (`.monster-name` where the other
+has `.spell-name`), and equipment is a second dialect entirely (`li > .list-row`,
+no `data-slug` at all). Nothing the surgery reaches for is specific to any of
+them: a row is a box with one link to the thing it names, and its own link is
+the one pointing at a numbered page. That rule is what keeps out the portrait
+link, the lightbox and the "Legacy" badge's "Learn More". All four fixtures run
+through the same tests.
+
+Two things equipment needs that the others don't, and both come from one fact:
+**`/equipment` is not one compendium but three.** Gear, armor and weapons are
+separate collections with separate ids, and DDB says which a row belongs to only
+by the icon it draws on it — `equipment-heavy-armor`, `equipment-simple-melee-weapon`.
+So a picked row, not the menu, decides the macro: the same list writes
+`[armor]Chain Mail[/armor]` on one row and `[weapon]Dagger[/weapon]` on the next.
+And its ids are **not kept**, unlike every other listing's. They are the
+*listing's* ids, which agree with the compendium's only for items the author
+owns; for the rest they point at a different real item, so a kept id would
+resolve — plausibly, and wrongly. Letting the resolver find it by name instead
+fails closed. (Checked against 90 of their own rows: 89 agreed, and the one that
+didn't was a book the account can't open.)
 
 Two things make this more than a convenience. Searching inside the frame is a
 plain form submit, so **every search is a whole new document** — undressed,
@@ -257,11 +275,12 @@ stays over the frame from the moment a navigation starts until the page it lands
 on has been cut down. And a row hands over its **numeric id**, which is the
 expensive half of a tooltip: an unknown name otherwise costs a redirect through
 a whole rendered page, about a second. Handed to the same store the resolver
-reads, the reference an author just inserted hovers immediately. The id also
-says *which* one — a legacy spell or monster and its 2024 replacement share a
-name and a slug, and differ nowhere else a macro can see. Picking the 2014
-Vampire off the list and hovering it gives back the 2014 Vampire, where the
-macro's slug alone would have resolved to the newer one.
+reads, the reference an author just inserted hovers immediately — for the three
+listings whose ids can be trusted. The id also says *which* one: a legacy spell
+or monster and its 2024 replacement share a name and a slug, and differ nowhere
+else a macro can see. Picking the 2014 Vampire off the list and hovering it
+gives back the 2014 Vampire, where the macro's slug alone would have resolved to
+the newer one.
 
 The listing shows what D&D Beyond shows, which includes books the author doesn't
 own. Referencing one is allowed and inserts normally; its tooltip is then their
@@ -272,8 +291,25 @@ The moving is animated, and honours `prefers-reduced-motion` — read in JS as
 well as in CSS, because the frame is unmounted on a timer and a timer that
 outlived a transition which never ran would leave a dead panel on screen.
 
-Magic items, equipment, armor, weapons and vehicles are the same page again,
-each a table entry away. They are not there yet.
+Two of the eleven kinds don't come from a listing at all. **Vehicles** have a
+page, but its cards link to `/vehicles/galley` with no id in the URL, so nothing
+about a vehicle was ever resolvable from one — a `[vehicle]` macro has never
+found a definition, in either direction. There are 31 of them and their tooltips
+need no session, so they are harvested into the shipped table instead and
+offered as a plain list, like a condition.
+
+And **equipment resolves at all** only because the resolver now knows where each
+compendium is *browsed*, which is not always where it lives:
+`/armor/chain-mail`, `/adventuring-gear/abacus` and `/weapons/club` all 404,
+while `/equipment/chain-mail` redirects to `/equipment/16-chain-mail`. Since the
+macro already says which of the three it means, the id off that redirect is the
+one the right compendium wants.
+
+**Lore glossary** is the one path in the map with nothing behind it:
+`/lore-glossary` 404s as a page and every id from 1 to 100 404s as a tooltip. It
+keeps its entry in the reading table, in case a `[lore]` macro exists somewhere,
+and is not offered as something to add — for the same reason damage types
+aren't.
 
 ## Legendary, and lairs
 
@@ -327,7 +363,7 @@ src/
 │   ├── ddb-markup.ts       bidirectional DDB-macro ⇄ editor-span codec
 │   ├── ddb-reference-map.ts  macro type → compendium path, and name → slug
 │   ├── ddb-reference-ids.ts  the harvested closed-set ids and names (generated)
-│   ├── reference-catalog.ts  the same tables as a list you can pick from
+│   ├── reference-catalog.ts  what an author can reference, and what to write
 │   ├── ddb-references.ts   what DDB says a reference means, in four tiers
 │   ├── reference-id-store.ts  ids learned from a redirect, kept on disk
 │   ├── reference-source.ts   the page's one source, shared across panel opens

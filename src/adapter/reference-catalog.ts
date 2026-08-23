@@ -36,6 +36,18 @@ export interface ReferenceKind {
    * instead.
    */
   source: "table" | "listing";
+  /**
+   * Which page to frame, when it isn't the compendium's own path.
+   *
+   * Only `/equipment` needs it, and it needs it because that one page *is*
+   * three compendiums — gear, armor and weapons. Two things follow, and both
+   * matter: a row has to say which of the three it belongs to (see
+   * `rowTarget`), and a row's id is the **listing's**, which coincides with the
+   * compendium's only for items the author owns. A wrong id there resolves to
+   * a different real item rather than to nothing, so where this is set a picked
+   * id is not worth keeping.
+   */
+  listing?: string;
 }
 
 /** One row of the "which one?" menu, and the reference it inserts. */
@@ -65,6 +77,13 @@ export const REFERENCE_KINDS: readonly ReferenceKind[] = [
   // `rules`, not `rule`: it is the spelling a live homebrew form was found to
   // contain, and `PATH_BY_MACRO` corrects it to the path that exists.
   { macro: "rules", path: "rules-glossary", label: "Rule", source: "table" },
+  {
+    macro: "equipment",
+    path: "adventuring-gear",
+    label: "Equipment",
+    source: "listing",
+    listing: "equipment",
+  },
   // Last because it is the rarest thing on a stat block, and a table rather
   // than a listing because DDB's vehicle *page* links to `/vehicles/galley`
   // with no id in it — there are 31 of them, so they are shipped instead.
@@ -154,6 +173,27 @@ function titleCase(slug: string): string {
     .split("-")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
+}
+
+/**
+ * Which compendium a listing row belongs to, where one listing serves several.
+ *
+ * Only `/equipment` does: its rows are adventuring gear, armor and weapons
+ * together, and the three are separate compendiums with separate id spaces.
+ * D&D Beyond says which by the icon it draws on the row — `equipment-heavy-armor`,
+ * `equipment-simple-melee-weapon`, `equipment-tool` — and the suffix is the
+ * whole rule. Checked against 90 of their own rows: every one the author can
+ * reach answers, under the path this picks, with the name the row shows.
+ *
+ * A category we don't recognise falls back to the kind's own compendium, which
+ * is where the great majority of that listing lives anyway.
+ */
+export function rowTarget(kind: ReferenceKind, category?: string): { macro: string; path: DdbPath } {
+  if (category?.endsWith("-weapon")) return { macro: "weapon", path: "weapons" };
+  if (category?.endsWith("-armor") || category === "shield") {
+    return { macro: "armor", path: "armor" };
+  }
+  return { macro: kind.macro, path: kind.path };
 }
 
 /**

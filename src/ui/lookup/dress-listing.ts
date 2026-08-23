@@ -28,6 +28,12 @@ export interface LookupPick {
   slug: string;
   /** The numeric id, which is the expensive half of a tooltip, free here. */
   id: number;
+  /**
+   * What the row says it is, where one listing serves several compendiums —
+   * `/equipment` is gear, armor and weapons at once, and the icon says which.
+   * `rowTarget` in the catalog turns it into a macro. Absent everywhere else.
+   */
+  category?: string;
 }
 
 export interface ListingHandlers {
@@ -37,10 +43,19 @@ export interface ListingHandlers {
 
 const STYLE_ID = "microbrewery-lookup";
 const CLOSE_CLASS = "microbrewery-close";
-/** A result row. Both attributes are DDB's, and both are load-bearing. */
-const ROW = ".listing .info[data-type][data-slug]";
-/** `2062-delayed-blast-fireball` — the id and the slug, in one attribute. */
-const NUMBERED = /^(\d+)-(.+)$/;
+/**
+ * A result row, in either of the two shapes D&D Beyond writes them.
+ *
+ * `.info` is what spells, monsters and magic items use; `/equipment` uses
+ * `.list-row` instead. They agree on everything that matters here — a row is a
+ * box containing one link to the thing it names — so nothing below has to know
+ * which it is holding.
+ */
+const ROW = ".listing .info[data-type][data-slug], .listing .list-row";
+/** The tail of a link to a thing: `/spells/2062-delayed-blast-fireball`. */
+const NUMBERED = /\/(\d+)-([a-z0-9-]+)\/?$/;
+/** `icon equipment-heavy-armor` → `heavy-armor`. */
+const CATEGORY = /(?:^|\s)equipment-(\S+)/;
 
 /**
  * What the request asks for, as a stylesheet: no navigation, no page-header
@@ -80,30 +95,43 @@ footer.ddb-footer {
   background: rgba(0, 0, 0, 0.6);
 }
 
-.listing .info {
+.listing .info,
+.listing .list-row {
   cursor: pointer !important;
 }
-.listing .info:hover {
+.listing .info:hover,
+.listing .list-row:hover {
   background: rgba(21, 121, 188, 0.08) !important;
 }
-.listing .info .open-indicator {
+/* Each dialect names its own: open-indicator on an .info row, and
+ * list-row-col-indicator on an equipment one. (No backticks in here: this
+ * whole stylesheet is a template literal.) */
+.listing .open-indicator,
+.listing .list-row-col-indicator {
   display: none !important;
 }
 `;
 
-/** Reads a row, or nothing if it isn't one we can name. */
+/**
+ * Reads a row, or nothing if it isn't one we can name.
+ *
+ * The row's own link is the one pointing at a numbered page — which is the
+ * only rule that holds across their listings, and the one that keeps the wrong
+ * links out. A row also contains a portrait linking to an image file, and a
+ * "Legacy" badge whose fine print links to `/legacy`; neither is numbered, and
+ * either would otherwise end up in the sentence.
+ */
 export function rowPick(row: Element): LookupPick | null {
-  const numbered = NUMBERED.exec(row.getAttribute("data-slug") ?? "");
-  if (!numbered) return null;
-  // The row's own link, by where it points — not the `.name` cell's text, which
-  // also holds the concentration marker and a "Legacy" badge whose fine print
-  // is itself a link ("Learn More"). Either would end up in the sentence.
-  const slug = row.getAttribute("data-slug")!;
-  const links = [...row.querySelectorAll(".name a")];
-  const link = links.find((a) => (a.getAttribute("href") ?? "").includes(slug)) ?? links[0];
-  const name = link?.textContent?.trim();
-  if (!name) return null;
-  return { name, slug: numbered[2]!, id: Number(numbered[1]) };
+  for (const link of row.querySelectorAll("a")) {
+    const numbered = NUMBERED.exec(link.getAttribute("href") ?? "");
+    const name = link.textContent?.trim();
+    if (!numbered || !name) continue;
+    const category = CATEGORY.exec(row.querySelector(".icon")?.className ?? "")?.[1];
+    return category
+      ? { name, slug: numbered[2]!, id: Number(numbered[1]), category }
+      : { name, slug: numbered[2]!, id: Number(numbered[1]) };
+  }
+  return null;
 }
 
 export function dressListing(doc: Document, handlers: ListingHandlers): () => void {

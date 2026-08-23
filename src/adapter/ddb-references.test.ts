@@ -90,6 +90,31 @@ test("an open-compendium name resolves through the slug redirect, in order", asy
   ]);
 });
 
+test("a compendium with no page of its own is looked up where DDB browses it", async () => {
+  // Armor has no page: `/armor/chain-mail` 404s, and every piece of it is
+  // browsed at `/equipment` instead. The *tooltip* still comes from `/armor`,
+  // because the macro already says which of the three compendiums sharing that
+  // listing this is — so the id off the redirect is the one `/armor` wants.
+  const ARMOR = envelope({
+    Type: "armor",
+    Id: 16,
+    Tooltip: `<div class="tooltip tooltip-armor">Chain Mail</div>`,
+  });
+  const { impl, calls } = stubFetch({
+    [`${ORIGIN}/equipment/chain-mail`]: { url: `${ORIGIN}/equipment/16-chain-mail` },
+    [`${ORIGIN}/armor/16/tooltip`]: { body: ARMOR },
+  });
+  const source = new DdbReferenceSource({ fetchImpl: impl, origin: ORIGIN });
+
+  const tooltip = await source.lookup({ ref: "armor", text: "Chain Mail" });
+
+  assert.equal(tooltip?.type, "armor");
+  assert.deepEqual(calls, [
+    `${ORIGIN}/equipment/chain-mail`,
+    `${ORIGIN}/armor/16/tooltip`,
+  ]);
+});
+
 test("the same token hovered twice at once makes one request", async () => {
   const { impl, calls } = stubFetch({
     [`${ORIGIN}/conditions/6/tooltip`]: { body: CONDITION },

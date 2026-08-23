@@ -63,13 +63,17 @@ async function caretAt(host: HTMLElement, offset: number) {
   await settle();
 }
 
-/** Types `/spell`, picks Spell…, and types a name into the box. */
-async function askForASpell(scene: ReturnType<typeof scene>, typed: string) {
-  await caretAt(scene.host, "It casts /spell".length);
+/** Puts the caret after the slash command already in the prose, picks the one
+ * kind it matches, and types into the box that opens. */
+async function ask(scene: ReturnType<typeof scene>, prose: string, typed: string) {
+  await caretAt(scene.host, prose.length);
   fireEvent.click(scene.root.querySelector(".rm-option")!);
   await settle();
   fireEvent.input(scene.root.querySelector(".rm-filter")!, { target: { value: typed } });
 }
+
+const askForASpell = (view: ReturnType<typeof scene>, typed: string) =>
+  ask(view, "It casts /spell", typed);
 
 const frame = (root: ParentNode) => root.querySelector<HTMLIFrameElement>(".lf-frame");
 
@@ -183,4 +187,41 @@ test("an edit arriving while the page is open doesn't reset the editor under it"
   await settle();
 
   assert.equal(await written(view.committed), "<p>It casts [spells]Fireball[/spells]</p>");
+});
+
+test("equipment is browsed at the one page that serves three compendiums", async (t) => {
+  // Gear, armor and weapons have no browse page of their own — `/equipment` is
+  // all three at once.
+  const view = scene(t, "<p>It wears /equip</p>");
+  await ask(view, "It wears /equip", "chain");
+  fireEvent.click(view.root.querySelector(".rm-lookup")!);
+  await settle();
+
+  assert.equal(frame(view.root)?.getAttribute("src"), "/equipment?filter-search=chain");
+});
+
+test("an armor row writes an armor reference, not an equipment one", async (t) => {
+  // Which is the whole reason a pick carries its category: the row two below
+  // this one is a weapon, and it takes a different macro again.
+  const view = scene(t, "<p>It wears /equip</p>");
+  await ask(view, "It wears /equip", "chain");
+  fireEvent.click(view.root.querySelector(".rm-lookup")!);
+  await settle();
+
+  view.lookup.pick({ name: "Chain Mail", slug: "chain-mail", id: 16, category: "heavy-armor" });
+  await settle();
+
+  assert.equal(await written(view.committed), "<p>It wears [armor]Chain Mail[/armor]</p>");
+});
+
+test("a gear row keeps the kind's own macro", async (t) => {
+  const view = scene(t, "<p>It carries /equip</p>");
+  await ask(view, "It carries /equip", "abacus");
+  fireEvent.click(view.root.querySelector(".rm-lookup")!);
+  await settle();
+
+  view.lookup.pick({ name: "Abacus", slug: "abacus", id: 6, category: "adventuring-gear" });
+  await settle();
+
+  assert.equal(await written(view.committed), "<p>It carries [equipment]Abacus[/equipment]</p>");
 });

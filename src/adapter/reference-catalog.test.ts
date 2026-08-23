@@ -5,6 +5,7 @@ import {
   entitiesOf,
   kindByMacro,
   kindsMatching,
+  rowTarget,
 } from "./reference-catalog.js";
 import { refToTarget } from "./ddb-reference-map.js";
 
@@ -27,7 +28,7 @@ test("every kind's macro resolves back to its own compendium", () => {
   }
 });
 
-test("the kinds are the seven shipped compendiums, and the three that are a search", () => {
+test("the kinds are the seven shipped compendiums, and the four that are a search", () => {
   assert.deepEqual(
     REFERENCE_KINDS.map((kind) => kind.path),
     [
@@ -40,12 +41,13 @@ test("the kinds are the seven shipped compendiums, and the three that are a sear
       "actions",
       "weapon-properties",
       "rules-glossary",
+      "adventuring-gear",
       "vehicles",
     ],
   );
   assert.deepEqual(
     REFERENCE_KINDS.filter((kind) => kind.source === "listing").map((kind) => kind.path),
-    ["spells", "monsters", "magic-items"],
+    ["spells", "monsters", "magic-items", "adventuring-gear"],
   );
 });
 
@@ -123,6 +125,50 @@ test("every entity's own name slugifies back to its slug", () => {
         `${kind.path}: ${entity.name}`,
       );
     }
+  }
+});
+
+test("one listing serves three compendiums, and a row says which", () => {
+  // `/equipment` is gear, armor and weapons at once. DDB says which by the
+  // icon it draws, and the suffix is the whole rule — checked against 90 of
+  // their own rows.
+  const equipment = kindByMacro("equipment")!;
+  assert.equal(equipment.listing, "equipment", "not browsed at its own path");
+
+  assert.deepEqual(rowTarget(equipment, "heavy-armor"), { macro: "armor", path: "armor" });
+  assert.deepEqual(rowTarget(equipment, "shield"), { macro: "armor", path: "armor" });
+  assert.deepEqual(rowTarget(equipment, "simple-melee-weapon"), {
+    macro: "weapon",
+    path: "weapons",
+  });
+  assert.deepEqual(rowTarget(equipment, "martial-ranged-weapon"), {
+    macro: "weapon",
+    path: "weapons",
+  });
+  // Gear, and anything they invent next, stay with the kind's own compendium.
+  for (const category of ["adventuring-gear", "tool", "poison", "mount", undefined, "new-thing"]) {
+    assert.deepEqual(
+      rowTarget(equipment, category),
+      { macro: "equipment", path: "adventuring-gear" },
+      String(category),
+    );
+  }
+});
+
+test("a row on a listing that is one compendium keeps that compendium", () => {
+  const spells = kindByMacro("spells")!;
+  assert.equal(spells.listing, undefined);
+  assert.deepEqual(rowTarget(spells, undefined), { macro: "spells", path: "spells" });
+});
+
+test("every macro a row can produce is one the reader knows", () => {
+  // `rowTarget` writes macros that are in no kind — `armor`, `weapon` — so the
+  // round-trip check above doesn't cover them.
+  for (const [macro, path] of [
+    ["armor", "armor"],
+    ["weapon", "weapons"],
+  ] as const) {
+    assert.equal(refToTarget({ ref: macro, text: "Anything" })?.path, path);
   }
 });
 

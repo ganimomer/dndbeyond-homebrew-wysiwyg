@@ -11,6 +11,7 @@ import { dressListing, type LookupPick } from "./dress-listing.js";
 import spells from "./__fixtures__/spell-listing.html";
 import monsters from "./__fixtures__/monster-listing.html";
 import magicItems from "./__fixtures__/magic-item-listing.html";
+import equipment from "./__fixtures__/equipment-listing.html";
 
 function listing(t: TestContext, fixture: string = spells) {
   const frame = document.createElement("iframe");
@@ -49,8 +50,14 @@ function listing(t: TestContext, fixture: string = spells) {
   };
 }
 
-/** The rows, by the spell each one names. */
-const rowFor = (doc: Document, slug: string) => doc.querySelector(`.info[data-slug="${slug}"]`)!;
+/**
+ * The rows, by the thing each one names — in whichever dialect that listing is
+ * written in. `.info` carries the slug as an attribute; a `.list-row` carries
+ * it in a class of its own (`list-row-equipment-16-chain-mail`).
+ */
+const rowFor = (doc: Document, slug: string) =>
+  (doc.querySelector(`.info[data-slug="${slug}"]`) ??
+    doc.querySelector(`.list-row[class$="${slug}"]`))!;
 
 /**
  * The listings this is asked to dress. Their cells differ — `.spell-cast-time`
@@ -65,6 +72,7 @@ const LISTINGS = [
     slug: "2618887-fireball",
     // Somewhere in the row that is nowhere near its link.
     cell: ".spell-cast-time",
+    indicator: ".open-indicator",
     pick: { name: "Fireball", slug: "fireball", id: 2618887 },
   },
   {
@@ -73,6 +81,7 @@ const LISTINGS = [
     heading: "Monsters",
     slug: "1123087-gnoll-vampire",
     cell: ".monster-type",
+    indicator: ".open-indicator",
     pick: { name: "Gnoll Vampire", slug: "gnoll-vampire", id: 1123087 },
   },
   {
@@ -81,7 +90,23 @@ const LISTINGS = [
     heading: "Magic Items",
     slug: "4606-cloak-of-elvenkind",
     cell: ".item-type",
+    indicator: ".open-indicator",
     pick: { name: "Cloak of Elvenkind", slug: "cloak-of-elvenkind", id: 4606 },
+  },
+  {
+    // The other dialect: `li > .list-row`, and a category on every pick.
+    what: "the equipment list",
+    fixture: equipment,
+    heading: "Equipment",
+    slug: "16-chain-mail",
+    cell: ".list-row-col-cost",
+    indicator: ".list-row-col-indicator",
+    pick: {
+      name: "Chain Mail",
+      slug: "chain-mail",
+      id: 16,
+      category: "heavy-armor",
+    },
   },
 ];
 
@@ -101,8 +126,8 @@ for (const listed of LISTINGS) {
 
   test(`${listed.what}: no row offers to open any more`, async (t) => {
     const page = listing(t, listed.fixture);
-    assert.ok(page.doc.querySelector(".open-indicator"), "they are still there");
-    assert.equal(page.shown(".open-indicator"), false, "and none of them shows");
+    assert.ok(page.doc.querySelector(listed.indicator), "they are still there");
+    assert.equal(page.shown(listed.indicator), false, "and none of them shows");
   });
 
   test(`${listed.what}: clicking anywhere in a row picks what it names`, async (t) => {

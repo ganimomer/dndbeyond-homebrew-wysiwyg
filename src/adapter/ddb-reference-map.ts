@@ -39,6 +39,12 @@ export type DdbPath =
 export interface ReferenceTarget {
   path: DdbPath;
   slug: string;
+  /**
+   * Where D&D Beyond keeps a *page* for this, when the compendium's own path
+   * hasn't got one. Only the id lookup uses it; the tooltip is always fetched
+   * from `path` — see `BROWSED_AT`.
+   */
+  browse?: string;
 }
 
 /**
@@ -101,6 +107,25 @@ export function slugify(name: string): string {
 }
 
 /**
+ * The three compendiums with no page of their own.
+ *
+ * `/adventuring-gear/chain-mail`, `/armor/chain-mail` and `/weapons/club` all
+ * 404 — D&D Beyond browses every one of them at `/equipment`, which does
+ * redirect a name to a numbered URL (`/equipment/16-chain-mail`). Since the
+ * macro already says *which* of the three a reference means, the id read off
+ * that redirect is the id the right compendium wants; verified against 90
+ * of their own rows.
+ *
+ * Without this, an equipment reference could never be resolved by name at all,
+ * in either direction.
+ */
+const BROWSED_AT: Partial<Record<DdbPath, string>> = {
+  "adventuring-gear": "equipment",
+  armor: "equipment",
+  weapons: "equipment",
+};
+
+/**
  * Where a token points, or null when we don't recognise it.
  *
  * `ddb-markup.ts`'s reference regex is generic — any `[foo]…[/foo]` D&D Beyond
@@ -117,5 +142,7 @@ export function refToTarget(token: RefToken): ReferenceTarget | null {
   const path = PATH_BY_MACRO[token.ref.trim().toLowerCase()];
   if (!path) return null;
   const slug = slugify(token.slug ?? token.text);
-  return slug ? { path, slug } : null;
+  if (!slug) return null;
+  const browse = BROWSED_AT[path];
+  return browse ? { path, slug, browse } : { path, slug };
 }

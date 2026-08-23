@@ -102,6 +102,7 @@ test("a slash offers every kind of reference", async (t) => {
     "Action…",
     "Weapon property…",
     "Rule…",
+    "Equipment…",
     "Vehicle…",
   ]);
 });

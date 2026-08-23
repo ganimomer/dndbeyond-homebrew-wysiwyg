@@ -24,6 +24,7 @@ import {
 } from "../../editor/prose-editor.js";
 import {
   kindsMatching,
+  rowTarget,
   slugToWrite,
   type ReferenceEntity,
   type ReferenceKind,
@@ -175,7 +176,10 @@ export function ProseItem({
       query,
       onPick: (pick) => {
         browsing.current = false;
-        choose(kind, { name: pick.name, slug: pick.slug }, point);
+        // The row may know better than the kind does: one `/equipment` row is
+        // armor and the next is a weapon, and they take different macros.
+        const macro = rowTarget(kind, pick.category).macro;
+        choose(macro, { name: pick.name, slug: pick.slug }, point);
       },
       onCancel: () => {
         browsing.current = false;
@@ -184,10 +188,10 @@ export function ProseItem({
     });
   };
 
-  const choose = (kind: ReferenceKind, entity: ReferenceEntity, point: InsertionPoint | null) => {
+  const choose = (macro: string, entity: ReferenceEntity, point: InsertionPoint | null) => {
     setMenu(null);
     editor.current?.insertReference(point, {
-      macro: kind.macro,
+      macro,
       name: entity.name,
       slug: slugToWrite(entity),
     });
@@ -285,7 +289,7 @@ export function ProseItem({
           }
           onChooseKind={(kind) => chooseKind(kind, menu.anchor)}
           onChoose={(entity) =>
-            menu.stage === "entities" && choose(menu.kind, entity, menu.point)
+            menu.stage === "entities" && choose(menu.kind.macro, entity, menu.point)
           }
           onLookUp={
             lookup && menu.stage === "entities"
