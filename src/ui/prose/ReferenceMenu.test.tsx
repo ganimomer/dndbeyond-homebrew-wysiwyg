@@ -95,6 +95,7 @@ test("a slash offers every kind of reference", async (t) => {
   assert.deepEqual(rows(root), [
     "Spell…",
     "Monster…",
+    "Magic item…",
     "Condition…",
     "Skill…",
     "Sense…",

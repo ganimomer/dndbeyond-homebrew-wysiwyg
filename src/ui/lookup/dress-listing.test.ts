@@ -10,6 +10,7 @@ import assert from "node:assert/strict";
 import { dressListing, type LookupPick } from "./dress-listing.js";
 import spells from "./__fixtures__/spell-listing.html";
 import monsters from "./__fixtures__/monster-listing.html";
+import magicItems from "./__fixtures__/magic-item-listing.html";
 
 function listing(t: TestContext, fixture: string = spells) {
   const frame = document.createElement("iframe");
@@ -73,6 +74,14 @@ const LISTINGS = [
     slug: "1123087-gnoll-vampire",
     cell: ".monster-type",
     pick: { name: "Gnoll Vampire", slug: "gnoll-vampire", id: 1123087 },
+  },
+  {
+    what: "the magic-item list",
+    fixture: magicItems,
+    heading: "Magic Items",
+    slug: "4606-cloak-of-elvenkind",
+    cell: ".item-type",
+    pick: { name: "Cloak of Elvenkind", slug: "cloak-of-elvenkind", id: 4606 },
   },
 ];
 

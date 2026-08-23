@@ -53,6 +53,10 @@ export const REFERENCE_KINDS: readonly ReferenceKind[] = [
   // captured containing (`[monsters]Vampire Spawn[/monsters]`).
   { macro: "spells", path: "spells", label: "Spell", source: "listing" },
   { macro: "monsters", path: "monsters", label: "Monster", source: "listing" },
+  // `items`, following the plural the other two are written in. Unlike theirs,
+  // this spelling is a guess: no captured form contains a magic-item macro.
+  // `PATH_BY_MACRO` reads all four spellings, so a guess costs nothing to read.
+  { macro: "items", path: "magic-items", label: "Magic item", source: "listing" },
   { macro: "condition", path: "conditions", label: "Condition", source: "table" },
   { macro: "skill", path: "skills", label: "Skill", source: "table" },
   { macro: "sense", path: "senses", label: "Sense", source: "table" },
