@@ -28,6 +28,7 @@ import {
   type ReferenceEntity,
   type ReferenceKind,
 } from "../../adapter/reference-catalog.js";
+import { useLookup } from "../lookup/lookup-context.js";
 import { FormatToolbar } from "./FormatToolbar.js";
 import { ReferenceMenu } from "./ReferenceMenu.js";
 
@@ -95,6 +96,12 @@ export function ProseItem({
    */
   const live = useRef<MenuState | null>(null);
   live.current = menu;
+  const lookup = useLookup();
+  /**
+   * Whether a reference is waiting on D&D Beyond's own page. The menu is gone
+   * by then, so this is the only thing left saying the entry is mid-gesture.
+   */
+  const browsing = useRef(false);
   /** Held in refs so the editor's one set of callbacks never goes stale. */
   const commit = useRef(onCommit);
   commit.current = onCommit;
@@ -152,6 +159,29 @@ export function ProseItem({
   const chooseKind = (kind: ReferenceKind, anchor: DOMRect) => {
     const point = editor.current?.takeInsertionPoint() ?? null;
     setMenu({ stage: "entities", anchor, kind, point });
+  };
+
+  /**
+   * Hand the question to D&D Beyond and take the menu off screen. Closing their
+   * page without picking abandons the reference — so the caret, not the menu,
+   * is what comes back.
+   */
+  const browse = (kind: ReferenceKind, query: string, point: InsertionPoint | null) => {
+    if (!lookup) return;
+    setMenu(null);
+    browsing.current = true;
+    lookup.open({
+      kind,
+      query,
+      onPick: (pick) => {
+        browsing.current = false;
+        choose(kind, { name: pick.name, slug: pick.slug }, point);
+      },
+      onCancel: () => {
+        browsing.current = false;
+        editor.current?.restoreCaret(point);
+      },
+    });
   };
 
   const choose = (kind: ReferenceKind, entity: ReferenceEntity, point: InsertionPoint | null) => {
@@ -212,10 +242,11 @@ export function ProseItem({
     const current = editor.current;
     if (!current) return;
     // Never while they're typing — that is what the old render guard was for.
-    // And never while the reference menu is up: the entity stage holds the
-    // caret in its filter box, so `hasFocus` is false there, and reloading
-    // would throw away the insertion point the author is choosing for.
-    if (current.hasFocus() || live.current) return;
+    // And never while the reference menu is up, or while a lookup is out: both
+    // hold the caret somewhere that isn't this editor, so `hasFocus` is false
+    // there, and reloading would throw away the insertion point the author is
+    // still choosing for.
+    if (current.hasFocus() || live.current || browsing.current) return;
     current.setContent(html);
   }, [html, menu]);
 
@@ -255,6 +286,11 @@ export function ProseItem({
           onChooseKind={(kind) => chooseKind(kind, menu.anchor)}
           onChoose={(entity) =>
             menu.stage === "entities" && choose(menu.kind, entity, menu.point)
+          }
+          onLookUp={
+            lookup && menu.stage === "entities"
+              ? (query) => browse(menu.kind, query, menu.point)
+              : undefined
           }
           onDismiss={() => dismiss(menu.stage === "entities" ? menu.point : undefined)}
         />

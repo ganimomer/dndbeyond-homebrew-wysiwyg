@@ -12,6 +12,7 @@ import type { Monster, SectionKey } from "../statblock/model.js";
 import { EditorStore } from "../state/store.js";
 import { StoreContext } from "../ui/store-context.js";
 import { StatBlock } from "../ui/StatBlock.js";
+import { LookupProvider, type LookupController } from "../ui/lookup/lookup-context.js";
 import { renderInShadowRoot } from "./render.js";
 
 /** A handful of plausible options, so the rows that offer a picker have one. */
@@ -78,6 +79,8 @@ export interface RenderBlockOptions {
   /** Description sections the user has added from the "Add section" button. */
   revealedSections?: Iterable<SectionKey>;
   adapter?: Partial<PageAdapter>;
+  /** A lookup to drive by hand — the overlay always provides one. */
+  lookup?: LookupController;
 }
 
 export function renderBlock(t: TestContext, monster: Monster, options: RenderBlockOptions = {}) {
@@ -96,7 +99,9 @@ export function renderBlock(t: TestContext, monster: Monster, options: RenderBlo
   // needs the same does it by hand, since nothing here subscribes.
   const tree = () => (
     <StoreContext.Provider value={store}>
-      <StatBlock monster={store.getMonster() ?? monster} />
+      <LookupProvider controller={options.lookup}>
+        <StatBlock monster={store.getMonster() ?? monster} />
+      </LookupProvider>
     </StoreContext.Provider>
   );
 

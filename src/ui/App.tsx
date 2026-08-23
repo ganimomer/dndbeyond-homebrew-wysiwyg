@@ -12,14 +12,17 @@
  * mini-form's click-away depends on the re-render landing inside the click that
  * caused it, while that click is still in its capture phase.
  */
+import type { RefObject } from "preact";
 import { useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { PageAdapter } from "../adapter/types.js";
+import type { Monster } from "../statblock/model.js";
 import { EditorStore } from "../state/store.js";
 import { applyDependencyHighlights } from "../editor/dependency-highlights.js";
 import { applySaveState } from "../editor/save-indicator.js";
 import { StoreContext } from "./store-context.js";
 import { StatBlock } from "./StatBlock.js";
 import { AvatarToast } from "./AvatarToast.js";
+import { LookupProvider, useLookupState } from "./lookup/lookup-context.js";
 import appCss from "./App.css";
 import statBlockCss from "./StatBlock.css";
 import artworkCss from "./Artwork.css";
@@ -45,6 +48,7 @@ import sectionListCss from "./prose/SectionList.css";
 import itemGapCss from "./prose/ItemGap.css";
 import dragHandleCss from "./prose/DragHandle.css";
 import formatToolbarCss from "./prose/FormatToolbar.css";
+import lookupFrameCss from "./lookup/LookupFrame.css";
 import referenceMenuCss from "./prose/ReferenceMenu.css";
 import removeSectionCss from "./prose/RemoveSection.css";
 import removeItemCss from "./prose/RemoveItem.css";
@@ -91,6 +95,7 @@ const STYLES = [
   dragHandleCss,
   formatToolbarCss,
   referenceMenuCss,
+  lookupFrameCss,
   removeSectionCss,
   removeItemCss,
   contextMenuCss,
@@ -172,15 +177,38 @@ export function App({ adapter, onClose }: AppProps) {
   return (
     <StoreContext.Provider value={store}>
       <style dangerouslySetInnerHTML={{ __html: STYLES }} />
-      <div class="overlay">
-        <div class="page">
-          <div class="stage" ref={stage}>
-            {monster ? <StatBlock monster={monster} onClose={onClose} /> : null}
-          </div>
-        </div>
-        {/* Outside the scrolling page: it reports on something off screen. */}
-        <AvatarToast />
-      </div>
+      <LookupProvider>
+        <Overlay stage={stage} monster={monster} onClose={onClose} />
+      </LookupProvider>
     </StoreContext.Provider>
+  );
+}
+
+/**
+ * The overlay itself, which is a component only so that it can be *under* the
+ * lookup provider and read from it. What it reads is one class: a lookup
+ * widens the stage, and since the page centres what it holds, widening is what
+ * slides the block left — see App.css.
+ */
+function Overlay({
+  stage,
+  monster,
+  onClose,
+}: {
+  stage: RefObject<HTMLDivElement>;
+  monster: Monster | null;
+  onClose?: () => void;
+}) {
+  const lookup = useLookupState();
+  return (
+    <div class={lookup?.phase === "open" ? "overlay is-looking-up" : "overlay"}>
+      <div class="page">
+        <div class="stage" ref={stage}>
+          {monster ? <StatBlock monster={monster} onClose={onClose} /> : null}
+        </div>
+      </div>
+      {/* Outside the scrolling page: it reports on something off screen. */}
+      <AvatarToast />
+    </div>
   );
 }

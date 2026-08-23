@@ -13,6 +13,7 @@
  * takes the store as an option and never imports the polyfill itself, which is
  * what lets it be unit-tested outside an extension context.
  */
+import type { ReferenceTarget } from "./ddb-reference-map.js";
 import { DdbReferenceSource } from "./ddb-references.js";
 import { LearnedReferenceIds, type KeyValueArea } from "./reference-id-store.js";
 
@@ -49,6 +50,22 @@ function storageArea(): KeyValueArea | null {
   return typeof area?.get === "function" && typeof area.set === "function"
     ? (area as KeyValueArea)
     : null;
+}
+
+/**
+ * An id learned somewhere other than a lookup.
+ *
+ * A listing row the author clicked carried its own numeric id, which is the
+ * half of a tooltip that costs a second to derive — see `redirectId`. Handing
+ * it to the same store the resolver reads means the reference they just
+ * inserted hovers immediately, and goes on doing so in later sessions.
+ *
+ * Silent before the panel has built its source, and silent where there is no
+ * storage to write to. Both are the right failure: the id is a shortcut, never
+ * the answer.
+ */
+export function rememberReferenceId(target: ReferenceTarget, id: number): void {
+  ids?.remember(target, id);
 }
 
 /** Writes anything the session learned, without waiting out the debounce. */

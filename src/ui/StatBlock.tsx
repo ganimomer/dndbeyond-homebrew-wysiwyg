@@ -10,6 +10,8 @@
 import { useLayoutEffect, useRef } from "preact/hooks";
 import type { Monster } from "../statblock/model.js";
 import { Artwork } from "./Artwork.js";
+import { LookupFrame } from "./lookup/LookupFrame.js";
+import { useLookupState } from "./lookup/lookup-context.js";
 import { ItemDragProvider } from "./prose/drag-context.js";
 import { SectionBody } from "./prose/SectionBody.js";
 import { sectionState } from "./prose/section-state.js";
@@ -49,6 +51,7 @@ function Description({ monster }: { monster: Monster }) {
 
 export function StatBlock({ monster, onClose }: { monster: Monster; onClose?: () => void }) {
   const Layout = monster.ruleset === "5e" ? StatBlock5e : StatBlock55e;
+  const lookup = useLookupState();
   const layout = useRef<HTMLDivElement>(null);
   const aside = useRef<HTMLDivElement>(null);
 
@@ -100,10 +103,18 @@ export function StatBlock({ monster, onClose }: { monster: Monster; onClose?: ()
         <div class="sb-layout" ref={layout}>
           <Layout monster={monster} onClose={onClose} />
           {/* `--accent` is declared on the layouts themselves, and this column is
-              outside them — so it carries the creature's own. */}
+              outside them — so it carries the creature's own. A lookup takes the
+              column whole: D&D Beyond's page is what the author is reading, and
+              a picture is not what they came for. */}
           <div class="sb-aside" ref={aside} style={`--accent:${ACCENT[monster.ruleset]}`}>
-            <Artwork monster={monster} onLoad={measure} />
-            <AddSectionButton monster={monster} />
+            {lookup ? (
+              <LookupFrame state={lookup} />
+            ) : (
+              <>
+                <Artwork monster={monster} onLoad={measure} />
+                <AddSectionButton monster={monster} />
+              </>
+            )}
           </div>
         </div>
         <Description monster={monster} />

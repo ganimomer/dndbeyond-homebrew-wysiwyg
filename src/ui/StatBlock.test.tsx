@@ -8,6 +8,8 @@ import { emptyMonster, type Monster, type Ruleset } from "../statblock/model.js"
 import { basicsFields, hiddenFields, tidbitFields } from "./fields/registry.js";
 import { fireEvent } from "../test-support/render.js";
 import { renderBlock } from "../test-support/editor.js";
+import { kindByMacro } from "../adapter/reference-catalog.js";
+import { LookupController } from "./lookup/lookup-context.js";
 import {
   ADDABLE_SECTIONS,
   SECTION_LABEL,
@@ -341,4 +343,27 @@ test("5e Traits keeps its headingless print, trash and all", (t) => {
     [],
     "and no heading was invented for it",
   );
+});
+
+test("a lookup takes the artwork's column", (t) => {
+  // The frame is a whole browse page; a picture and an offer of a new section
+  // are not what the author opened it for.
+  const lookup = new LookupController();
+  const { root } = renderBlock(t, creature("5e", { image: "https://example.test/a.png" }), {
+    lookup,
+  });
+  assert.ok(root.querySelector(".sb-image"), "the artwork, to begin with");
+
+  lookup.open({
+    kind: kindByMacro("spells")!,
+    query: "fireb",
+    onPick: () => {},
+    onCancel: () => {},
+  });
+
+  assert.ok(root.querySelector(".lf-frame"), "D&D Beyond's own page");
+  assert.equal(root.querySelector(".sb-image"), null);
+  assert.equal(root.querySelector(".sb-add-section"), null);
+
+  lookup.cancel();
 });

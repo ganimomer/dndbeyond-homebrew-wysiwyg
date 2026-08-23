@@ -1,0 +1,52 @@
+/* D&D Beyond's browse page, standing in for the artwork.
+ *
+ * Sticky rather than tall: the block beside it scrolls, and a page-length frame
+ * would put the list off screen exactly when the author is reading it. */
+.lf {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 32px);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.18);
+  /* Mounts here and is moved a paint later — see `arrived`. */
+  opacity: 0;
+  transform: translateX(24px);
+  transition: opacity 0.24s ease, transform 0.24s ease;
+}
+
+.lf.is-open {
+  opacity: 1;
+  transform: none;
+}
+
+.lf-frame {
+  flex: 1;
+  display: block;
+  width: 100%;
+  border: 0;
+  background: #ffffff;
+}
+
+/* Over the frame for as long as what's in it isn't ours yet. Opaque, because
+ * what it hides is D&D Beyond's own navigation bar mid-reload. */
+.lf-cover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  /* `.save-spinner` is drawn in `em`. */
+  font-size: 40px;
+  color: #822000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lf {
+    transition: none;
+  }
+}
