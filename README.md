@@ -22,7 +22,8 @@ with a thin per-browser layer for each extension format.
 > reload. Every reference in the prose — a condition, a spell, a glossary term
 > — **hovers to D&D Beyond's own definition**, borrowed from their tooltip
 > endpoint and styled by their own stylesheet, and a **`/` slash command** adds
-> a new one without anyone typing a macro. This pulls
+> a new one without anyone typing a macro — including a spell, picked off D&D
+> Beyond's own browse page **framed beside the block**. This pulls
 > Lexical + Preact into the content script (~400 KB minified); release builds
 > are minified.
 >
@@ -181,10 +182,11 @@ handed to it, display text and all. Writing starts from nothing — so where the
 tooltip resolver needed a *lookup*, this needs a **catalog**, which is what
 `src/adapter/reference-catalog.ts` makes out of the same harvested tables.
 
-Type **`/`** in any entry and a menu offers the six kinds — Condition, Skill,
-Sense, Action, Weapon property, Rule — narrowed by whatever you type after the
-slash. Pick one and the command comes back out of the prose; a second menu opens
-with that compendium's contents and a filter box. Pick again and the reference
+Type **`/`** in any entry and a menu offers the kinds — Condition, Skill, Sense,
+Action, Weapon property, Rule, and Spell, which is its own story below —
+narrowed by whatever you type after the slash. Pick one and the command comes
+back out of the prose; a second menu opens with that compendium's contents and a
+filter box. Pick again and the reference
 is in the sentence, already underlined and already hovering for its definition,
 because it lands as the same `RefNode` a reference from D&D Beyond does. The
 **"+"** in the floating format bar reaches the same menu, for a reference you
@@ -212,15 +214,50 @@ exist, spelt as a word plausible enough that nobody would look. Its *edges* are
 now sealed and its text is not, because an author still has to be able to write
 "fireballs", or "shape-shifts" where the glossary says "Shape-Shifting".
 
-Spells, monsters and magic items are not here yet, and the reason is worth
-recording: **D&D Beyond has no search endpoint**. `/api/search` and
-`/api/search/typeahead` both 404, and the only entitlement-aware search is their
-listing HTML — 230 KB for one spell query, 750 KB for a magic-item one. It
-works, and it yields the numeric id as well as the name, which would skip the
-resolver's expensive tier outright; it needs its own pass to do it without
-making an author wait. Damage types are not here either, and won't be: there is
-no compendium behind them (`/damage-types/<id>/tooltip` 404s), so a reference to
-one would be underlined, look interactive, and resolve to nothing.
+Damage types are not among the kinds, and won't be: there is no compendium behind
+them (`/damage-types/<id>/tooltip` 404s), so a reference to one would be
+underlined, look interactive, and resolve to nothing.
+
+## Look a spell up
+
+A spell can't be listed the way a condition can. **D&D Beyond has no search
+endpoint** — `/api/search` and `/api/search/typeahead` both 404 — and which
+spells exist for an author depends on what they own, so there is no table to
+ship and nothing to ask. Their *browse page* is the only entitlement-aware
+search there is.
+
+So a spell is asked for rather than picked. `/spell` opens a box: type the name
+exactly and press Enter, and `[spells]Fireball[/spells]` is in the sentence.
+Above the box is **Look up spell…**, and that is where the browse page comes in.
+
+It opens **inside the overlay** — their page, framed at the same origin,
+carrying the author's own session, so what it lists is exactly what they own.
+The stat block slides left and D&D Beyond's own spell list takes the artwork's
+column and everything the block can spare, already searched for whatever had
+been typed. It arrives cut down to a picker: no navigation, no breadcrumbs, no
+ads and no footer, so the top of the page is the **Spells** heading with a
+**Close** at the right of its row; and no open indicator on a row, because a row
+no longer opens — clicking anywhere on it picks that spell, inserts the
+reference and puts the page away. Closing it without picking abandons the
+reference and gives the caret back to the sentence.
+
+Two things make this more than a convenience. Searching inside the frame is a
+plain form submit, so **every search is a whole new document** — undressed,
+navigation bar and all — which is why the surgery runs per load and a cover
+stays over the frame from the moment a navigation starts until the page it lands
+on has been cut down. And a row hands over its **numeric id**, which is the
+expensive half of a tooltip: an unknown name otherwise costs a redirect through
+a whole rendered page, about a second. Handed to the same store the resolver
+reads, the reference an author just inserted hovers immediately. The id also
+says *which* spell — a legacy spell and its 2024 replacement share a name and a
+slug, and differ nowhere else a macro can see.
+
+The moving is animated, and honours `prefers-reduced-motion` — read in JS as
+well as in CSS, because the frame is unmounted on a timer and a timer that
+outlived a transition which never ran would leave a dead panel on screen.
+
+Monsters and magic items are the same page with a different path, so they are a
+table entry away. They are not there yet.
 
 ## Legendary, and lairs
 
@@ -310,6 +347,11 @@ src/
 │   │   ├── LegendaryChip.tsx the crown, and what goes with it
 │   │   ├── LairChip.tsx      the castle, and what goes with it
 │   │   └── Field.tsx         picks a row's control by which field it is
+│   ├── lookup/             D&D Beyond's own browse page, as a picker
+│   │   ├── lookup-context.tsx  the request an entry makes and the column answers
+│   │   ├── dress-listing.ts    cutting their spell list down to rows you can click
+│   │   ├── LookupFrame.tsx     the frame, its cover, and its way in and out (+ .css)
+│   │   └── motion.ts           whether this author wants things to move
 │   ├── prose/              the description sections, an entry at a time
 │   │   ├── section-registry.ts  the sections' names, and which can be added
 │   │   ├── section-items.ts     cutting a section into entries, and back again
