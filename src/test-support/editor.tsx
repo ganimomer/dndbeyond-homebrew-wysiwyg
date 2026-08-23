@@ -7,6 +7,7 @@
  * component in isolation.
  */
 import type { TestContext } from "node:test";
+import type { VNode } from "preact";
 import type { PageAdapter, SelectOption } from "../adapter/types.js";
 import type { Monster, SectionKey } from "../statblock/model.js";
 import { EditorStore } from "../state/store.js";
@@ -71,6 +72,28 @@ export function stubAdapter(monster: Monster, overrides: Partial<PageAdapter> = 
     removeSense: () => Promise.resolve(),
     ...overrides,
   } as PageAdapter;
+}
+
+/**
+ * One component, with a real store behind it.
+ *
+ * For fields that reach the store directly rather than being handed everything
+ * as props — the Gear row, which reads the creature's Dexterity and leaves its
+ * armor-class offer on the session. `renderBlock` below is the same idea for
+ * the whole block.
+ */
+export function renderWithStore(
+  t: TestContext,
+  monster: Monster,
+  node: (store: EditorStore) => VNode,
+  adapter: Partial<PageAdapter> = {},
+) {
+  const store = new EditorStore(stubAdapter(monster, adapter));
+  store.start();
+  t.after(() => store.stop());
+  const tree = () => <StoreContext.Provider value={store}>{node(store)}</StoreContext.Provider>;
+  const view = renderInShadowRoot(t, tree());
+  return { ...view, store, repaint: () => view.rerender(tree()) };
 }
 
 export interface RenderBlockOptions {

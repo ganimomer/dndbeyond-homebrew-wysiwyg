@@ -18,6 +18,9 @@ import { Icon } from "./Icon.js";
  * An offer, never an application: nothing changes until the user takes it. That
  * is the whole point of a hint rather than a recompute — the value it's
  * displacing may well have been set on purpose.
+ *
+ * A string value is for the armor-class row's qualifier — "←splint" — which is
+ * the one offered field on the block that isn't a number.
  */
 export function HintChip({
   name,
@@ -25,7 +28,7 @@ export function HintChip({
   onTake,
 }: {
   name: string;
-  value: number;
+  value: string | number;
   onTake: () => void;
 }) {
   return (

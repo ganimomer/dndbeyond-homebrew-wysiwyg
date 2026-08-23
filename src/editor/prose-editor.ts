@@ -24,6 +24,7 @@ import {
   createEditor,
   $createRangeSelection,
   $createParagraphNode,
+  $getNearestNodeFromDOMNode,
   $getNodeByKey,
   $getRoot,
   $getSelection,
@@ -54,6 +55,8 @@ import { registerRichText } from "@lexical/rich-text";
 import { registerHistory, createEmptyHistoryState } from "@lexical/history";
 import { mergeRegister } from "@lexical/utils";
 import { DDB_NODES, RefNode, RollNode } from "./nodes.js";
+import { readToken, refUnder } from "./ref-token.js";
+import type { RefToken } from "../adapter/types.js";
 import { slashCommandLength, slashQuery } from "./slash-trigger.js";
 
 /** How long to coalesce keystrokes before writing back to the form. */
@@ -100,6 +103,18 @@ export interface InsertionPoint {
   index: number;
 }
 
+/**
+ * A reference the author has clicked, and everything a menu needs to act on it:
+ * which node to replace, what it currently stands for, and where to hang the
+ * menu.
+ */
+export interface RefHit {
+  key: NodeKey;
+  token: RefToken;
+  /** The chip's box in viewport coordinates, for `menuPlacement`. */
+  rect: DOMRect;
+}
+
 /** What to write into the prose. */
 export interface ReferenceInsertion {
   /** The macro DDB stores, e.g. `condition`. */
@@ -138,6 +153,12 @@ export interface ProseEditorOptions {
    * just Enter, which is what the Description wants.
    */
   onSplit?: (remainingHtml: string, movedHtml: string) => void;
+  /**
+   * Called when a click lands on a reference, and with null when one lands
+   * anywhere else. Leave it off and references are just styled text, which is
+   * what every editor but the Gear row wants.
+   */
+  onRefSelect?: (hit: RefHit | null) => void;
   /**
    * The field behind this editor holds one line of text — Gear, the Languages
    * note. Enter then means "done" rather than "new paragraph": it commits and
@@ -217,6 +238,7 @@ export class ProseEditor {
         (event) => this.onEnter(event),
         COMMAND_PRIORITY_HIGH,
       ),
+      this.registerRefClicks(host),
     );
     this.load(this.opts.initialHtml);
     this.markEmptiness();
@@ -365,6 +387,109 @@ export class ProseEditor {
     );
     this.editor.getRootElement()?.focus({ preventScroll: true });
     this.editor.focus();
+  }
+
+  /**
+   * Turns a click on a reference into a selected chip.
+   *
+   * "Selected" is a *range* over the node's own text, because that is the only
+   * kind of selection this editor has: `RefNode` is a `TextNode` subclass, and
+   * nothing here uses Lexical's `NodeSelection`. The browser then paints the
+   * selection itself, and the CSS makes it read as a chip rather than as
+   * highlighted words.
+   *
+   * Registered only where an owner asked for it, and it never calls
+   * `preventDefault`: the click still does everything it always did, so an
+   * author who wants to put a caret inside a reference and reword it still can.
+   */
+  private registerRefClicks(host: HTMLElement): () => void {
+    const report = this.opts.onRefSelect;
+    if (!report) return () => {};
+    const onClick = (event: MouseEvent) => {
+      const element = refUnder(event.target);
+      if (!element) {
+        report(null);
+        return;
+      }
+      let key: NodeKey | null = null;
+      this.editor.update(
+        () => {
+          const node = $getNearestNodeFromDOMNode(element);
+          if (!(node instanceof RefNode)) return;
+          key = node.getKey();
+          node.select(0, node.getTextContentSize());
+        },
+        { discrete: true },
+      );
+      // A `.ref` element Lexical doesn't own is not something we can act on —
+      // it can only be stale DOM mid-reconcile, and reporting it would hand the
+      // menu a key that resolves to nothing.
+      if (key === null) {
+        report(null);
+        return;
+      }
+      report({ key, token: readToken(element), rect: element.getBoundingClientRect() });
+    };
+    host.addEventListener("click", onClick);
+    return () => host.removeEventListener("click", onClick);
+  }
+
+  /**
+   * Swaps one reference for another, in place.
+   *
+   * Commits at once rather than on the usual typing debounce: this is not
+   * typing. The author picked a thing out of a menu, and the row should say so
+   * before they have looked away from it.
+   */
+  replaceRef(key: NodeKey, reference: ReferenceInsertion): void {
+    let replaced = false;
+    this.editor.update(
+      () => {
+        const node = $getNodeByKey(key);
+        if (!(node instanceof RefNode)) return;
+        const next = new RefNode(reference.name, reference.macro, reference.slug);
+        node.replace(next);
+        next.selectEnd();
+        replaced = true;
+      },
+      { discrete: true },
+    );
+    if (!replaced) return;
+    window.clearTimeout(this.commitTimer);
+    this.opts.onCommit(this.html());
+  }
+
+  /**
+   * Takes a reference out of the prose, and the separator that was holding its
+   * place in the list with it.
+   *
+   * Gear is a comma-separated line, so removing the middle of
+   * "Greatsword, Splint Armor, Shield" has to remove one of the commas too or
+   * the row reads "Greatsword, , Shield". The comma *before* is the one to go,
+   * since that is the one that only existed to attach this item to the one
+   * above; for the first item there is no such comma and the one after it is.
+   */
+  removeRef(key: NodeKey): void {
+    let removed = false;
+    this.editor.update(
+      () => {
+        const node = $getNodeByKey(key);
+        if (!(node instanceof RefNode)) return;
+        const previous = node.getPreviousSibling();
+        const next = node.getNextSibling();
+        if ($isTextNode(previous) && !(previous instanceof RefNode)) {
+          trimSeparator(previous, "end");
+        } else if ($isTextNode(next) && !(next instanceof RefNode)) {
+          trimSeparator(next, "start");
+        }
+        node.remove();
+        removed = true;
+      },
+      { discrete: true },
+    );
+    if (!removed) return;
+    window.clearTimeout(this.commitTimer);
+    this.opts.onCommit(this.html());
   }
 
   /** True when there is nothing in the item — drives the empty-row reaper. */
@@ -674,4 +799,22 @@ function splitBlocksAt(html: string, index: number): [string, string] {
   template.innerHTML = html;
   const blocks = [...template.content.children].map((block) => block.outerHTML);
   return [blocks.slice(0, index).join(""), blocks.slice(index + 1).join("")];
+}
+
+/**
+ * Eats the separator at one end of a plain-text node — the ", " that was
+ * joining a removed reference to its neighbour.
+ *
+ * Removes the punctuation *and* the whitespace around it, then leaves a single
+ * space if there is still text on both sides, so "Greatsword, , Shield" becomes
+ * "Greatsword, Shield" and never "Greatsword,Shield". A node left with nothing
+ * in it goes too, rather than lingering as an empty text node the codec would
+ * have to think about.
+ */
+function trimSeparator(node: TextNode, end: "start" | "end"): void {
+  const text = node.getTextContent();
+  const trimmed =
+    end === "end" ? text.replace(/[\s,;]+$/, "") : text.replace(/^[\s,;]+/, "");
+  if (trimmed === "") node.remove();
+  else node.setTextContent(end === "end" ? `${trimmed} ` : `${trimmed}`);
 }

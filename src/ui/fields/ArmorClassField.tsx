@@ -14,19 +14,31 @@
  * there is only ever one number — the split is a lens on it, not a second fact
  * that could disagree.
  *
- * The one hint is on the total, and only after a Dexterity change: the session
- * remembers what the armor was worth beforehand and offers the class that keeps
- * it worth that, since otherwise a DEX bump quietly reinterprets the creature's
- * armor as being worth less.
+ * Two things can leave hints here, and they are not the same shape.
+ *
+ * A **Dexterity change** leaves one, on the total: the session remembers what
+ * the armor was worth beforehand and offers the class that keeps it worth that,
+ * since otherwise a DEX bump quietly reinterprets the creature's armor as being
+ * worth less.
+ *
+ * **Replacing the armor in the Gear row** leaves one on every field at once,
+ * and taking any of them takes all. That is the one place this form departs
+ * from "each field is its own offer", and deliberately: a Dexterity change
+ * leaves genuinely independent values to reconcile one at a time, while a new
+ * suit of armor is a *single fact* — accepting half of it would leave the block
+ * reading "16 (splint)" about a creature in chain mail.
  */
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { ArmorClass, Monster } from "../../statblock/model.js";
+import type { ArmorSuggestion } from "../../state/session.js";
 import { armorBonus, armorClassText, unarmoredAc } from "../../statblock/armor-class.js";
 import { Icon } from "../shared/Icon.js";
 import { HintChip, IconButton, toInt, useCloseOnOutsideClick } from "../shared/MiniForm.js";
 
-/** The name the hint chip announces itself under. */
+/** The names the hint chips announce themselves under. */
 const HINT = "armor class";
+const BONUS_HINT = "armor bonus";
+const TYPE_HINT = "armor type";
 
 export interface ArmorClassFieldProps {
   monster: Monster;
@@ -37,11 +49,32 @@ export interface ArmorClassFieldProps {
    * or null when there is no reading yet.
    */
   armorBonus: number | null;
+  /**
+   * A whole armor class the Gear row is offering, because the author just
+   * changed what the creature is wearing. Its arrival opens the form.
+   */
+  suggestion: ArmorSuggestion | null;
+  /** The offer has been answered — taken, or walked away from. */
+  onSuggestionDone: () => void;
   onCommit: (armorClass: ArmorClass) => void;
 }
 
 export function ArmorClassField(props: ArmorClassFieldProps) {
   const [open, setOpen] = useState(false);
+
+  // An offer arriving from the Gear row opens the form to make it. The author
+  // is looking at the armor they just picked; the class it implies belongs on
+  // screen beside it, not behind a chip they have to think to click.
+  const offered = props.suggestion !== null;
+  useLayoutEffect(() => {
+    if (offered) setOpen(true);
+  }, [offered]);
+
+  /** Closing answers the offer, whichever way the form was left. */
+  const close = () => {
+    setOpen(false);
+    if (offered) props.onSuggestionDone();
+  };
 
   if (!open) {
     return (
@@ -64,7 +97,7 @@ export function ArmorClassField(props: ArmorClassFieldProps) {
     <span class="sb-chips" data-field="armorClass">
       {/* Keyed so re-opening always starts from the creature's stored value
           rather than resuming a draft the user walked away from. */}
-      <ArmorClassForm key="form" {...props} onClose={() => setOpen(false)} />
+      <ArmorClassForm key="form" {...props} onClose={close} />
     </span>
   );
 }
@@ -73,6 +106,7 @@ function ArmorClassForm({
   monster,
   dexChanged,
   armorBonus: previousBonus,
+  suggestion,
   onCommit,
   onClose,
 }: ArmorClassFieldProps & { onClose: () => void }) {
@@ -130,11 +164,41 @@ function ArmorClassForm({
   };
 
   /**
-   * The class that would keep the armor worth what it was before this session's
-   * Dexterity edits, or undefined when there is nothing to offer.
+   * The class on offer, and where it came from.
+   *
+   * New armor wins over a Dexterity change when both have something to say: it
+   * is the fresher fact, and it is the one that also knows what the parentheses
+   * should read. Failing that, the Dexterity offer is the class that would keep
+   * the armor worth what it was before this session's edits.
    */
-  const suggested =
-    dexChanged && previousBonus !== null ? base + previousBonus : undefined;
+  const offeredValue = suggestion
+    ? suggestion.value
+    : dexChanged && previousBonus !== null
+      ? base + previousBonus
+      : undefined;
+  /**
+   * The armor's half of the offer — and only ever for an armor swap.
+   *
+   * A Dexterity change deliberately leaves this alone and hints on the total
+   * only: there the bonus box is the field the author is already typing in
+   * (it takes the focus when the form opens) and the total is the readout, so
+   * the offer belongs on the readout. A swap is the other way round — nothing
+   * has been typed, and all three fields are being replaced together.
+   */
+  const offeredBonus = suggestion ? armorBonus(suggestion.value, base) : undefined;
+
+  /**
+   * Takes the whole offer.
+   *
+   * One handler behind every chip, which is what makes accepting one accept all
+   * — see this file's header for why an armor swap is a single fact rather than
+   * three independent ones. A Dexterity offer has no type to set and so passes
+   * through this unchanged.
+   */
+  const take = () => {
+    if (offeredValue !== undefined) setTotal(offeredValue);
+    if (suggestion) setType(suggestion.type);
+  };
 
   return (
     <span
@@ -190,6 +254,9 @@ function ArmorClassForm({
             setMagnitude(Math.abs(next));
           }}
         />
+        {offeredBonus !== undefined && offeredBonus !== sign * magnitude ? (
+          <HintChip name={BONUS_HINT} value={offeredBonus} onTake={take} />
+        ) : null}
       </span>
       =
       <span class="ac-field">
@@ -207,8 +274,8 @@ function ArmorClassForm({
             setTotal(toInt((event.currentTarget as HTMLInputElement).value, total));
           }}
         />
-        {suggested !== undefined && suggested !== total ? (
-          <HintChip name={HINT} value={suggested} onTake={() => setTotal(suggested)} />
+        {offeredValue !== undefined && offeredValue !== total ? (
+          <HintChip name={HINT} value={offeredValue} onTake={take} />
         ) : null}
       </span>
       (
@@ -221,6 +288,9 @@ function ArmorClassForm({
         value={type}
         onInput={(event) => setType((event.currentTarget as HTMLInputElement).value)}
       />
+      {suggestion && suggestion.type !== type ? (
+        <HintChip name={TYPE_HINT} value={suggestion.type} onTake={take} />
+      ) : null}
       )
       <IconButton
         action="cancel"

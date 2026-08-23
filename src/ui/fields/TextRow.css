@@ -38,3 +38,46 @@
 .statblock .sb-text-clear:hover {
   opacity: 1;
 }
+
+/* Gear reads as a row of chips: the things a creature is carrying are objects
+ * to be acted on, not words in a sentence. Only Gear — the Languages note
+ * shares this component and is prose.
+ *
+ * Styled here and nowhere else, because the `.ref` element itself belongs to
+ * Lexical's reconciler: it writes the class and the data attributes on every
+ * update and would fight anything that decorated the element in place. CSS is
+ * the one way to change how a reference looks without touching it. (Same
+ * reasoning as the `.ref` rules in StatBlock55e.css.)
+ *
+ * Led with `.statblock` only to outweigh those rules: they say the same things
+ * about `.ref` with equal specificity, and their stylesheet is assembled after
+ * this one — the layouts come last precisely so they can have the last word. */
+
+.statblock .sb-text[data-field="gear"] .ref {
+  display: inline-flex;
+  align-items: baseline;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(91, 22, 12, 0.1);
+  /* The reference underline would read as a link inside a chip that is already
+   * saying "I am a thing you can click". */
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.statblock .sb-text[data-field="gear"] .ref:hover {
+  background: rgba(91, 22, 12, 0.18);
+}
+
+/* A selected chip. The selection is a real text range — this editor has no
+ * node selection, `RefNode` being a TextNode subclass — so what marks a chip as
+ * selected is what the browser paints over its own text. Recoloured from the
+ * OS blue to the block's own accent, so it reads as part of the stat block
+ * rather than as a word being edited.
+ *
+ * No `:has()` and no class on the element: the first is off the table for the
+ * Firefox target (see FormatToolbar.css) and the second belongs to Lexical. */
+.statblock .sb-text[data-field="gear"] .ref::selection {
+  background: rgba(91, 22, 12, 0.3);
+  color: inherit;
+}

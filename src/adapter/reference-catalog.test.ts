@@ -1,11 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  ARMOR_KIND,
   REFERENCE_KINDS,
   entitiesOf,
   kindByMacro,
   kindsMatching,
   rowTarget,
+  slugToWrite,
 } from "./reference-catalog.js";
 import { refToTargets } from "./ddb-reference-map.js";
 
@@ -207,4 +209,28 @@ test("a command narrows on any word of a kind's name", () => {
 
 test("a bare slash offers everything", () => {
   assert.equal(kindsMatching("").length, REFERENCE_KINDS.length);
+});
+
+test("armor is listed from the bundled table, in the order its rules read", () => {
+  const armor = entitiesOf("armor");
+  assert.equal(armor.length, 12);
+  // Light first, heavy last — not alphabetical, unlike every other compendium.
+  assert.equal(armor[0]?.name, "Padded Armor");
+  assert.equal(armor.at(-1)?.name, "Plate Armor");
+  assert.ok(armor.some((entry) => entry.name === "Chain Mail"));
+});
+
+test("an armor's name slugs to its own slug, so the macro needs no target", () => {
+  // What makes us write `[armor]Splint Armor[/armor]` — byte-for-byte DDB's.
+  for (const entity of entitiesOf("armor")) {
+    assert.equal(slugToWrite(entity), undefined, entity.name);
+  }
+});
+
+test("the armor kind writes a macro that reads back as armor", () => {
+  assert.deepEqual(refToTargets({ ref: ARMOR_KIND.macro, text: "Chain Mail" })[0]?.path, "armor");
+  // It is deliberately not in the slash menu: it lists mundane armor only, and
+  // offering it globally would imply magic armor doesn't exist.
+  assert.ok(!REFERENCE_KINDS.includes(ARMOR_KIND));
+  assert.equal(ARMOR_KIND.source, "table");
 });

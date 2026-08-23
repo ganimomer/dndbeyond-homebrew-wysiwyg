@@ -246,6 +246,43 @@ Only slashes that could be commands count. Stat-block prose is full of the other
 kind — `1d6/round`, `60/120 ft.`, `Melee/Ranged` — so the slash has to start a
 word, and a space after the query closes the menu again.
 
+**Gear you can act on.** In the Gear row those references are drawn as chips,
+because a thing a creature is carrying is an object rather than a word in a
+sentence. Clicking one selects it and opens a small menu: **Remove**, and — when
+the chip is a piece of armor the editor recognises — **Replace…**, which offers
+the SRD's twelve mundane body armors.
+
+Picking one changes the gear, and *offers* the armor class that armor implies.
+The offer is three chips at once, on the bonus, the total and the type, and
+taking any of them takes all three:
+
+```
+AC  [ 11 + ] 6 ←5  =  [17] ←16  ( [        ] ←chain mail )
+```
+
+That is the one place the editor departs from "each field is its own offer", and
+deliberately. A Dexterity change leaves genuinely independent values to
+reconcile one at a time; a new suit of armor is a **single fact**, and accepting
+half of it would leave the block reading "16 (splint)" about a creature in chain
+mail. It is still an offer and not a recompute — the number on the block may
+have been set on purpose, and a homebrew veteran can be AC 18 in splint.
+
+What makes any of it possible is `src/statblock/armor.ts`, the one place that
+knows splint is a flat 17 and half plate is 15 plus as much Dexterity as it will
+take (at most two). Nothing else in the repo carries an item's *stats*: the
+compendium tables are ids and names, and everything beyond that comes live from
+D&D Beyond. Selection is a plain text range over the chip, because `RefNode` is
+a `TextNode` subclass and this editor has no node selection — so what marks a
+chip as selected is a recoloured `::selection`, and the chip's own look is CSS,
+never a class written onto an element Lexical's reconciler owns.
+
+Mundane body armor only, for now. Magic armor ("Splint, +1") varies by the item
+rather than by the kind, and a shield adds rather than replaces — both want a
+different gesture than "replace this with that". The armor list is also kept out
+of the `/` menu on purpose: offering twelve mundane items as *the* way to
+reference armor would quietly say a Splint +1 doesn't exist, and Equipment
+already reaches those through D&D Beyond's own listing.
+
 A reference also stops absorbing what is typed against it. `RefNode` is a
 `TextNode` subclass, so `Grappled` plus an `s` used to become
 `[condition]Grappleds[/condition]` — a macro naming a condition that doesn't
@@ -410,6 +447,7 @@ src/
 │   ├── model.ts            Monster (`ruleset` discriminator, per-section HTML)
 │   ├── compute.ts          modifiers, saves, proficiency, CR → XP
 │   ├── skills.ts / movement.ts / senses.ts / adjustments.ts / armor-class.ts
+│   ├── armor.ts            the mundane armor table: what wearing each is worth
 │   └── sample.ts           era-accurate sample vampires (5e + 5.5e)
 ├── state/                the spine
 │   ├── store.ts            EditorStore: the creature + the session, one subscription
@@ -436,6 +474,8 @@ src/
 │   │   ├── LegendaryChip.tsx the crown, and what goes with it
 │   │   ├── LairChip.tsx      the castle, and what goes with it
 │   │   ├── TextRow.tsx       Gear / Languages: one line of prose over a plain input
+│   │   ├── use-gear-chips.tsx  clicking a piece of gear: replace it, remove it
+│   │   ├── use-armor-suggestion.ts  the armor class a gear change is offering
 │   │   └── Field.tsx         picks a row's control by which field it is
 │   ├── lookup/             D&D Beyond's own browse page, as a picker
 │   │   ├── lookup-context.tsx  the request an entry makes and the column answers
@@ -449,6 +489,7 @@ src/
 │   │   ├── ProseItem.tsx        one entry: a Lexical editor, its format bar, its menus
 │   │   ├── use-reference-menu.tsx  the two-stage "/" menu, shared with the Gear row
 │   │   ├── ReferenceMenu.tsx    picking a reference: what kind, then which one
+│   │   ├── ChipMenu.tsx         the commands on a selected chip (+ .css)
 │   │   ├── menu-placement.ts    where a menu hangs off what opened it
 │   │   ├── drag-context.tsx     where the sections meet, so an entry can cross
 │   │   ├── item-drag.ts         where a dragged entry would land, in numbers

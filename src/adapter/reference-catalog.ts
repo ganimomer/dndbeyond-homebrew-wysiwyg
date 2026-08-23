@@ -17,6 +17,7 @@
  * Pure: no network, no DOM.
  */
 import { REFERENCE_IDS, REFERENCE_NAMES } from "./ddb-reference-ids.js";
+import { MUNDANE_ARMOR } from "../statblock/armor.js";
 import { slugify, type DdbPath } from "./ddb-reference-map.js";
 
 /** One row of the "what kind of thing?" menu. */
@@ -91,6 +92,27 @@ export const REFERENCE_KINDS: readonly ReferenceKind[] = [
   { macro: "vehicles", path: "vehicles", label: "Vehicle", source: "table" },
 ];
 
+/**
+ * Armor, for the Gear row's "Replace…" — and only for it.
+ *
+ * Deliberately *not* in `REFERENCE_KINDS`, so no slash menu ever grows an
+ * "Armor…" row. What backs it is `MUNDANE_ARMOR`, which is twelve items and
+ * knows nothing of magic armor; offering that list as the way to reference
+ * armor would quietly say a Splint +1 doesn't exist. An author who wants one
+ * still reaches it the way they always have, through Equipment and DDB's own
+ * listing.
+ *
+ * A `table` kind even though there is no harvested table behind it: what the
+ * menu means by that is "this kind can list itself", which this one can — see
+ * `entitiesOf`.
+ */
+export const ARMOR_KIND: ReferenceKind = {
+  macro: "armor",
+  path: "armor",
+  label: "Armor",
+  source: "table",
+};
+
 export function kindByMacro(macro: string): ReferenceKind | undefined {
   return REFERENCE_KINDS.find((kind) => kind.macro === macro);
 }
@@ -138,6 +160,15 @@ const ABILITY_PREFIXED = /^\w+ \((.+)\)$/;
  * Acrobatics check", not "makes a Dexterity (Acrobatics) check".
  */
 export function entitiesOf(path: DdbPath): ReferenceEntity[] {
+  // Armor is the one compendium listed from rules knowledge rather than from a
+  // harvested id table — `ddb-reference-ids.ts` has no equipment in it at all.
+  // It is also the one that must not be sorted: `MUNDANE_ARMOR` is already in
+  // the order the SRD's own table reads (light, medium, heavy), which is the
+  // axis an author choosing armor is choosing along.
+  if (path === "armor") {
+    return MUNDANE_ARMOR.map((armor) => ({ name: armor.name, slug: armor.slug }));
+  }
+
   const ids = REFERENCE_IDS[path] ?? {};
   const names = REFERENCE_NAMES[path] ?? {};
   const excluded = NOT_AN_ENTITY[path] ?? [];

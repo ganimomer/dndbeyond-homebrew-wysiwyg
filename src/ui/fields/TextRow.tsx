@@ -26,6 +26,7 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 import { ProseEditor } from "../../editor/prose-editor.js";
 import { ddbTextToEditorHtml, editorHtmlToDdbText } from "../../adapter/ddb-text.js";
 import { useReferenceMenu } from "../prose/use-reference-menu.js";
+import { useGearChips } from "./use-gear-chips.js";
 
 /** The fields this renders, named for the model field they show. */
 export type TextField = "gear" | "languages";
@@ -45,12 +46,19 @@ export function TextRow({ field, value, label, placeholder, onCommit, onClear }:
   const host = useRef<HTMLDivElement>(null);
   const editor = useRef<ProseEditor | null>(null);
   const references = useReferenceMenu(editor);
+  // Gear's references are things a creature is carrying, so they are acted on
+  // as well as read. The Languages note's are not.
+  const chips = useGearChips(editor);
+  const chipsOn = field === "gear";
   const html = ddbTextToEditorHtml(value);
   /** Held in refs so the editor's one set of callbacks never goes stale. */
   const commit = useRef(onCommit);
   commit.current = onCommit;
   const current = useRef(value);
   current.current = value;
+  /** Captured once at mount, like every other editor callback, so it's a ref. */
+  const select = useRef(chips.onRefSelect);
+  select.current = chips.onRefSelect;
 
   useLayoutEffect(() => {
     const node = host.current;
@@ -68,6 +76,9 @@ export function TextRow({ field, value, label, placeholder, onCommit, onClear }:
       },
       onTrigger: references.onTrigger,
       onMenuKey: references.onMenuKey,
+      // Through the ref, not the value: this is captured once at mount, and the
+      // handler behind it is rebuilt on every render.
+      onRefSelect: chipsOn ? (hit) => select.current(hit) : undefined,
     });
     created.mount(node);
     editor.current = created;
@@ -89,9 +100,9 @@ export function TextRow({ field, value, label, placeholder, onCommit, onClear }:
     if (!box) return;
     // Never while they're typing, and never while a menu or a lookup holds the
     // caret — the same guard, for the same reasons, as a prose entry's.
-    if (box.hasFocus() || references.isAway()) return;
+    if (box.hasFocus() || references.isAway() || chips.isAway()) return;
     box.setContent(html);
-  }, [html, references.stage]);
+  }, [html, references.stage, chips.isAway()]);
 
   return (
     <span class="sb-text" data-field={field}>
@@ -103,6 +114,7 @@ export function TextRow({ field, value, label, placeholder, onCommit, onClear }:
         ref={host}
       />
       {references.node}
+      {chipsOn ? chips.node : null}
       <button
         type="button"
         class="sb-text-clear"

@@ -12,6 +12,7 @@ import { sectionState } from "./prose/section-state.js";
 import { RemoveSection } from "./prose/RemoveSection.js";
 import { SECTION_LABEL } from "./prose/section-registry.js";
 import { useEditing, useSession } from "./store-context.js";
+import { useArmorSuggestion } from "./fields/use-armor-suggestion.js";
 import { SaveSlot } from "./shared/SaveSlot.js";
 import { AbilityScores } from "./fields/AbilityScores.js";
 import { AddFieldMenu } from "./fields/AddFieldMenu.js";
@@ -82,6 +83,7 @@ function DescriptionBlock({
 export function StatBlock55e({ monster, onClose }: { monster: Monster; onClose?: () => void }) {
   const session = useSession();
   const editing = useEditing();
+  const armorOffer = useArmorSuggestion();
   const commitAbility = useCommitAbility();
   const revealed = session.revealed;
 
@@ -135,6 +137,8 @@ export function StatBlock55e({ monster, onClose }: { monster: Monster; onClose?:
               monster={monster}
               dexChanged={session.changedAbilities.has("dex")}
               armorBonus={session.armorBonus}
+              suggestion={armorOffer.suggestion}
+              onSuggestionDone={armorOffer.done}
               onCommit={(armorClass) => editing.setArmorClass(armorClass)}
             />
           </span>

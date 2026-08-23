@@ -8,7 +8,11 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { fireEvent, renderInShadowRoot, userEvent } from "../../test-support/render.js";
+import { fireEvent, userEvent } from "../../test-support/render.js";
+import { renderWithStore } from "../../test-support/editor.js";
+import type { VNode } from "preact";
+import { StoreContext } from "../store-context.js";
+import { emptyMonster } from "../../statblock/model.js";
 import { TextRow, type TextField } from "./TextRow.js";
 
 /** The Gear field of D&D Beyond's own Warrior Veteran, verbatim. */
@@ -33,8 +37,7 @@ function row(props: Partial<Parameters<typeof TextRow>[0]> = {}) {
 function setup(t: import("node:test").TestContext, value = "", field: TextField = "languages") {
   const committed: Array<[TextField, string]> = [];
   const cleared: TextField[] = [];
-  const view = renderInShadowRoot(
-    t,
+  const view = renderWithStore(t, emptyMonster(), () =>
     row({
       field,
       value,
@@ -45,7 +48,12 @@ function setup(t: import("node:test").TestContext, value = "", field: TextField 
     }),
   );
   const box = view.root.querySelector<HTMLElement>(".sb-text-prose")!;
-  return { ...view, box, committed, cleared };
+  // Re-rendering has to keep the store above it: the Gear row reaches through
+  // it for the creature's Dexterity.
+  const rerender = (node: VNode) => (
+    view.rerender(<StoreContext.Provider value={view.store}>{node}</StoreContext.Provider>)
+  );
+  return { ...view, rerender, box, committed, cleared };
 }
 
 test("shows the value it was given, ready to type over", (t) => {

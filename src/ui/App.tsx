@@ -50,6 +50,7 @@ import dragHandleCss from "./prose/DragHandle.css";
 import formatToolbarCss from "./prose/FormatToolbar.css";
 import lookupFrameCss from "./lookup/LookupFrame.css";
 import referenceMenuCss from "./prose/ReferenceMenu.css";
+import chipMenuCss from "./prose/ChipMenu.css";
 import removeSectionCss from "./prose/RemoveSection.css";
 import removeItemCss from "./prose/RemoveItem.css";
 import contextMenuCss from "./shared/ContextMenu.css";
@@ -99,6 +100,8 @@ const STYLES = [
   removeSectionCss,
   removeItemCss,
   contextMenuCss,
+  // After ContextMenu's, whose row classes it borrows and re-drafts.
+  chipMenuCss,
   confirmDialogCss,
   // After ContextMenu's: `.sb-add` and `.cm-trigger` tie on specificity, and one
   // of the buttons it styles is a context-menu trigger.

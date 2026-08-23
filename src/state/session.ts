@@ -24,6 +24,20 @@ export interface AvatarStatus {
   message?: string;
 }
 
+/**
+ * An armor class the editor is offering, because the author changed the armor
+ * the creature is wearing.
+ *
+ * Both halves together: the number and the words in the parentheses are one
+ * fact about one piece of armor, and a block reading "16 (splint)" would be
+ * saying something untrue about a creature in chain mail.
+ */
+export interface ArmorSuggestion {
+  value: number;
+  /** The armor-class row's qualifier — "splint", "half plate". */
+  type: string;
+}
+
 export interface SessionState {
   /**
    * Optional fields the user added from the "Add…" menu that have nothing in
@@ -52,6 +66,18 @@ export interface SessionState {
    * Dexterity change is measured against.
    */
   readonly armorBonus: number | null;
+  /**
+   * The armor class a gear change is offering, until the author has answered.
+   *
+   * A one-shot nudge like `pendingFocus` below, and cleared the same way — the
+   * armor-class field opens itself when this arrives, and clears it whether the
+   * offer is taken or walked away from.
+   *
+   * Deliberately not `armorBonus` above, which answers a different question and
+   * on a different clock: that one is anchored once from the pristine form and
+   * measures what a *Dexterity* edit did to armor whose kind never changed.
+   */
+  readonly pendingArmor: ArmorSuggestion | null;
 
   /**
    * A large avatar uploaded this session, as an object URL.
@@ -86,6 +112,7 @@ export function emptySession(): SessionState {
     revealedSections: new Set(),
     changedAbilities: new Set(),
     armorBonus: null,
+    pendingArmor: null,
     avatarPreview: null,
     avatarStatus: new Map(),
     pendingFocus: null,

@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { emptyMonster, type ArmorClass, type Monster } from "../../statblock/model.js";
 import { fireEvent, renderInShadowRoot } from "../../test-support/render.js";
+import type { ArmorSuggestion } from "../../state/session.js";
 import { ArmorClassField } from "./ArmorClassField.js";
 
 /** AC 16 (natural armor) on DEX 18 (+4): unarmored 14, so the armor is worth 2. */
@@ -15,26 +16,39 @@ function monsterWith(armorClass: ArmorClass, dex = 18): Monster {
 function setup(
   t: import("node:test").TestContext,
   monster: Monster,
-  { open = true, dexChanged = false, armorBonus = null as number | null } = {},
+  {
+    open = true,
+    dexChanged = false,
+    armorBonus = null as number | null,
+    suggestion = null as ArmorSuggestion | null,
+  } = {},
 ) {
   const committed: ArmorClass[] = [];
+  const answered: true[] = [];
   const view = renderInShadowRoot(
     t,
     <ArmorClassField
       monster={monster}
       dexChanged={dexChanged}
       armorBonus={armorBonus}
+      suggestion={suggestion}
+      onSuggestionDone={() => answered.push(true)}
       onCommit={(ac) => committed.push(ac)}
     />,
   );
-  if (open) fireEvent.click(view.root.querySelector(".sb-chip-button")!);
+  // A suggestion opens the form itself; anything else needs the chip clicked.
+  if (open && !suggestion) fireEvent.click(view.root.querySelector(".sb-chip-button")!);
 
   const field = (name: string) => view.root.querySelector<HTMLInputElement>(`[data-ac="${name}"]`)!;
   const prefix = () => view.root.querySelector(".ac-prefix")?.textContent;
   const hint = () => view.root.querySelector<HTMLElement>(".sb-hint");
+  const hintFor = (name: string) =>
+    view.root.querySelector<HTMLElement>(`.sb-hint[data-hint="${name}"]`);
+  const hints = () =>
+    [...view.root.querySelectorAll<HTMLElement>(".sb-hint")].map((el) => el.dataset.hint);
   const action = (name: string) =>
     view.root.querySelector<HTMLButtonElement>(`[data-form-action="${name}"]`)!;
-  return { ...view, committed, field, prefix, hint, action };
+  return { ...view, committed, answered, field, prefix, hint, hintFor, hints, action };
 }
 
 const type = (input: HTMLInputElement, value: string) => {
@@ -225,4 +239,113 @@ test("each field carries the focus key the panel restores to", (t) => {
   assert.equal(field("bonus").dataset.focusKey, "ac:bonus");
   assert.equal(field("value").dataset.focusKey, "ac:value");
   assert.equal(field("type").dataset.focusKey, "ac:type");
+});
+
+/**
+ * A whole armor class offered because the Gear row changed. The rule these are
+ * about is the one the component's header sets out: an armor swap is a single
+ * fact, so the three fields it touches are taken together or not at all.
+ */
+
+/** Chain Mail on the Warrior Veteran: flat 16, and the row reads "chain mail". */
+const CHAIN_MAIL: ArmorSuggestion = { value: 16, type: "chain mail" };
+
+test("an offered armor class opens the form itself", (t) => {
+  const { root, field } = setup(t, monsterWith({ value: 17, type: "splint" }, 13), {
+    suggestion: CHAIN_MAIL,
+  });
+  // No chip left to click — the form is already up.
+  assert.equal(root.querySelector(".sb-chip-button"), null);
+  assert.equal(field("value").value, "17");
+});
+
+test("it offers the bonus, the total and the type at once", (t) => {
+  const { hints, hintFor } = setup(t, monsterWith({ value: 17, type: "splint" }, 13), {
+    suggestion: CHAIN_MAIL,
+  });
+  assert.deepEqual(hints(), ["armor bonus", "armor class", "armor type"]);
+  // DEX 13 (+1) → unarmored 11, so chain mail's flat 16 is worth 5.
+  assert.equal(hintFor("armor bonus")?.textContent, "←5");
+  assert.equal(hintFor("armor class")?.textContent, "←16");
+  assert.equal(hintFor("armor type")?.textContent, "←chain mail");
+});
+
+test("taking any one of them takes all three", (t) => {
+  for (const which of ["armor bonus", "armor class", "armor type"]) {
+    const { hintFor, field, prefix } = setup(
+      t,
+      monsterWith({ value: 17, type: "splint" }, 13),
+      { suggestion: CHAIN_MAIL },
+    );
+    fireEvent.click(hintFor(which)!);
+
+    assert.equal(field("value").value, "16", which);
+    assert.equal(field("bonus").value, "5", which);
+    assert.equal(field("type").value, "chain mail", which);
+    assert.equal(prefix(), "11 +", which);
+  }
+});
+
+test("taking the offer settles it — no chip is left standing", (t) => {
+  const { hintFor, hints } = setup(t, monsterWith({ value: 17, type: "splint" }, 13), {
+    suggestion: CHAIN_MAIL,
+  });
+  fireEvent.click(hintFor("armor class")!);
+  assert.deepEqual(hints(), []);
+});
+
+test("nothing reaches the creature until the form is applied", (t) => {
+  const { hintFor, committed, action } = setup(
+    t,
+    monsterWith({ value: 17, type: "splint" }, 13),
+    { suggestion: CHAIN_MAIL },
+  );
+  fireEvent.click(hintFor("armor class")!);
+  assert.deepEqual(committed, []);
+
+  fireEvent.click(action("commit"));
+  assert.deepEqual(committed, [{ value: 16, type: "chain mail" }]);
+});
+
+test("half plate takes the Dexterity the offer already accounted for", (t) => {
+  // 15 + min(DEX +1, 2) = 16, which on an unarmored 11 is worth 5.
+  const { hintFor } = setup(t, monsterWith({ value: 17, type: "splint" }, 13), {
+    suggestion: { value: 16, type: "half plate" },
+  });
+  assert.equal(hintFor("armor class")?.textContent, "←16");
+  assert.equal(hintFor("armor bonus")?.textContent, "←5");
+});
+
+test("an offer already agreed with shows no chips", (t) => {
+  const { hints } = setup(t, monsterWith({ value: 16, type: "chain mail" }, 13), {
+    suggestion: CHAIN_MAIL,
+  });
+  assert.deepEqual(hints(), []);
+});
+
+test("walking away from the offer answers it, so it never fires twice", (t) => {
+  const { answered, action } = setup(t, monsterWith({ value: 17, type: "splint" }, 13), {
+    suggestion: CHAIN_MAIL,
+  });
+  assert.deepEqual(answered, []);
+  fireEvent.click(action("cancel"));
+  assert.deepEqual(answered, [true]);
+});
+
+test("applying the offer answers it too", (t) => {
+  const { answered, action } = setup(t, monsterWith({ value: 17, type: "splint" }, 13), {
+    suggestion: CHAIN_MAIL,
+  });
+  fireEvent.click(action("commit"));
+  assert.deepEqual(answered, [true]);
+});
+
+test("new armor wins over a Dexterity change, which knows nothing of the type", (t) => {
+  const { hintFor } = setup(t, monsterWith({ value: 17, type: "splint" }, 13), {
+    suggestion: CHAIN_MAIL,
+    dexChanged: true,
+    armorBonus: 6,
+  });
+  // Not 11 + 6 = 17, which is what the Dexterity offer alone would have said.
+  assert.equal(hintFor("armor class")?.textContent, "←16");
 });
