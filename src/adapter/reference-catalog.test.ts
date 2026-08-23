@@ -27,7 +27,7 @@ test("every kind's macro resolves back to its own compendium", () => {
   }
 });
 
-test("the kinds are the six shipped compendiums, and the three that are a search", () => {
+test("the kinds are the seven shipped compendiums, and the three that are a search", () => {
   assert.deepEqual(
     REFERENCE_KINDS.map((kind) => kind.path),
     [
@@ -40,6 +40,7 @@ test("the kinds are the six shipped compendiums, and the three that are a search
       "actions",
       "weapon-properties",
       "rules-glossary",
+      "vehicles",
     ],
   );
   assert.deepEqual(
@@ -86,6 +87,16 @@ test("the senses drop the one that isn't a sense", () => {
     senses.map((sense) => sense.name),
     ["Blindsight", "Darkvision", "Tremorsense", "Truesight"],
   );
+});
+
+test("the vehicles are the closed set their own page can't offer", () => {
+  // DDB has a vehicles page, but its cards link to `/vehicles/galley` — no id
+  // in the URL, so nothing about a vehicle could be resolved from one. There
+  // are 31, so the table carries them instead.
+  const vehicles = entitiesOf("vehicles");
+  assert.equal(vehicles.length, 31);
+  assert.deepEqual(vehicles[0], { name: "Battle Balloon", slug: "battle-balloon" });
+  assert.ok(vehicles.some((vehicle) => vehicle.name === "Galley"));
 });
 
 test("the glossary is the long list the picker has to filter", () => {

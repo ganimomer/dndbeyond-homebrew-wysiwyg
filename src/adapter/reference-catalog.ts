@@ -65,6 +65,11 @@ export const REFERENCE_KINDS: readonly ReferenceKind[] = [
   // `rules`, not `rule`: it is the spelling a live homebrew form was found to
   // contain, and `PATH_BY_MACRO` corrects it to the path that exists.
   { macro: "rules", path: "rules-glossary", label: "Rule", source: "table" },
+  // Last because it is the rarest thing on a stat block, and a table rather
+  // than a listing because DDB's vehicle *page* links to `/vehicles/galley`
+  // with no id in it — there are 31 of them, so they are shipped instead.
+  // Plural like the other book content; unobserved, as `items` is.
+  { macro: "vehicles", path: "vehicles", label: "Vehicle", source: "table" },
 ];
 
 export function kindByMacro(macro: string): ReferenceKind | undefined {

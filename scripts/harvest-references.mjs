@@ -32,7 +32,8 @@ const OUT = resolve(
  * Ranges overshoot the ids known to exist today, so a compendium that grows is
  * picked up on the next run and the gaps cost nothing but a 404. Observed at
  * time of writing: conditions 1–15, skills 2–19, senses 1–5, actions 1–11 with
- * gaps, weapon-properties 1–15 with gaps, rules-glossary 1–127 contiguous.
+ * gaps, weapon-properties 1–15 with gaps, rules-glossary 1–127 contiguous,
+ * vehicles 1–31 contiguous.
  */
 const PATHS = {
   conditions: 20,
@@ -41,6 +42,13 @@ const PATHS = {
   actions: 15,
   "weapon-properties": 20,
   "rules-glossary": 160,
+  // A closed set of 31 at time of writing, and the only compendium here that
+  // isn't rules text: DDB has a vehicles *page*, but its cards link to
+  // `/vehicles/galley` with no id in the URL at all, so a reference to one
+  // could never be resolved by name the way a spell can. Harvesting the table
+  // is what makes `[vehicle]Galley[/vehicle]` work — for reading as well as
+  // writing.
+  vehicles: 40,
 };
 
 /** Mirrors `slugify` in src/adapter/ddb-reference-map.ts — see the note there. */

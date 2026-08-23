@@ -102,6 +102,7 @@ test("a slash offers every kind of reference", async (t) => {
     "Action…",
     "Weapon property…",
     "Rule…",
+    "Vehicle…",
   ]);
 });
 
@@ -129,7 +130,7 @@ test("the arrows walk the kinds, wrapping at the ends", async (t) => {
 
   key(host, "ArrowUp");
   key(host, "ArrowUp");
-  assert.equal(active(root), "Rule…", "past the top is the bottom");
+  assert.equal(active(root), "Vehicle…", "past the top is the bottom");
 });
 
 test("Escape closes the menu and leaves what was typed alone", async (t) => {
