@@ -6,13 +6,13 @@
  * This is the writing direction, and it needs the thing that direction never
  * did: the *contents* of a compendium, by name.
  *
- * Only the six compendiums whose whole contents are already committed in
- * `ddb-reference-ids.ts` are here. Spells, monsters and items are open-ended
- * and entitlement-dependent — they need a search, not a list, and D&D Beyond
- * has no JSON endpoint for one (their own listing pages are the only
- * entitlement-aware search, at 230–750 KB a query). They arrive as a second
- * source behind the same menu, which is why `ReferenceKind` says nothing about
- * where its entities come from.
+ * A kind's entities come from one of two places, and the kind says which.
+ * **A table**: the six compendiums whose whole contents are committed in
+ * `ddb-reference-ids.ts`, listed in full and filtered in the menu. **A
+ * listing**: D&D Beyond's own browse page, which for spells, monsters and items
+ * is the only search there is — they are open-ended and entitlement-dependent,
+ * and DDB has no JSON endpoint to ask (`/api/search` 404s). Nothing in this
+ * module fetches either; a listing kind simply has no entities to offer here.
  *
  * Pure: no network, no DOM.
  */
@@ -30,6 +30,12 @@ export interface ReferenceKind {
   path: DdbPath;
   /** The menu row, which the menu itself suffixes with an ellipsis. */
   label: string;
+  /**
+   * Where the "which one?" stage gets its rows. `table` lists `entitiesOf`;
+   * `listing` has none to list, and offers D&D Beyond's own browse page
+   * instead.
+   */
+  source: "table" | "listing";
 }
 
 /** One row of the "which one?" menu, and the reference it inserts. */
@@ -41,14 +47,17 @@ export interface ReferenceEntity {
 }
 
 export const REFERENCE_KINDS: readonly ReferenceKind[] = [
-  { macro: "condition", path: "conditions", label: "Condition" },
-  { macro: "skill", path: "skills", label: "Skill" },
-  { macro: "sense", path: "senses", label: "Sense" },
-  { macro: "action", path: "actions", label: "Action" },
-  { macro: "weapon-property", path: "weapon-properties", label: "Weapon property" },
+  // First, because it is the reference a stat block reaches for most — and the
+  // only one here an author can't be shown a list of.
+  { macro: "spells", path: "spells", label: "Spell", source: "listing" },
+  { macro: "condition", path: "conditions", label: "Condition", source: "table" },
+  { macro: "skill", path: "skills", label: "Skill", source: "table" },
+  { macro: "sense", path: "senses", label: "Sense", source: "table" },
+  { macro: "action", path: "actions", label: "Action", source: "table" },
+  { macro: "weapon-property", path: "weapon-properties", label: "Weapon property", source: "table" },
   // `rules`, not `rule`: it is the spelling a live homebrew form was found to
   // contain, and `PATH_BY_MACRO` corrects it to the path that exists.
-  { macro: "rules", path: "rules-glossary", label: "Rule" },
+  { macro: "rules", path: "rules-glossary", label: "Rule", source: "table" },
 ];
 
 export function kindByMacro(macro: string): ReferenceKind | undefined {
@@ -147,4 +156,17 @@ function titleCase(slug: string): string {
  */
 export function slugToWrite(entity: ReferenceEntity): string | undefined {
   return slugify(entity.name) === entity.slug ? undefined : entity.slug;
+}
+
+/**
+ * An entity out of a name an author typed, for the kinds there is no list of.
+ *
+ * The slug is the name's own, which is the same bargain a picked entity makes:
+ * `slugToWrite` then leaves it off the macro, and the resolver slugifies the
+ * display text back to it. That is also why the name has to be exact — a
+ * misspelling isn't wrong here, it just points at a spell D&D Beyond hasn't got.
+ */
+export function typedEntity(name: string): ReferenceEntity {
+  const trimmed = name.trim();
+  return { name: trimmed, slug: slugify(trimmed) };
 }

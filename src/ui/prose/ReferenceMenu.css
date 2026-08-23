@@ -66,3 +66,38 @@
   color: #6f7478;
   font-style: italic;
 }
+
+/* The offer to go and look, for a kind there is no list of. Above the box
+ * rather than beside it: it is the way out of typing, not a decoration on it. */
+.rm-lookup {
+  box-sizing: border-box;
+  display: block;
+  width: calc(100% - 4px);
+  margin: 2px 2px 6px;
+  padding: 6px 8px;
+  border: 1px solid #d8e1e8;
+  border-radius: 3px;
+  font: inherit;
+  color: #1579bc;
+  background: #f7fafc;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rm-lookup:hover {
+  background: #eef4f8;
+}
+
+.rm-lookup:focus-visible {
+  outline: none;
+  border-color: #1579bc;
+}
+
+/* Says the one thing an author has to know about typing a name themselves. */
+.rm-hint {
+  margin: 4px 2px 2px;
+  padding: 0 6px;
+  color: #6f7478;
+  font-size: 12px;
+  line-height: 1.4;
+}

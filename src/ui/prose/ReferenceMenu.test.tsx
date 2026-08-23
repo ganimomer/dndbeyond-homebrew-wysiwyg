@@ -93,6 +93,7 @@ test("a slash offers every kind of reference", async (t) => {
   await caretAt(host, "The target is /".length);
 
   assert.deepEqual(rows(root), [
+    "Spell…",
     "Condition…",
     "Skill…",
     "Sense…",
@@ -119,10 +120,10 @@ test("a slash in ordinary prose opens nothing", async (t) => {
 test("the arrows walk the kinds, wrapping at the ends", async (t) => {
   const { root, host } = item(t, "<p>/</p>");
   await caretAt(host, 1);
-  assert.equal(active(root), "Condition…");
+  assert.equal(active(root), "Spell…");
 
   key(host, "ArrowDown");
-  assert.equal(active(root), "Skill…");
+  assert.equal(active(root), "Condition…");
 
   key(host, "ArrowUp");
   key(host, "ArrowUp");
@@ -216,7 +217,7 @@ test("the toolbar's + reaches the same menu", async (t) => {
   fireEvent.click(root.querySelector('[aria-label="Add…"]')!);
   await settle();
 
-  assert.deepEqual(rows(root)[0], "Condition…");
+  assert.deepEqual(rows(root)[0], "Spell…");
 });
 
 test("a reference added from the toolbar lands at the caret", async (t) => {
@@ -225,7 +226,7 @@ test("a reference added from the toolbar lands at the caret", async (t) => {
 
   fireEvent.click(root.querySelector('[aria-label="Add…"]')!);
   await settle();
-  fireEvent.click(root.querySelector(".rm-option")!);
+  fireEvent.click([...root.querySelectorAll(".rm-option")].find((r) => r.textContent === "Condition…")!);
   await settle();
   fireEvent.input(filter(root)!, { target: { value: "grappled" } });
   key(filter(root), "Enter");
@@ -235,6 +236,49 @@ test("a reference added from the toolbar lands at the caret", async (t) => {
     await written(committed),
     "<p>The target is [condition]Grappled[/condition]now</p>",
   );
+});
+
+test("a spell is named rather than picked from a list", async (t) => {
+  // There is no list to pick from: D&D Beyond has no search endpoint, and the
+  // spells an author owns aren't knowable offline.
+  const { root, host } = item(t, "<p>It casts /spell</p>");
+  await caretAt(host, "It casts /spell".length);
+
+  fireEvent.click(root.querySelector(".rm-option")!);
+  await settle();
+
+  assert.deepEqual(rows(root), [], "no rows to offer");
+  assert.equal(filter(root)?.placeholder, "Spell…");
+});
+
+test("a typed spell name becomes a reference on Enter", async (t) => {
+  const { root, host, committed } = item(t, "<p>It casts /spell</p>");
+  await caretAt(host, "It casts /spell".length);
+  fireEvent.click(root.querySelector(".rm-option")!);
+  await settle();
+
+  fireEvent.input(filter(root)!, { target: { value: "Fireball" } });
+  key(filter(root), "Enter");
+  await settle();
+
+  assert.equal(menu(root), null);
+  assert.equal(words(host), "It casts Fireball");
+  // DDB's own spelling: the display text slugifies to the target, so the macro
+  // needs no slug of its own.
+  assert.equal(await written(committed), "<p>It casts [spells]Fireball[/spells]</p>");
+});
+
+test("an empty name commits nothing", async (t) => {
+  const { root, host } = item(t, "<p>It casts /spell</p>");
+  await caretAt(host, "It casts /spell".length);
+  fireEvent.click(root.querySelector(".rm-option")!);
+  await settle();
+
+  key(filter(root), "Enter");
+  await settle();
+
+  assert.ok(filter(root), "the menu is still asking");
+  assert.equal(host.querySelector(".ref"), null);
 });
 
 test("an edit arriving while the menu is up doesn't reset the editor under it", async (t) => {

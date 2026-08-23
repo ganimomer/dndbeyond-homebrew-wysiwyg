@@ -18,6 +18,11 @@
  * its own and handles its own keys. Where the reference will go is by then a
  * saved `InsertionPoint`, not a selection.
  *
+ * **Naming an entity** is that same stage for a kind there is no list of — a
+ * spell, where the only search D&D Beyond has is a whole browse page. The box
+ * filters nothing; what is typed *is* the reference, and Enter commits it. The
+ * button above it hands the question to DDB's own page instead.
+ *
  * The combobox behaviour is `shared/OptionPicker.tsx`'s, deliberately: rows
  * hidden rather than dropped so the list never reshuffles under the cursor, one
  * `is-active` highlight that the arrows and the pointer share,
@@ -31,6 +36,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
   entitiesOf,
+  typedEntity,
   type ReferenceEntity,
   type ReferenceKind,
 } from "../../adapter/reference-catalog.js";
@@ -53,6 +59,12 @@ export interface ReferenceMenuProps {
   onHighlight: (index: number) => void;
   onChooseKind: (kind: ReferenceKind) => void;
   onChoose: (entity: ReferenceEntity) => void;
+  /**
+   * Hand the question to D&D Beyond's own listing page, carrying whatever has
+   * been typed so far. Absent means there is nowhere to hand it to, and the
+   * offer isn't made.
+   */
+  onLookUp?: (query: string) => void;
   onDismiss: () => void;
 }
 
@@ -104,12 +116,22 @@ export function ReferenceMenu(props: ReferenceMenuProps) {
       }}
     >
       {props.kind ? (
-        <EntityList
-          kind={props.kind}
-          placed={offset !== null}
-          onChoose={props.onChoose}
-          onDismiss={props.onDismiss}
-        />
+        props.kind.source === "listing" ? (
+          <NamedEntity
+            kind={props.kind}
+            placed={offset !== null}
+            onChoose={props.onChoose}
+            onLookUp={props.onLookUp}
+            onDismiss={props.onDismiss}
+          />
+        ) : (
+          <EntityList
+            kind={props.kind}
+            placed={offset !== null}
+            onChoose={props.onChoose}
+            onDismiss={props.onDismiss}
+          />
+        )
       ) : (
         <KindList
           kinds={props.kinds}
@@ -282,6 +304,72 @@ function EntityList({
       <div class="rm-empty" hidden={matches.length > 0}>
         No matches
       </div>
+    </div>
+  );
+}
+
+/**
+ * A kind with no list behind it: the author names the thing themselves.
+ *
+ * The same box as `EntityList`'s filter, and the same `placed` gate before it
+ * takes the caret — for the same reason, that a `visibility: hidden` box cannot
+ * be focused and would fail silently, leaving the author typing into the prose
+ * behind the menu.
+ */
+function NamedEntity({
+  kind,
+  placed,
+  onChoose,
+  onLookUp,
+  onDismiss,
+}: {
+  kind: ReferenceKind;
+  placed: boolean;
+  onChoose: (entity: ReferenceEntity) => void;
+  onLookUp?: (query: string) => void;
+  onDismiss: () => void;
+}) {
+  const [name, setName] = useState("");
+  const box = useRef<HTMLInputElement>(null);
+
+  useLayoutEffect(() => {
+    if (placed) box.current?.focus();
+  }, [placed, kind.path]);
+
+  const onKeyDown = (event: KeyboardEvent) => {
+    switch (event.key) {
+      case "Enter":
+        event.preventDefault();
+        // Nothing typed is not an empty reference — it is a question the author
+        // hasn't answered yet, so the menu simply stays up.
+        if (name.trim()) onChoose(typedEntity(name));
+        break;
+      case "Escape":
+      case "Tab":
+        event.preventDefault();
+        onDismiss();
+        break;
+    }
+  };
+
+  const what = kind.label.toLowerCase();
+  return (
+    <div onKeyDown={onKeyDown}>
+      {onLookUp ? (
+        <button type="button" class="rm-lookup" onClick={() => onLookUp(name.trim())}>
+          Look up {what}…
+        </button>
+      ) : null}
+      <input
+        ref={box}
+        class="rm-filter"
+        type="text"
+        placeholder={`${kind.label}…`}
+        aria-label={kind.label}
+        value={name}
+        onInput={(event) => setName((event.target as HTMLInputElement).value)}
+      />
+      <p class="rm-hint">Type the name exactly, then press Enter.</p>
     </div>
   );
 }

@@ -27,11 +27,29 @@ test("every kind's macro resolves back to its own compendium", () => {
   }
 });
 
-test("the kinds are the six compendiums that need no network", () => {
+test("the kinds are the six shipped compendiums, and the one that is a search", () => {
   assert.deepEqual(
     REFERENCE_KINDS.map((kind) => kind.path),
-    ["conditions", "skills", "senses", "actions", "weapon-properties", "rules-glossary"],
+    [
+      "spells",
+      "conditions",
+      "skills",
+      "senses",
+      "actions",
+      "weapon-properties",
+      "rules-glossary",
+    ],
   );
+  assert.deepEqual(
+    REFERENCE_KINDS.filter((kind) => kind.source === "listing").map((kind) => kind.path),
+    ["spells"],
+  );
+});
+
+test("a listing kind has no rows to list", () => {
+  // Nothing is wrong here: a spell can't be enumerated without asking DDB, and
+  // the menu is expected to read `source` rather than an empty array.
+  assert.deepEqual(entitiesOf("spells"), []);
 });
 
 test("an alias slug doesn't become a second row", () => {
@@ -95,7 +113,8 @@ test("every entity's own name slugifies back to its slug", () => {
 
 test("kindByMacro finds a kind by the macro it writes", () => {
   assert.equal(kindByMacro("condition")?.path, "conditions");
-  assert.equal(kindByMacro("spells"), undefined);
+  assert.equal(kindByMacro("spells")?.path, "spells");
+  assert.equal(kindByMacro("spell"), undefined);
 });
 
 test("a half-typed command narrows the kinds to what it could still mean", () => {
@@ -105,7 +124,7 @@ test("a half-typed command narrows the kinds to what it could still mean", () =>
   );
   assert.deepEqual(
     kindsMatching("s").map((kind) => kind.label),
-    ["Skill", "Sense"],
+    ["Spell", "Skill", "Sense"],
   );
 });
 
