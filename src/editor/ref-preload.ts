@@ -16,7 +16,7 @@
  * own observer sees nothing, and the rule the hover controller lives by holds
  * here unchanged.
  */
-import { refToTarget } from "../adapter/ddb-reference-map.js";
+import { refKey } from "../adapter/ddb-reference-map.js";
 import type { ReferenceSource } from "../adapter/types.js";
 import { readToken } from "./ref-token.js";
 
@@ -96,11 +96,12 @@ export class RefPreloader {
     for (const element of this.scope.querySelectorAll(".ref")) {
       if (this.seen.size >= this.limit) break;
       const token = readToken(element);
-      const target = refToTarget(token);
-      if (!target) continue;
       // Deduped on the reference, not the element: a condition named in three
-      // traits is one lookup, and a rescan offers nothing at all.
-      const key = `${target.path}/${target.slug}`;
+      // traits is one lookup, and a rescan offers nothing at all. The same key
+      // the resolver caches under, so the two can't disagree about what "the
+      // same reference" means.
+      const key = refKey(token);
+      if (key === null) continue;
       if (this.seen.has(key)) continue;
       this.seen.add(key);
       offered++;

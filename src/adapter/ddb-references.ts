@@ -19,9 +19,24 @@
  * `/spells/2065-detect-magic`) — we read the id off the redirect and cancel the
  * body, so the page itself is never downloaded. Three of the compendiums have
  * no page of their own and are browsed somewhere else; the target says where.
+ *
+ * And one macro doesn't say which compendium it means at all. `[items]` is
+ * written for a magic item and, in D&D Beyond's own 2024 Gear rows, for a
+ * greatsword — so it arrives with four candidates rather than one (see
+ * `refToTargets`). They are tried in turn, but the first one that *answers* is
+ * not the answer: the equipment compendiums number their contents separately,
+ * so `/weapons/17` and `/armor/17` are both real and only one of them is
+ * Splint. So a multi-candidate lookup believes a tooltip only when the name in
+ * it is the name it asked for — see `nameFits`.
  */
 import { REFERENCE_IDS } from "./ddb-reference-ids.js";
-import { refToTarget, type DdbPath, type ReferenceTarget } from "./ddb-reference-map.js";
+import {
+  refKey,
+  refToTargets,
+  slugify,
+  type DdbPath,
+  type ReferenceTarget,
+} from "./ddb-reference-map.js";
 import type { ReferenceIdStore } from "./reference-id-store.js";
 import { Dropped, TaskQueue, type Priority, type Queued } from "./task-queue.js";
 import type { LookupOptions, ReferenceSource, ReferenceTooltip, RefToken } from "./types.js";
@@ -29,7 +44,7 @@ import type { LookupOptions, ReferenceSource, ReferenceTooltip, RefToken } from 
 const ORIGIN = "https://www.dndbeyond.com";
 
 /** The numbered slug DDB redirects to: `/spells/2065-detect-magic`. */
-const NUMBERED = /\/(\d+)-[^/]*\/?$/;
+const NUMBERED = /\/(\d+)-([^/]*)\/?$/;
 
 export interface DdbReferenceSourceOptions {
   /** Injected so the resolver unit-tests without a network. */
@@ -52,12 +67,23 @@ export interface DdbReferenceSourceOptions {
  */
 class Unreachable extends Error {}
 
+/** Where a canonical slug URL landed. */
+interface Landing {
+  id: number;
+  /**
+   * The slug in the numbered URL — D&D Beyond's own spelling of the record's
+   * name, which is a better thing to check a tooltip against than the slug we
+   * asked with. Absent when the id came from a table or the store instead.
+   */
+  slug?: string;
+}
+
 export class DdbReferenceSource implements ReferenceSource {
   private readonly fetchImpl: typeof fetch;
   private readonly origin: string;
   private readonly idStore: ReferenceIdStore | null;
   private readonly queue: TaskQueue;
-  /** Settled answers, keyed `path/slug`. Null means DDB has nothing to say. */
+  /** Settled answers, keyed by `refKey`. Null means DDB has nothing to say. */
   private readonly results = new Map<string, ReferenceTooltip | null>();
   /**
    * Lookups queued or running, so one reference asked about twice — by two
@@ -75,10 +101,10 @@ export class DdbReferenceSource implements ReferenceSource {
 
   async lookup(token: RefToken, options: LookupOptions = {}): Promise<ReferenceTooltip | null> {
     const priority = options.priority ?? "interactive";
-    const target = refToTarget(token);
-    if (!target) return null;
+    const key = refKey(token);
+    if (key === null) return null;
+    const targets = refToTargets(token);
 
-    const key = `${target.path}/${target.slug}`;
     if (this.results.has(key)) return this.results.get(key) ?? null;
 
     const running = this.pending.get(key);
@@ -89,7 +115,7 @@ export class DdbReferenceSource implements ReferenceSource {
       return running.result;
     }
 
-    const queued = this.queue.run(() => this.resolve(target, priority), priority);
+    const queued = this.queue.run(() => this.resolve(targets, priority), priority);
     const request: Queued<ReferenceTooltip | null> = {
       promote: queued.promote,
       result: queued.result
@@ -125,15 +151,46 @@ export class DdbReferenceSource implements ReferenceSource {
     this.queue.drop("background");
   }
 
-  /** The id, then the tooltip. Throws `Unreachable` when the network failed. */
+  /**
+   * The first candidate that answers with the thing we asked about. Throws
+   * `Unreachable` when the network failed.
+   *
+   * The name check only applies where there is a choice to get wrong. With one
+   * candidate the macro has already said which compendium this is, so a
+   * tooltip that came back *is* the answer — and checking it there could only
+   * ever throw away a good one over a name DDB spells differently from its own
+   * slug.
+   */
   private async resolve(
-    target: ReferenceTarget,
+    targets: readonly ReferenceTarget[],
     priority: Priority,
   ): Promise<ReferenceTooltip | null> {
-    const id =
-      tableId(target) ?? this.learnedId(target) ?? (await this.redirectId(target, priority));
-    if (id === null) return null;
-    return this.tooltip(target.path, id, priority);
+    const ambiguous = targets.length > 1;
+    // One probe per URL: three of `[items]`'s four candidates are browsed at
+    // the same `/equipment` page, and that probe is the expensive tier.
+    const probed = new Map<string, Landing | null>();
+    for (const target of targets) {
+      const found = await this.identify(target, priority, probed);
+      if (!found) continue;
+      const tooltip = await this.tooltip(target.path, found.id, priority);
+      if (!tooltip) continue;
+      if (ambiguous && !nameFits(tooltip.html, found.slug ?? target.slug)) continue;
+      return tooltip;
+    }
+    return null;
+  }
+
+  /** Which record in this compendium the name means: table, then store, then DDB. */
+  private async identify(
+    target: ReferenceTarget,
+    priority: Priority,
+    probed: Map<string, Landing | null>,
+  ): Promise<Landing | null> {
+    const known = tableId(target) ?? this.learnedId(target);
+    // No slug with it: an id we already knew came with no page to read one off.
+    // `resolve` falls back to the slug it asked for, which is what named it.
+    if (known !== null) return { id: known };
+    return this.redirectId(target, priority, probed);
   }
 
   /** An id this browser learned from a redirect on some earlier visit. */
@@ -142,26 +199,41 @@ export class DdbReferenceSource implements ReferenceSource {
   }
 
   /**
-   * The id off the canonical slug URL's redirect. `res.url` is the page we
+   * Where the canonical slug URL's redirect landed. `res.url` is the page we
    * landed on; cancelling the body means we pay for the redirect chain and the
    * target's headers, not for the page.
    */
-  private async redirectId(target: ReferenceTarget, priority: Priority): Promise<number | null> {
+  private async redirectId(
+    target: ReferenceTarget,
+    priority: Priority,
+    probed: Map<string, Landing | null>,
+  ): Promise<Landing | null> {
     // `browse` where the compendium has no page of its own — see `BROWSED_AT`.
-    const res = await this.get(
-      `${this.origin}/${target.browse ?? target.path}/${encodeURIComponent(target.slug)}`,
-      priority,
-    );
-    await res.body?.cancel().catch(() => {});
-    if (!res.ok) return null;
-    const match = NUMBERED.exec(new URL(res.url).pathname);
-    if (!match) return null;
-    const id = Number(match[1]);
+    const url = `${this.origin}/${target.browse ?? target.path}/${encodeURIComponent(target.slug)}`;
+    const landing = probed.has(url)
+      ? (probed.get(url) ?? null)
+      : await this.probe(url, priority, probed);
+    if (!landing) return null;
     // This is the expensive tier — DDB's slug URL redirects to a whole rendered
     // page, and we wait on it being built even though we throw the body away.
     // Roughly a second, so it is worth never paying twice for the same name.
-    this.idStore?.remember(target, id);
-    return id;
+    // Remembered per candidate: a rejected one is still a real id in the
+    // compendium that answered, and knowing it saves the probe, not the check.
+    this.idStore?.remember(target, landing.id);
+    return landing;
+  }
+
+  private async probe(
+    url: string,
+    priority: Priority,
+    probed: Map<string, Landing | null>,
+  ): Promise<Landing | null> {
+    const res = await this.get(url, priority);
+    await res.body?.cancel().catch(() => {});
+    const match = res.ok ? NUMBERED.exec(new URL(res.url).pathname) : null;
+    const landing = match ? { id: Number(match[1]), slug: match[2] } : null;
+    probed.set(url, landing);
+    return landing;
   }
 
   private async tooltip(
@@ -212,6 +284,47 @@ export class DdbReferenceSource implements ReferenceSource {
 /** The harvested id for a closed-compendium slug, if we shipped one. */
 function tableId(target: ReferenceTarget): number | null {
   return REFERENCE_IDS[target.path]?.[target.slug] ?? null;
+}
+
+/**
+ * Whether this tooltip is about the thing we asked about.
+ *
+ * Only consulted where a macro left the compendium open (see the module note),
+ * and it compares slugs rather than words because that is the one spelling both
+ * sides agree on: the name in the header is what D&D Beyond's own URL slug is
+ * built from, so `Crossbow, Heavy` and `crossbow-heavy` are the same answer
+ * while the display text in the macro — `Heavy Crossbow` — is not.
+ *
+ * A header we can't read a name out of counts as a miss, which costs a hover
+ * that could have worked if their markup changes. That is the right way round:
+ * the failure this guards against is a *confident wrong answer* — Splint Armor
+ * explained as a Shortbow, in D&D Beyond's own styling, with nothing to say it
+ * is wrong.
+ */
+function nameFits(html: string, slug: string): boolean {
+  const name = tooltipName(html);
+  return name !== "" && slugify(name) === slug;
+}
+
+/**
+ * The name out of a tooltip's header.
+ *
+ * Three shapes, all of them theirs: a weapon puts the name in the title div as
+ * text (`<div class="tooltip-header-title">Greatsword </div>`), a magic item
+ * wraps it in a span, and a condition has no title div and puts the name
+ * straight in the header text. What is common is the `.badge` beside it —
+ * "Legacy: this doesn't reflect the latest rules and lore" — which is prose
+ * about the record rather than its name, and has to come off first.
+ */
+function tooltipName(html: string): string {
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  const header =
+    template.content.querySelector(".tooltip-header-title") ??
+    template.content.querySelector(".tooltip-header-text");
+  if (!header) return "";
+  for (const badge of header.querySelectorAll(".badge")) badge.remove();
+  return header.textContent?.trim() ?? "";
 }
 
 /**

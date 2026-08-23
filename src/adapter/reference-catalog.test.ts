@@ -7,7 +7,7 @@ import {
   kindsMatching,
   rowTarget,
 } from "./reference-catalog.js";
-import { refToTarget } from "./ddb-reference-map.js";
+import { refToTargets } from "./ddb-reference-map.js";
 
 /**
  * What the "add a reference" menu offers. Every fact here is about the
@@ -17,11 +17,11 @@ import { refToTarget } from "./ddb-reference-map.js";
 
 test("every kind's macro resolves back to its own compendium", () => {
   // The load-bearing invariant: whatever macro we *write* must be one
-  // `refToTarget` can read, or the reference we just inserted would never get
+  // `refToTargets` can read, or the reference we just inserted would never get
   // a tooltip. This is the only thing tying the two tables together.
   for (const kind of REFERENCE_KINDS) {
     assert.equal(
-      refToTarget({ ref: kind.macro, text: "Anything" })?.path,
+      refToTargets({ ref: kind.macro, text: "Anything" })[0]?.path,
       kind.path,
       `${kind.macro} should reach ${kind.path}`,
     );
@@ -120,7 +120,7 @@ test("every entity's own name slugifies back to its slug", () => {
   for (const kind of REFERENCE_KINDS) {
     for (const entity of entitiesOf(kind.path)) {
       assert.equal(
-        refToTarget({ ref: kind.macro, text: entity.name })?.slug,
+        refToTargets({ ref: kind.macro, text: entity.name })[0]?.slug,
         entity.slug,
         `${kind.path}: ${entity.name}`,
       );
@@ -168,7 +168,7 @@ test("every macro a row can produce is one the reader knows", () => {
     ["armor", "armor"],
     ["weapon", "weapons"],
   ] as const) {
-    assert.equal(refToTarget({ ref: macro, text: "Anything" })?.path, path);
+    assert.equal(refToTargets({ ref: macro, text: "Anything" })[0]?.path, path);
   }
 });
 

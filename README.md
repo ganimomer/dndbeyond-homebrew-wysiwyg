@@ -126,7 +126,27 @@ numbered one (`/spells/detect-magic` → `/spells/2065-detect-magic`), read off
 the redirect with the body cancelled so the page is never downloaded. A miss at
 every tier just means no tooltip.
 
-That last tier is the expensive one — about **a second**, nearly all of it
+**`[items]` is the macro that won't say what it means.** D&D Beyond writes the
+2024 Gear row as `[items]Greatsword[/items], [items]splint;Splint Armor[/items]`
+— mundane equipment — and the same macro is the natural spelling for a Bag of
+Holding. Four compendiums could answer, and their slugs are disjoint:
+`/magic-items/greatsword` 404s and so does `/equipment/bag-of-holding`. So the
+macro arrives with four candidates rather than one, tried in order.
+
+The trap is that **the first candidate to answer is not the answer.** The three
+equipment compendiums number their contents separately, so the id that
+`/equipment/splint` hands back — 17 — is a real record in each of them:
+`/weapons/17` is a Shortbow, `/armor/17` is Splint. Taking the first 200 would
+explain Splint Armor as a bow, in D&D Beyond's own styling, with nothing on
+screen to say it is wrong. So an ambiguous lookup reads the name out of the
+tooltip header and keeps the answer only if it slugifies to the slug D&D Beyond
+redirected to. Slugs, not words, because that is the one spelling both sides
+agree on: the header says `Crossbow, Heavy` where the macro says `Heavy
+Crossbow`, and `crossbow-heavy` is both. A macro that *does* name its
+compendium — `[weapon]`, `[armor]`, `[equipment]` — is never second-guessed;
+checking it there could only throw away a good answer.
+
+That redirect tier is the expensive one — about **a second**, nearly all of it
 spent waiting on D&D Beyond to render a page we throw away — which is why so
 much of the design is about not paying it. Three things keep it off the hover.
 
@@ -378,7 +398,7 @@ src/
 │   ├── ddb-listings.ts     skills/movements/senses — DDB's separate records
 │   ├── ddb-markup.ts       bidirectional DDB-macro ⇄ editor-span codec
 │   ├── ddb-text.ts         the same codec for the plain fields (Gear, Languages)
-│   ├── ddb-reference-map.ts  macro type → compendium path, and name → slug
+│   ├── ddb-reference-map.ts  macro type → the compendiums it could mean, name → slug
 │   ├── ddb-reference-ids.ts  the harvested closed-set ids and names (generated)
 │   ├── reference-catalog.ts  what an author can reference, and what to write
 │   ├── ddb-references.ts   what DDB says a reference means, in four tiers

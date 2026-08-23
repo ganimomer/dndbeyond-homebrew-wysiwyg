@@ -410,3 +410,162 @@ test("a background lookup asks the browser to deprioritise it", async () => {
   assert.equal(inits[0]?.priority, "low");
   assert.equal(inits[1]?.priority, undefined, "an interactive fetch should carry no hint");
 });
+
+/**
+ * `[items]` — the one macro that doesn't say which compendium it means.
+ *
+ * D&D Beyond writes the 2024 Gear row with it (`[items]Greatsword[/items]`)
+ * and a magic item with it too, and the four compendiums it could mean number
+ * their contents *separately*: `/weapons/17` is a Shortbow and `/armor/17` is
+ * Splint, both real, both answering 200 to the id that `/equipment/splint`
+ * hands back. So the first candidate that answers is not the answer — which is
+ * what these are about.
+ *
+ * The header shapes are theirs: a weapon puts the name in the title div as
+ * text, a magic item wraps it in a span, and both hang a Legacy badge beside it.
+ */
+const titled = (type: string, id: number, name: string) =>
+  envelope({
+    Type: type,
+    Id: id,
+    Tooltip:
+      `<div class="tooltip tooltip-${type}"><div class="tooltip-header">` +
+      `<div class="tooltip-header-text"><div class="tooltip-header-title">${name} ` +
+      `<span class="badge"><span class="badge-label">Legacy</span>` +
+      `<span class="badge-text">This doesn't reflect the latest rules and lore.</span></span>` +
+      `</div></div></div><div class="tooltip-body">…</div></div>`,
+  });
+
+test("[items] resolves a magic item on the first candidate", async () => {
+  const { impl, calls } = stubFetch({
+    [`${ORIGIN}/magic-items/bag-of-holding`]: { url: `${ORIGIN}/magic-items/4581-bag-of-holding` },
+    [`${ORIGIN}/magic-items/4581/tooltip`]: {
+      // Their magic-item header wraps the name rather than writing it inline.
+      body: envelope({
+        Type: "magic-item",
+        Id: 4581,
+        Tooltip: `<div class="tooltip-header-title"><span>Bag of Holding</span></div>`,
+      }),
+    },
+  });
+  const source = new DdbReferenceSource({ fetchImpl: impl, origin: ORIGIN });
+
+  const tooltip = await source.lookup({ ref: "items", text: "Bag of Holding" });
+
+  assert.equal(tooltip?.type, "magic-item");
+  assert.deepEqual(calls, [
+    `${ORIGIN}/magic-items/bag-of-holding`,
+    `${ORIGIN}/magic-items/4581/tooltip`,
+  ]);
+});
+
+test("[items] falls through to the equipment compendiums when it isn't magic", async () => {
+  const { impl, calls } = stubFetch({
+    [`${ORIGIN}/equipment/greatsword`]: { url: `${ORIGIN}/equipment/22-greatsword` },
+    [`${ORIGIN}/weapons/22/tooltip`]: { body: titled("weapon", 22, "Greatsword") },
+  });
+  const source = new DdbReferenceSource({ fetchImpl: impl, origin: ORIGIN });
+
+  const tooltip = await source.lookup({ ref: "items", text: "Greatsword" });
+
+  assert.equal(tooltip?.type, "weapon");
+  assert.deepEqual(calls, [
+    `${ORIGIN}/magic-items/greatsword`,
+    `${ORIGIN}/equipment/greatsword`,
+    `${ORIGIN}/weapons/22/tooltip`,
+  ]);
+});
+
+test("[items] refuses a candidate that answers about something else", async () => {
+  // The one that matters. `/equipment/splint` hands back 17, and `/weapons/17`
+  // answers — with a Shortbow. Believed, that is Splint Armor explained as a
+  // bow, in D&D Beyond's own styling, with nothing on screen to say it's wrong.
+  const { impl, calls } = stubFetch({
+    [`${ORIGIN}/equipment/splint`]: { url: `${ORIGIN}/equipment/17-splint` },
+    [`${ORIGIN}/weapons/17/tooltip`]: { body: titled("weapon", 17, "Shortbow") },
+    [`${ORIGIN}/armor/17/tooltip`]: { body: titled("armor", 17, "Splint") },
+  });
+  const source = new DdbReferenceSource({ fetchImpl: impl, origin: ORIGIN });
+
+  const tooltip = await source.lookup({ ref: "items", slug: "splint", text: "Splint Armor" });
+
+  assert.equal(tooltip?.type, "armor");
+  assert.match(tooltip?.html ?? "", /Splint/);
+  assert.deepEqual(
+    calls,
+    [
+      `${ORIGIN}/magic-items/splint`,
+      // One probe, not three: the three equipment compendiums share a page.
+      `${ORIGIN}/equipment/splint`,
+      `${ORIGIN}/weapons/17/tooltip`,
+      `${ORIGIN}/armor/17/tooltip`,
+    ],
+    "the redirect is paid once and the wrong compendium costs one cheap tooltip",
+  );
+});
+
+test("[items] checks the name DDB landed on, not the words in the macro", async () => {
+  // The display text is the author's; the slug in the numbered URL is DDB's,
+  // and it is the one the header's name is built from. `Heavy Crossbow` never
+  // matches `Crossbow, Heavy` as words — as slugs they are the same answer.
+  const { impl } = stubFetch({
+    [`${ORIGIN}/equipment/crossbow-heavy`]: { url: `${ORIGIN}/equipment/36-crossbow-heavy` },
+    [`${ORIGIN}/weapons/36/tooltip`]: { body: titled("weapon", 36, "Crossbow, Heavy") },
+  });
+  const source = new DdbReferenceSource({ fetchImpl: impl, origin: ORIGIN });
+
+  const tooltip = await source.lookup({
+    ref: "items",
+    slug: "crossbow, heavy",
+    text: "Heavy Crossbow",
+  });
+
+  assert.equal(tooltip?.type, "weapon");
+});
+
+test("[items] that fits nowhere resolves to nothing rather than to the last try", async () => {
+  const { impl } = stubFetch({
+    [`${ORIGIN}/equipment/gizmo`]: { url: `${ORIGIN}/equipment/99-gizmo` },
+    [`${ORIGIN}/weapons/99/tooltip`]: { body: titled("weapon", 99, "Club") },
+    [`${ORIGIN}/armor/99/tooltip`]: { body: titled("armor", 99, "Shield") },
+    [`${ORIGIN}/adventuring-gear/99/tooltip`]: { body: titled("gear", 99, "Torch") },
+  });
+  const source = new DdbReferenceSource({ fetchImpl: impl, origin: ORIGIN });
+
+  assert.equal(await source.lookup({ ref: "items", text: "Gizmo" }), null);
+});
+
+test("a macro that names its compendium is not second-guessed", async () => {
+  // `[armor]` has already said which of the three this is, so the tooltip that
+  // came back *is* the answer. Checking the name here could only throw away a
+  // good one over a header DDB words differently from its own slug — and one
+  // compendium (conditions) doesn't put a title in the header at all.
+  const { impl } = stubFetch({
+    [`${ORIGIN}/equipment/chain-mail`]: { url: `${ORIGIN}/equipment/16-chain-mail` },
+    [`${ORIGIN}/armor/16/tooltip`]: {
+      body: envelope({ Type: "armor", Id: 16, Tooltip: `<div class="body">Nothing named</div>` }),
+    },
+  });
+  const source = new DdbReferenceSource({ fetchImpl: impl, origin: ORIGIN });
+
+  assert.equal((await source.lookup({ ref: "armor", text: "Chain Mail" }))?.type, "armor");
+});
+
+test("an [items] answer is remembered under a key of its own", async () => {
+  // `[items]Greatsword[/items]` and `[weapon]Greatsword[/weapon]` are different
+  // questions — one has said which compendium and the other hasn't — so a
+  // cached answer to one must not be handed to the other.
+  const { impl, calls } = stubFetch({
+    [`${ORIGIN}/equipment/greatsword`]: { url: `${ORIGIN}/equipment/22-greatsword` },
+    [`${ORIGIN}/weapons/22/tooltip`]: { body: titled("weapon", 22, "Greatsword") },
+  });
+  const source = new DdbReferenceSource({ fetchImpl: impl, origin: ORIGIN });
+
+  await source.lookup({ ref: "items", text: "Greatsword" });
+  const before = calls.length;
+  await source.lookup({ ref: "items", text: "Greatsword" });
+  assert.equal(calls.length, before, "the same question is asked once");
+
+  await source.lookup({ ref: "weapon", text: "Greatsword" });
+  assert.ok(calls.length > before, "a different question is asked");
+});
