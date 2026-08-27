@@ -13,7 +13,12 @@ import monsters from "./__fixtures__/monster-listing.html";
 import magicItems from "./__fixtures__/magic-item-listing.html";
 import equipment from "./__fixtures__/equipment-listing.html";
 
-function listing(t: TestContext, fixture: string = spells) {
+interface ListingOptions {
+  /** Supplied only by the tests about locking; every other test asks nothing. */
+  lock?: (pick: LookupPick) => Promise<boolean>;
+}
+
+function listing(t: TestContext, fixture: string = spells, options: ListingOptions = {}) {
   const frame = document.createElement("iframe");
   document.body.appendChild(frame);
   const doc = frame.contentDocument!;
@@ -26,6 +31,7 @@ function listing(t: TestContext, fixture: string = spells) {
   const dispose = dressListing(doc, {
     onPick: (pick) => picks.push(pick),
     onClose: () => (closes += 1),
+    ...(options.lock ? { lock: options.lock } : {}),
   });
   t.after(() => {
     dispose();
@@ -47,8 +53,12 @@ function listing(t: TestContext, fixture: string = spells) {
       const element = doc.querySelector(selector);
       return element ? win.getComputedStyle(element).display !== "none" : null;
     },
+    dimmed: (element: Element) => Number(win.getComputedStyle(element).opacity) < 1,
   };
 }
+
+/** Lets every pending `lock` answer land before the assertions read the rows. */
+const swept = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 /**
  * The rows, by the thing each one names — in whichever dialect that listing is
@@ -240,4 +250,125 @@ test("disposing leaves the page as it was found", async (t) => {
 
   page.click(rowFor(page.doc, "2618887-fireball"));
   assert.deepEqual(page.picks, []);
+});
+
+/**
+ * Locking — the compare panel's half, and the only part of this surgery that
+ * asks D&D Beyond a question before painting.
+ *
+ * The rule the rest of these depend on is the first one: with no `lock`, not a
+ * row is touched and not a question is asked. That is the reference picker,
+ * which shares this whole module and must never grow a sweep.
+ */
+
+const BLOOD_DRINKER = "175326-blood-drinker-vampire";
+const GNOLL = "1123087-gnoll-vampire";
+
+test("with nothing to ask, no row is marked", async (t) => {
+  const view = listing(t, monsters);
+  await swept();
+
+  assert.equal(view.doc.querySelector(".microbrewery-locked"), null);
+  assert.equal(view.doc.querySelector(".microbrewery-lock"), null);
+});
+
+test("the question is only asked when there is something to ask it of", async (t) => {
+  // The claim the reference picker rests on: it shares this module and must
+  // never make D&D Beyond a request per row for a reference it can write
+  // regardless. `lock` absent has to mean *silent*, not merely "unmarked".
+  const asked: number[] = [];
+  listing(t, monsters, {
+    lock: async (pick) => {
+      asked.push(pick.id);
+      return false;
+    },
+  });
+  await swept();
+  assert.ok(asked.length > 0, "a panel that asks, asks about every row");
+
+  asked.length = 0;
+  listing(t, monsters);
+  await swept();
+  assert.deepEqual(asked, [], "and a panel that doesn't, asks nothing at all");
+});
+
+test("a row that is out of reach dims, gets a padlock, and names the book", async (t) => {
+  const asked: number[] = [];
+  const view = listing(t, monsters, {
+    lock: async (pick) => {
+      asked.push(pick.id);
+      return pick.id === 175326;
+    },
+  });
+  await swept();
+
+  const locked = rowFor(view.doc, BLOOD_DRINKER);
+  assert.ok(locked.classList.contains("microbrewery-locked"));
+  assert.ok(locked.querySelector(".microbrewery-lock svg"), "a padlock over its portrait");
+  assert.equal(locked.getAttribute("title"), "Guildmasters’ Guide to Ravnica isn't in your library");
+  assert.equal(view.dimmed(locked), true);
+
+  const open = rowFor(view.doc, GNOLL);
+  assert.equal(open.classList.contains("microbrewery-locked"), false, "the other is left alone");
+  assert.equal(open.querySelector(".microbrewery-lock"), null);
+  assert.equal(open.getAttribute("title"), null);
+
+  assert.deepEqual(asked.sort(), [175326, 1123087].sort(), "every row asked, once each");
+});
+
+test("a locked row picks nothing, and doesn't let D&D Beyond's own click through", async (t) => {
+  const view = listing(t, monsters, { lock: async (pick) => pick.id === 175326 });
+  await swept();
+
+  const locked = rowFor(view.doc, BLOOD_DRINKER);
+  const link = locked.querySelector("a[href^='/monsters/']")!;
+  const handled = !view.click(link);
+
+  assert.deepEqual(view.picks, [], "nothing picked");
+  assert.ok(handled, "and the click is still stopped, or the frame would navigate");
+
+  view.click(rowFor(view.doc, GNOLL));
+  assert.equal(view.picks.length, 1, "an open row still picks");
+});
+
+test("an answer that arrives after the page is gone marks nothing", async (t) => {
+  let answer: (locked: boolean) => void = () => {};
+  const view = listing(t, monsters, {
+    lock: (pick) =>
+      pick.id === 175326 ? new Promise<boolean>((resolve) => (answer = resolve)) : Promise.resolve(false),
+  });
+
+  view.dispose();
+  answer(true);
+  await swept();
+
+  assert.equal(view.doc.querySelector(".microbrewery-locked"), null);
+});
+
+test("a lock that goes wrong leaves its row alone and the rest of the sweep standing", async (t) => {
+  const view = listing(t, monsters, {
+    lock: async (pick) => {
+      if (pick.id === 175326) throw new Error("no answer");
+      return true;
+    },
+  });
+  await swept();
+
+  assert.equal(
+    rowFor(view.doc, BLOOD_DRINKER).classList.contains("microbrewery-locked"),
+    false,
+    "the one that failed is not marked on a guess",
+  );
+  assert.ok(rowFor(view.doc, GNOLL).classList.contains("microbrewery-locked"), "the rest still ran");
+});
+
+test("a listing with no source column still says what it can", async (t) => {
+  // `/equipment` is the dialect with no book to name — the row carries a
+  // category icon and nothing else.
+  const view = listing(t, equipment, { lock: async () => true });
+  await swept();
+
+  const locked = view.doc.querySelector(".microbrewery-locked")!;
+  assert.ok(locked, "the other row dialect marks too");
+  assert.equal(locked.getAttribute("title"), "This isn't in your library");
 });

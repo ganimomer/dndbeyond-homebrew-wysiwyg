@@ -91,6 +91,8 @@ export class DdbReferenceSource implements ReferenceSource {
    * makes one request.
    */
   private readonly pending = new Map<string, Queued<ReferenceTooltip | null>>();
+  /** Settled entitlement answers, keyed `path/id`. See `blocked`. */
+  private readonly entitlement = new Map<string, boolean>();
 
   constructor(options: DdbReferenceSourceOptions = {}) {
     this.fetchImpl = options.fetchImpl ?? ((...args) => fetch(...args));
@@ -149,6 +151,51 @@ export class DdbReferenceSource implements ReferenceSource {
    */
   dropPending(): void {
     this.queue.drop("background");
+  }
+
+  /**
+   * Whether D&D Beyond refuses this record to this author, or null when it
+   * didn't say.
+   *
+   * The same tooltip a hover would fetch, asked for its `Type` rather than its
+   * prose: something outside the author's library answers `"blocked"` instead of
+   * the record. That is the only thing this reads as a refusal. A response that
+   * wasn't `ok` is a *non*-answer and comes back null — measured, those are a
+   * creature the author wrote themselves (500 at this endpoint) and an id that
+   * isn't a creature at all (404), and neither is D&D Beyond saying no.
+   *
+   * Takes the id rather than a token because the caller has one: a listing row
+   * carries its own, so this skips the redirect probe that makes a lookup by
+   * name expensive.
+   *
+   * Answers are remembered for the session and no longer. An id, once learned,
+   * is true forever and is written to disk; this is true only until the author
+   * buys the book, and a padlock left on a creature they now own would be a lie
+   * with nothing to correct it.
+   */
+  async blocked(
+    path: DdbPath,
+    id: number,
+    options: LookupOptions = {},
+  ): Promise<boolean | null> {
+    const key = `${path}/${id}`;
+    const known = this.entitlement.get(key);
+    if (known !== undefined) return known;
+    // Through the queue, like a lookup: a listing is twenty of these at once,
+    // and the reserved slot is what stops them making a hover wait.
+    const priority = options.priority ?? "background";
+    let tooltip: ReferenceTooltip | null;
+    try {
+      tooltip = await this.queue.run(() => this.tooltip(path, id, priority), priority).result;
+    } catch {
+      // Unreachable, or a task dropped before it ran. Not an answer, and not
+      // worth remembering — see the same reasoning in `lookup`.
+      return null;
+    }
+    if (!tooltip) return null;
+    const blocked = tooltip.type === "blocked";
+    this.entitlement.set(key, blocked);
+    return blocked;
   }
 
   /**

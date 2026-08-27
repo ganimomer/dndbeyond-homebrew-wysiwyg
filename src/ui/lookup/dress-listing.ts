@@ -20,6 +20,8 @@
  * width without us second-guessing their layout.
  */
 
+import { makeIcon } from "../shared/icons.js";
+
 /** What a row knows about the thing it names. */
 export interface LookupPick {
   /** DDB's own display name — "Delayed Blast Fireball". */
@@ -39,10 +41,22 @@ export interface LookupPick {
 export interface ListingHandlers {
   onPick(pick: LookupPick): void;
   onClose(): void;
+  /**
+   * Whether this row is out of the author's reach, asked once per row as the
+   * page is dressed. A row that answers true is marked and stops picking.
+   *
+   * Absent means don't ask and don't mark, which is the reference picker's
+   * case: a spell the author doesn't own is still a perfectly good thing to
+   * name in their prose, since the macro resolves for whoever reads the block.
+   * Only a panel that needs to *open* the page has to care.
+   */
+  lock?(pick: LookupPick): Promise<boolean>;
 }
 
 const STYLE_ID = "microbrewery-lookup";
 const CLOSE_CLASS = "microbrewery-close";
+const LOCKED_CLASS = "microbrewery-locked";
+const LOCK_CLASS = "microbrewery-lock";
 /**
  * A result row, in either of the two shapes D&D Beyond writes them.
  *
@@ -103,6 +117,38 @@ footer.ddb-footer {
 .listing .list-row:hover {
   background: rgba(21, 121, 188, 0.08) !important;
 }
+
+/* A row D&D Beyond won't open for this author. It keeps its place in the list,
+ * because knowing the creature exists is worth something — it just stops
+ * offering to be picked. */
+.listing .${LOCKED_CLASS} {
+  opacity: 0.45;
+  cursor: default !important;
+}
+.listing .${LOCKED_CLASS}:hover {
+  background: none !important;
+}
+
+/* Over the corner of the portrait, at the row's left end. Positioned against
+ * the icon cell rather than the row so it lands in the same place whatever the
+ * listing's own columns are doing. */
+.listing .${LOCKED_CLASS} .monster-icon,
+.listing .${LOCKED_CLASS} .list-row-col-icon {
+  position: relative;
+}
+.${LOCK_CLASS} {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #822000;
+}
 /* Each dialect names its own: open-indicator on an .info row, and
  * list-row-col-indicator on an equipment one. (No backticks in here: this
  * whole stylesheet is a template literal.) */
@@ -149,6 +195,8 @@ export function isListing(doc: Document): boolean {
 }
 
 export function dressListing(doc: Document, handlers: ListingHandlers): () => void {
+  /** Cleared by the disposer, so an answer that outlives the page marks nothing. */
+  let live = true;
   const style = doc.createElement("style");
   style.id = STYLE_ID;
   style.textContent = STYLES;
@@ -175,9 +223,14 @@ export function dressListing(doc: Document, handlers: ListingHandlers): () => vo
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
+    // A locked row is stopped like any other, and then does nothing: letting
+    // DDB's own click through would take the frame to the marketplace.
+    if (row.classList.contains(LOCKED_CLASS)) return;
     handlers.onPick(pick);
   };
   doc.addEventListener("click", onClick, true);
+
+  askAboutRows(doc, handlers, () => live);
 
   // Escape inside the frame, which the parent's own key handling can't see —
   // events don't cross a browsing context, however same-origin it is.
@@ -187,9 +240,57 @@ export function dressListing(doc: Document, handlers: ListingHandlers): () => vo
   doc.addEventListener("keydown", onKeyDown, true);
 
   return () => {
+    live = false;
     doc.removeEventListener("click", onClick, true);
     doc.removeEventListener("keydown", onKeyDown, true);
     style.remove();
     close.remove();
   };
+}
+
+/**
+ * Asks about every row, and marks the ones that come back out of reach.
+ *
+ * Each row is marked as its own answer lands rather than the list being held
+ * back for all of them: a sweep of a full page takes about a second, and a
+ * list that sat blank for that long to spare the author two greyed rows would
+ * be a poor trade. The rows are D&D Beyond's own and readable throughout; they
+ * only stop being *clickable* once we know they lead nowhere.
+ *
+ * `live` is the disposer's flag. A page thrown away mid-sweep leaves answers
+ * still in flight, and marking a detached document would be harmless but
+ * pointless — worse, the next page's rows would be arriving into a document
+ * this one no longer owns.
+ */
+function askAboutRows(doc: Document, handlers: ListingHandlers, live: () => boolean): void {
+  const ask = handlers.lock;
+  if (!ask) return;
+  for (const row of doc.querySelectorAll(ROW)) {
+    const pick = rowPick(row);
+    if (!pick) continue;
+    void ask(pick)
+      .then((locked) => {
+        if (locked && live()) lockRow(doc, row);
+      })
+      // Never rejects by contract, but a picker that stopped dressing rows
+      // because one answer went wrong would be a poor way to find that out.
+      .catch(() => {});
+  }
+}
+
+/** Dims one row, says why, and hangs a padlock on its portrait. */
+function lockRow(doc: Document, row: Element): void {
+  if (row.classList.contains(LOCKED_CLASS)) return;
+  row.classList.add(LOCKED_CLASS);
+  // The book is the reason, and the row already prints it. Without one — the
+  // equipment dialect has no source column — the fact alone still helps.
+  const source = row.querySelector(".source")?.textContent?.trim();
+  row.setAttribute(
+    "title",
+    source ? `${source} isn't in your library` : "This isn't in your library",
+  );
+  const icon = doc.createElement("span");
+  icon.className = LOCK_CLASS;
+  icon.append(makeIcon("lock", 12, doc));
+  (row.querySelector(".monster-icon, .list-row-col-icon") ?? row).append(icon);
 }

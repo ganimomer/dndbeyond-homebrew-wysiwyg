@@ -25,6 +25,7 @@ import { SideFrame } from "../shared/SideFrame.js";
 import { dressListing, isListing } from "../lookup/dress-listing.js";
 import { listingUrl } from "../lookup/LookupFrame.js";
 import { kindByMacro } from "../../adapter/reference-catalog.js";
+import { pageReferenceSource } from "../../adapter/reference-source.js";
 import { importEntry, sectionHasEntry } from "../../state/import-entry.js";
 import { dressMonster } from "./dress-monster.js";
 import { monsterUrl, useCompare, type CompareState } from "./compare-context.js";
@@ -63,6 +64,12 @@ export function CompareFrame({ state }: { state: CompareState }) {
               // Where the row was found, so Back comes back to the same search.
               onPick: (pick) => compare?.pick(pick, doc.location.pathname + doc.location.search),
               onClose: () => compare?.close(),
+              // Only here. A row that leads to the marketplace is a dead end for
+              // *this* panel, which has to open the page; the reference picker
+              // over the same listing asks nothing, because naming a creature
+              // needs no entitlement — see `ListingHandlers.lock`.
+              lock: async (pick) =>
+                (await pageReferenceSource().blocked(MONSTERS.path, pick.id)) === true,
             })
           : dressMonster(doc, {
               onImport: (section, html) => void importEntry(store, section, html),

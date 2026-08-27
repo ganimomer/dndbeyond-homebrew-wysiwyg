@@ -28,7 +28,8 @@ export type IconName =
   | "castle"
   | "openInNew"
   | "monsters"
-  | "arrowBack";
+  | "arrowBack"
+  | "lock";
 
 export interface IconSpec {
   /** Only when it isn't the legacy set's 24×24 grid. */
@@ -105,6 +106,11 @@ export const ICONS: Record<IconName, IconSpec> = {
   cellMerge: {
     viewBox: "0 -960 960 960",
     d: "M120-120v-240h80v160h160v80H120Zm480 0v-80h160v-160h80v240H600ZM287-327l-57-56 57-57H80v-80h207l-57-57 57-56 153 153-153 153Zm386 0L520-480l153-153 57 56-57 57h207v80H673l57 57-57 56ZM120-600v-240h240v80H200v160h-80Zm640 0v-160H600v-80h240v240h-80Z",
+  },
+  // lock — a creature in the compare list that D&D Beyond won't open for this
+  // author, because the book it is in isn't one they own.
+  lock: {
+    d: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm3 12c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z",
   },
   // arrow_back — the import button on a compared entry. It points at the live
   // block, which is the column to its left.

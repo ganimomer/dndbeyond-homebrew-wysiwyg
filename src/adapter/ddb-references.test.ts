@@ -569,3 +569,110 @@ test("an [items] answer is remembered under a key of its own", async () => {
   await source.lookup({ ref: "weapon", text: "Greatsword" });
   assert.ok(calls.length > before, "a different question is asked");
 });
+
+/**
+ * `blocked()` — the same endpoint, asked whether the author may read the thing
+ * rather than what it says. The distinction that matters throughout is between
+ * D&D Beyond refusing (which is an answer) and D&D Beyond not answering at all;
+ * only the first is worth marking a row on, and only the first is remembered.
+ */
+
+const BLOCKED = envelope({
+  Type: "blocked",
+  Id: 0,
+  Tooltip: `<div class="ddb-blocked-tooltip">Unlock this content</div>`,
+});
+
+test("a paywalled record is blocked, and one the author owns is not", async () => {
+  const { impl } = stubFetch({
+    [`${ORIGIN}/monsters/175326/tooltip`]: { body: BLOCKED },
+    [`${ORIGIN}/monsters/17043/tooltip`]: {
+      body: envelope({ Type: "monster", Id: 17043, Tooltip: "<div>Vampire</div>" }),
+    },
+  });
+  const source = new DdbReferenceSource({ fetchImpl: impl, origin: ORIGIN });
+
+  assert.equal(await source.blocked("monsters", 175326), true);
+  assert.equal(await source.blocked("monsters", 17043), false);
+});
+
+test("a response that isn't an answer is not a refusal", async () => {
+  // Measured against the live endpoint: the author's own homebrew answers 500
+  // there, and an id that names no creature answers 404. Neither is D&D Beyond
+  // saying no, and a row marked on either would be marked wrongly.
+  const { impl } = stubFetch({
+    [`${ORIGIN}/monsters/6700407/tooltip`]: { status: 500, body: "<!DOCTYPE html>" },
+  });
+  const source = new DdbReferenceSource({ fetchImpl: impl, origin: ORIGIN });
+
+  assert.equal(await source.blocked("monsters", 6700407), null, "their own homebrew");
+  assert.equal(await source.blocked("monsters", 99999999), null, "no such creature");
+});
+
+test("a network that never answered is not a refusal either", async () => {
+  const impl = (async () => {
+    throw new TypeError("Failed to fetch");
+  }) as unknown as typeof fetch;
+  const source = new DdbReferenceSource({ fetchImpl: impl, origin: ORIGIN });
+
+  assert.equal(await source.blocked("monsters", 175326), null);
+});
+
+test("an answer is remembered, and a non-answer is asked again", async () => {
+  const { impl, calls } = stubFetch({
+    [`${ORIGIN}/monsters/175326/tooltip`]: { body: BLOCKED },
+  });
+  const source = new DdbReferenceSource({ fetchImpl: impl, origin: ORIGIN });
+
+  await source.blocked("monsters", 175326);
+  await source.blocked("monsters", 175326);
+  assert.equal(calls.length, 1, "a settled answer costs one request");
+
+  const before = calls.length;
+  await source.blocked("monsters", 404404);
+  await source.blocked("monsters", 404404);
+  assert.equal(calls.length, before + 2, "but silence is worth asking about again");
+});
+
+test("a sweep is background work, and yields its slot to a hover", async () => {
+  const routes: Record<string, { body?: string }> = {
+    [`${ORIGIN}/conditions/6/tooltip`]: { body: CONDITION },
+  };
+  for (const id of [1, 2, 3]) {
+    routes[`${ORIGIN}/monsters/${id}/tooltip`] = { body: BLOCKED };
+  }
+  const { impl, calls } = stubFetch(routes);
+  const source = new DdbReferenceSource({
+    fetchImpl: impl,
+    origin: ORIGIN,
+    queue: new TaskQueue({ limit: 2, backgroundLimit: 1 }),
+  });
+
+  // A listing's worth of rows, then someone hovers a chip in their own prose.
+  const sweep = [1, 2, 3].map((id) => source.blocked("monsters", id));
+  const hover = source.lookup({ ref: "condition", text: "Grappled" });
+  await Promise.all([...sweep, hover]);
+
+  const hoverAt = calls.indexOf(`${ORIGIN}/conditions/6/tooltip`);
+  for (const id of [2, 3]) {
+    assert.ok(
+      hoverAt < calls.indexOf(`${ORIGIN}/monsters/${id}/tooltip`),
+      `the hover should precede the queued sweep, got ${calls.join(", ")}`,
+    );
+  }
+});
+
+test("asking about a row does not deprioritise a caller who says otherwise", async () => {
+  const inits: Array<RequestInit & { priority?: string }> = [];
+  const impl = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    inits.push((init ?? {}) as RequestInit & { priority?: string });
+    return new Response(BLOCKED, { status: 200 });
+  }) as unknown as typeof fetch;
+  const source = new DdbReferenceSource({ fetchImpl: impl, origin: ORIGIN });
+
+  await source.blocked("monsters", 1);
+  await source.blocked("monsters", 2, { priority: "interactive" });
+
+  assert.equal(inits[0]?.priority, "low", "a sweep is background by default");
+  assert.equal(inits[1]?.priority, undefined, "unlike a lookup, whose default is a hover");
+});
