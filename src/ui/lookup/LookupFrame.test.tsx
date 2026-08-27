@@ -75,7 +75,7 @@ async function ask(scene: ReturnType<typeof scene>, prose: string, typed: string
 const askForASpell = (view: ReturnType<typeof scene>, typed: string) =>
   ask(view, "It casts /spell", typed);
 
-const frame = (root: ParentNode) => root.querySelector<HTMLIFrameElement>(".lf-frame");
+const frame = (root: ParentNode) => root.querySelector<HTMLIFrameElement>(".sf-frame");
 
 async function written(committed: string[]): Promise<string> {
   await settle(600);
@@ -147,12 +147,12 @@ test("the page arrives moved, and settles into place", async (t) => {
   await askForASpell(view, "fireb");
   fireEvent.click(view.root.querySelector(".rm-lookup")!);
 
-  const panel = view.root.querySelector(".lf")!;
-  assert.equal(panel.className, "lf", "off to the side, to begin with");
+  const panel = view.root.querySelector(".sf")!;
+  assert.equal(panel.className, "sf", "off to the side, to begin with");
 
   await new Promise((resolve) => requestAnimationFrame(resolve));
   await settle();
-  assert.equal(view.root.querySelector(".lf")?.className, "lf is-open");
+  assert.equal(view.root.querySelector(".sf")?.className, "sf is-open");
 });
 
 test("closing without picking abandons the reference", async (t) => {

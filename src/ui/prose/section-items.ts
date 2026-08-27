@@ -48,8 +48,13 @@ function firstMeaningfulChild(node: Element): ChildNode | null {
  * that opens on a roll (`<span class="roll">+9</span> to hit`) is a
  * continuation of the entry above, and treating its span as transparent would
  * split the entry in two.
+ *
+ * Exported for the compare panel, which cuts *live nodes* of D&D Beyond's own
+ * page into the same entries rather than a string into them — it has DDB's
+ * elements in hand and would rather not re-parse them. The rule has to be this
+ * one, or the two panels would disagree about where an entry begins.
  */
-function leadsWithBold(node: Node): boolean {
+export function leadsWithBold(node: Node): boolean {
   let element = node.nodeType === 1 ? (node as Element) : null;
   while (element) {
     const tag = element.tagName.toLowerCase();

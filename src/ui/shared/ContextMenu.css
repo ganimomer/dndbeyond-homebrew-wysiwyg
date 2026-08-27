@@ -104,6 +104,12 @@
   color: #b00;
 }
 
+/* D&D Beyond's own red — the fill on the wordmark in its header, which is the
+ * mark the glyph wearing this was lifted from. */
+.cm-icon.tone-brand {
+  color: #e40712;
+}
+
 .cm-label {
   flex: 1;
 }

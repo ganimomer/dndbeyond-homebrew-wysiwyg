@@ -192,6 +192,14 @@ export interface Monster {
    * back, and only kept on save, while this is ticked.
    */
   hasLair?: boolean;
+  /**
+   * Whether the creature is mythic — the third of D&D Beyond's gate checkboxes,
+   * over the Mythic Actions textarea. Nothing on the block offers to tick it,
+   * because a mythic creature is rare enough that nobody reaches for one by
+   * accident; importing a mythic action from another creature is the one
+   * gesture that implies it, and does it.
+   */
+  isMythic?: boolean;
 
   /**
    * Ready-to-render HTML for description sections, keyed by section. Populated

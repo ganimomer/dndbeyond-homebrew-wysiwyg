@@ -39,6 +39,7 @@ export function recordingPage(monster: Monster): RecordingPage {
     },
     setLegendary: flag("isLegendary"),
     setHasLair: flag("hasLair"),
+    setMythic: flag("isMythic"),
   } as unknown as PageAdapter;
 
   const store = new EditorStore(adapter);

@@ -554,6 +554,7 @@ export class DdbMonsterAdapter implements PageAdapter {
 
     m.isLegendary = checked(SELECTORS.isLegendary);
     m.hasLair = checked(SELECTORS.hasLair);
+    m.isMythic = checked(SELECTORS.isMythic);
     m.descriptionHtml = readDescriptions();
     // Structured arrays stay empty; the renderers use descriptionHtml.
     return m;
@@ -626,6 +627,13 @@ export class DdbMonsterAdapter implements PageAdapter {
     // Not "lair-actions-description": DDB's label calls this "Lair and Lair
     // Actions Description" and its class follows the label, not the section.
     setDescriptionEnabled("lair-description", on);
+  }
+
+  setMythic(on: boolean): void {
+    setCheckbox(SELECTORS.isMythic, on);
+    // "mythic-description" for the same reason "lair-description" is: the class
+    // follows DDB's label, which reads "Mythic Description".
+    setDescriptionEnabled("mythic-description", on);
   }
 
   /**

@@ -14,6 +14,7 @@ import { EditorStore } from "../state/store.js";
 import { StoreContext } from "../ui/store-context.js";
 import { StatBlock } from "../ui/StatBlock.js";
 import { LookupProvider, type LookupController } from "../ui/lookup/lookup-context.js";
+import { CompareProvider, type CompareController } from "../ui/compare/compare-context.js";
 import { renderInShadowRoot } from "./render.js";
 
 /** A handful of plausible options, so the rows that offer a picker have one. */
@@ -47,6 +48,7 @@ export function stubAdapter(monster: Monster, overrides: Partial<PageAdapter> = 
     setDescription: () => {},
     setLegendary: () => {},
     setHasLair: () => {},
+    setMythic: () => {},
     setSavingThrows: () => {},
     setDamageAdjustments: () => {},
     setConditionImmunities: () => {},
@@ -104,6 +106,8 @@ export interface RenderBlockOptions {
   adapter?: Partial<PageAdapter>;
   /** A lookup to drive by hand — the overlay always provides one. */
   lookup?: LookupController;
+  /** A comparison to drive by hand — likewise. */
+  compare?: CompareController;
 }
 
 export function renderBlock(t: TestContext, monster: Monster, options: RenderBlockOptions = {}) {
@@ -122,9 +126,11 @@ export function renderBlock(t: TestContext, monster: Monster, options: RenderBlo
   // needs the same does it by hand, since nothing here subscribes.
   const tree = () => (
     <StoreContext.Provider value={store}>
-      <LookupProvider controller={options.lookup}>
-        <StatBlock monster={store.getMonster() ?? monster} />
-      </LookupProvider>
+      <CompareProvider controller={options.compare}>
+        <LookupProvider controller={options.lookup}>
+          <StatBlock monster={store.getMonster() ?? monster} />
+        </LookupProvider>
+      </CompareProvider>
     </StoreContext.Provider>
   );
 

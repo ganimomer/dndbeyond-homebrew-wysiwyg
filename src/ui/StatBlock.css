@@ -25,11 +25,11 @@
   align-items: stretch;
 }
 
-/* A lookup takes the column and everything the block can spare: the frame is a
- * whole browse page, and 300px is a picture's width, not a page's. The basis
- * lets the block give some of its own width up where the window has none to
- * donate. */
-.overlay.is-looking-up .sb-aside {
+/* A framed page takes the column and everything the block can spare: it is a
+ * whole D&D Beyond page, and 300px is a picture's width, not a page's. The
+ * basis lets the block give some of its own width up where the window has none
+ * to donate. (A comparison asks for more still — see CompareFrame.css.) */
+.overlay.is-aside-frame .sb-aside {
   flex: 1 1 520px;
 }
 

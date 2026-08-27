@@ -361,7 +361,7 @@ test("a lookup takes the artwork's column", (t) => {
     onCancel: () => {},
   });
 
-  assert.ok(root.querySelector(".lf-frame"), "D&D Beyond's own page");
+  assert.ok(root.querySelector(".sf-frame"), "D&D Beyond's own page");
   assert.equal(root.querySelector(".sb-image"), null);
   assert.equal(root.querySelector(".sb-add-section"), null);
 

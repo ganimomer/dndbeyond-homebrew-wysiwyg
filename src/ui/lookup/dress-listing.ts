@@ -134,6 +134,20 @@ export function rowPick(row: Element): LookupPick | null {
   return null;
 }
 
+/**
+ * Whether this document is one of D&D Beyond's listings — a page with rows to
+ * pick from.
+ *
+ * For the compare panel, which mounts one frame over two kinds of page and has
+ * to know which arrived. Asked here because the answer is `ROW`, and it has to
+ * be `ROW` rather than `.listing`: a *creature's* page carries a `.listing` too,
+ * for its comments, and dressing that as a picker would put a Close button on a
+ * stat block and band nothing.
+ */
+export function isListing(doc: Document): boolean {
+  return !!doc.querySelector(ROW);
+}
+
 export function dressListing(doc: Document, handlers: ListingHandlers): () => void {
   const style = doc.createElement("style");
   style.id = STYLE_ID;

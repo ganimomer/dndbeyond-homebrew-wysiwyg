@@ -15,6 +15,12 @@ export interface MenuItem {
   label: string;
   /** Material UI icon shown before the label. */
   icon?: IconName;
+  /**
+   * Takes the icon off the menu's blue and onto D&D Beyond's own red. For the
+   * one row whose glyph is DDB's artwork rather than a Material one, so it is
+   * read as the thing it came from rather than as another editor control.
+   */
+  iconTone?: "brand";
   /** Renders the item in a warning colour (e.g. Close). */
   danger?: boolean;
   /**
@@ -117,7 +123,14 @@ export function ContextMenu({
               item.onClick();
             }}
           >
-            {item.icon ? <Icon name={item.icon} class="cm-icon" /> : <span class="cm-icon" />}
+            {item.icon ? (
+          <Icon
+            name={item.icon}
+            class={item.iconTone ? `cm-icon tone-${item.iconTone}` : "cm-icon"}
+          />
+        ) : (
+          <span class="cm-icon" />
+        )}
             <span class="cm-label">{item.label}</span>
           </li>
         ))}

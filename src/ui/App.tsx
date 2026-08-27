@@ -23,6 +23,7 @@ import { StoreContext } from "./store-context.js";
 import { StatBlock } from "./StatBlock.js";
 import { AvatarToast } from "./AvatarToast.js";
 import { LookupProvider, useLookupState } from "./lookup/lookup-context.js";
+import { CompareProvider, useCompareState } from "./compare/compare-context.js";
 import appCss from "./App.css";
 import statBlockCss from "./StatBlock.css";
 import artworkCss from "./Artwork.css";
@@ -48,7 +49,8 @@ import sectionListCss from "./prose/SectionList.css";
 import itemGapCss from "./prose/ItemGap.css";
 import dragHandleCss from "./prose/DragHandle.css";
 import formatToolbarCss from "./prose/FormatToolbar.css";
-import lookupFrameCss from "./lookup/LookupFrame.css";
+import sideFrameCss from "./shared/SideFrame.css";
+import compareFrameCss from "./compare/CompareFrame.css";
 import referenceMenuCss from "./prose/ReferenceMenu.css";
 import chipMenuCss from "./prose/ChipMenu.css";
 import removeSectionCss from "./prose/RemoveSection.css";
@@ -96,7 +98,9 @@ const STYLES = [
   dragHandleCss,
   formatToolbarCss,
   referenceMenuCss,
-  lookupFrameCss,
+  sideFrameCss,
+  // After SideFrame's, whose panel it widens and stacks.
+  compareFrameCss,
   removeSectionCss,
   removeItemCss,
   contextMenuCss,
@@ -180,18 +184,20 @@ export function App({ adapter, onClose }: AppProps) {
   return (
     <StoreContext.Provider value={store}>
       <style dangerouslySetInnerHTML={{ __html: STYLES }} />
-      <LookupProvider>
-        <Overlay stage={stage} monster={monster} onClose={onClose} />
-      </LookupProvider>
+      <CompareProvider>
+        <LookupProvider>
+          <Overlay stage={stage} monster={monster} onClose={onClose} />
+        </LookupProvider>
+      </CompareProvider>
     </StoreContext.Provider>
   );
 }
 
 /**
  * The overlay itself, which is a component only so that it can be *under* the
- * lookup provider and read from it. What it reads is one class: a lookup
- * widens the stage, and since the page centres what it holds, widening is what
- * slides the block left — see App.css.
+ * two frame providers and read from them. What it reads is one class: a page
+ * in the aside widens the stage, and since the page centres what it holds,
+ * widening is what slides the block left — see App.css.
  */
 function Overlay({
   stage,
@@ -203,8 +209,13 @@ function Overlay({
   onClose?: () => void;
 }) {
   const lookup = useLookupState();
+  const compare = useCompareState();
+  const comparing = !!compare && compare.phase !== "closing";
+  const classes = ["overlay"];
+  if (lookup?.phase === "open" || comparing) classes.push("is-aside-frame");
+  if (comparing) classes.push("is-comparing");
   return (
-    <div class={lookup?.phase === "open" ? "overlay is-looking-up" : "overlay"}>
+    <div class={classes.join(" ")}>
       <div class="page">
         <div class="stage" ref={stage}>
           {monster ? <StatBlock monster={monster} onClose={onClose} /> : null}

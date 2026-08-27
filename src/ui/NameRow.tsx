@@ -19,6 +19,7 @@ import { CloseButton } from "./shared/CloseButton.js";
 import { useSaveState } from "./shared/use-save-state.js";
 import { isDirty } from "../editor/autosave.js";
 import { detailsUrl } from "../adapter/edit-url.js";
+import { useCompare } from "./compare/compare-context.js";
 
 /** Why "Go to details page" is greyed out. */
 const UNSAVED_NOTE =
@@ -27,6 +28,7 @@ const UNSAVED_NOTE =
 export function NameRow({ monster, onClose }: { monster: Monster; onClose?: () => void }) {
   const editing = useEditing();
   const store = useStore();
+  const compare = useCompare();
   const unsaved = isDirty(useSaveState());
   // Offer only the layout we're not currently in.
   const other = monster.ruleset === "5e" ? "5.5e" : "5e";
@@ -49,6 +51,17 @@ export function NameRow({ monster, onClose }: { monster: Monster; onClose?: () =
   }
   if (!monster.hasLair) {
     items.push({ label: "Add lair", icon: "castle", onClick: () => void addLair(store) });
+  }
+  // Wearing D&D Beyond's own Monsters glyph in D&D Beyond's own red, because
+  // what it opens is their page rather than anything of ours — the one row in
+  // this menu that is a door into the compendium rather than an edit.
+  if (compare) {
+    items.push({
+      label: "Compare to…",
+      icon: "monsters",
+      iconTone: "brand",
+      onClick: () => compare.open(),
+    });
   }
   // Last, below the three that change the creature: this is the one that leaves.
   //

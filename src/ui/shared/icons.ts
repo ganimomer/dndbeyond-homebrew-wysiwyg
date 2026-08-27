@@ -26,7 +26,9 @@ export type IconName =
   | "cellMerge"
   | "crown"
   | "castle"
-  | "openInNew";
+  | "openInNew"
+  | "monsters"
+  | "arrowBack";
 
 export interface IconSpec {
   /** Only when it isn't the legacy set's 24×24 grid. */
@@ -104,24 +106,44 @@ export const ICONS: Record<IconName, IconSpec> = {
     viewBox: "0 -960 960 960",
     d: "M120-120v-240h80v160h160v80H120Zm480 0v-80h160v-160h80v240H600ZM287-327l-57-56 57-57H80v-80h207l-57-57 57-56 153 153-153 153Zm386 0L520-480l153-153 57 56-57 57h207v80H673l57 57-57 56ZM120-600v-240h240v80H200v160h-80Zm640 0v-160H600v-80h240v240h-80Z",
   },
+  // arrow_back — the import button on a compared entry. It points at the live
+  // block, which is the column to its left.
+  arrowBack: {
+    d: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z",
+  },
+  // D&D Beyond's own Monsters glyph, the one its Rules menu links with, vendored
+  // from `wizardsprod.a.bigcontent.io/v1/static/monsters` so nothing is fetched
+  // at runtime — and the one icon here that isn't a Material one, hence the
+  // 86×80 grid. Four subpaths on one `d`, like `crown`: the original draws the
+  // body and the three facial features separately, and they render identically
+  // concatenated (checked pixel for pixel) because none of them is a hole.
+  // Coordinates rounded to a tenth of that grid — under a pixel either way at
+  // any size this is drawn at, and it halves the string.
+  monsters: {
+    viewBox: "0 0 86 80",
+    d: "M78 26C79.6 25.6 81 25.4 82.9 25.2C83.1 22.1 76.6 18.5 73.8 17.6C76.1 16.7 80.5 14.3 81.3 11.8C79.5 12 78.2 12.1 76.7 12.1C80 8.7 82.4 5.1 82.4 0.4C75.7 5.3 71.4 7.3 63.1 9.7C64.2 7.4 66.4 6.7 68.4 5.4C62.9 4.8 57.9 6.3 53.1 8.4C54.3 6.4 56.1 5.2 58 3.7C55.5 2.8 52.4 4.7 50.4 5.7C50.3 5 50.2 4 50 3.5C49.4 1.9 35 1.4 33.1 3C34 4.4 34.6 5.4 35.3 6.9C31.7 5.6 28.6 4.6 25 4.7C26 5.9 26.8 6.7 27.7 8.1L22.6 5.8C21.1 5.2 19.3 5.1 17.6 5.3C19.4 6.6 21.2 7.3 22.3 9.4C15.2 7.9 8.9 4.5 3.2 0C3.2 5.4 5.5 8 8.6 12L4.2 11.8C5.4 14.5 9.2 16.2 12 17.5C8.5 19 3.8 21.1 2.4 25.2L7.7 26.1C4 30.1-0.6 35.2 0.1 41.1C1.6 39.9 3.1 38.9 4.8 38.1C2.8 43.6 0.4 49.1 2.7 54.9C4.3 53.5 5.7 52.4 7.4 51.2C7.4 54.1 7.1 56.3 7.8 58.8C8.8 62.6 11.3 65.6 14.3 67.9C14.5 65.5 14.7 63.7 15.6 61.7L17.7 65.2C20.2 69.3 24.2 72.1 28.7 74.2C28.6 72.4 28.4 71 28.8 69.5C32.9 74.1 37.3 77.7 42.9 80C48.4 77.6 53 74.1 57 69.5C57.5 71.2 57.2 72.5 57.1 74.3C63.1 71.3 67 67.8 70 61.8C70.7 63.6 71.1 65.5 71.4 67.8C76.8 63.9 79.4 57.8 78.3 51.3C80.2 52.4 81.5 53.5 83.2 55C84.4 50.9 84.2 46.7 82.7 42.6L81 38.3C82.9 39.1 84.1 39.9 85.7 41C86.5 34.8 82 30.1 78 26L78 26ZM48.9 21.6L49.4 22.5C52.4 20.3 53.6 16.6 56.4 14.8C57.3 16.6 56.1 17.6 55.7 19.4L59.3 17.1C61 16.1 65.5 13.4 66.8 15.3C67.9 16.9 65.3 19.1 63.9 19.9L54.1 25.8C52 27.1 48.2 30.3 46.3 28.4C44.9 26.9 47.1 22.6 48.9 21.6V21.6ZM19.8 15C22 13.1 28.3 18.1 30.6 19.4L29.5 16C29.4 15.8 29.5 15.2 29.7 15C29.8 14.9 30.4 15.1 30.6 15.2C33.7 17.9 33.4 19.6 36.7 22.4L37.5 21.3C39.4 22.7 41.7 27 39.6 28.6C37.8 29.9 34.3 27.1 32.3 25.9L24.6 21.2C23 20.2 21.4 19.3 20.1 17.9C19.5 17.2 19 15.7 19.8 15V15ZM33.9 31.1L33.2 33.3C32.6 35.6 30.4 37.1 27.8 37.1C26.6 37.1 25.4 36.7 24.4 36.1C23 35 22.1 33.3 22 31.4C21.9 29.6 22.7 27.8 24 26.8L24.5 25.1L26.6 26.7L32 29.6L33.9 31.1L33.9 31.1ZM49.4 38.9C48.4 45.1 46.6 51 44.1 56.7C43.9 57.2 43.3 57.7 42.9 57.7C42.6 57.8 41.9 57.3 41.7 56.9C38.8 51.6 36.7 45.9 36 39.8C35.8 37.8 36.7 36 38.4 35.1C41.5 33.4 45.5 33.2 48.5 35.3C49.5 36 49.5 37.8 49.4 38.9H49.4ZM55.7 29.4C56.9 28.6 57.9 27.8 58.9 26.7L61.4 24.2L62.6 26.5C63.8 27.7 64.6 29.3 64.6 31.1C64.6 32.9 63.9 34.6 62.5 35.8C61.4 36.8 60 37.4 58.5 37.4C56.4 37.4 54.4 36.3 53.2 34.5L51.1 31.4L54.3 29.4H55.7ZM67.7 43.1C68.9 46.3 69.7 49.1 68.4 52.5C66.5 50.2 64.4 48.4 61.2 47.9C60.5 52.2 58.5 55.8 54.5 57.7C55.1 51.2 56.7 50.6 54 44.5C58.1 44.4 59.2 43.1 64 41.6C68.1 40.3 69.9 33.5 68.4 29.4C67.9 28.1 67.5 27.3 66.7 25.7L69.8 24.2C73.1 27.2 74.4 31.2 74 35.7C73.9 36.8 73.1 37.5 71.7 37.9C73.1 39.7 74.2 41.4 74.5 43.8L67.7 43.1V43.1ZM18.7 43.1L11.9 43.8C12.2 41.4 13.3 39.7 14.7 37.9C13.3 37.5 12.5 36.8 12.4 35.7C12.1 31.2 13.3 27.2 16.7 24.1L19.7 25.7C18.9 27.3 18.5 28.1 18 29.4C16.5 33.5 18.3 40.3 22.5 41.6C27.2 43.1 28.3 44.4 32.5 44.5C29.7 50.6 31.3 51.2 32 57.7C27.9 55.8 26 52.2 25.3 47.9C22.1 48.4 20 50.2 18 52.5C16.8 49.1 17.6 46.3 18.7 43.1V43.1Z M38.5 42.2C37.9 40.5 37.8 38.2 39.6 37.4C39.9 37.3 40.4 37.9 40.5 38.2C40.7 39.8 40 41.2 38.5 42.1V42.2Z M29.7 32.2C29.3 33.6 27.3 34 26.1 33.2C25 32.3 24.8 30.2 25.9 29.3L29.7 32.3V32.2Z M56 32.4C57.5 31.5 58.6 30.5 59.9 29.2C60.9 30.2 60.9 32 59.8 33C58.7 34 56.9 33.7 56 32.4Z",
+  },
 };
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 /**
  * The same glyph as DOM, for code that paints outside the Preact tree — the save
- * indicator, which is repainted on its own schedule rather than by a render.
- * Everything else wants `<Icon>`.
+ * indicator, which is repainted on its own schedule rather than by a render, and
+ * the compare panel, which paints into a frame. Everything else wants `<Icon>`.
+ *
+ * `doc` is which document to build in: a node made by one document cannot be
+ * appended to another, and the compare panel's belongs to the iframe.
  */
-export function makeIcon(name: IconName, size = 18): SVGSVGElement {
+export function makeIcon(name: IconName, size = 18, doc: Document = document): SVGSVGElement {
   const { viewBox = DEFAULT_VIEWBOX, d } = ICONS[name];
-  const svg = document.createElementNS(SVG_NS, "svg");
+  const svg = doc.createElementNS(SVG_NS, "svg");
   svg.setAttribute("viewBox", viewBox);
   svg.setAttribute("width", String(size));
   svg.setAttribute("height", String(size));
   svg.setAttribute("fill", "currentColor");
   svg.setAttribute("aria-hidden", "true");
-  const path = document.createElementNS(SVG_NS, "path");
+  const path = doc.createElementNS(SVG_NS, "path");
   path.setAttribute("d", d);
   svg.appendChild(path);
   return svg;

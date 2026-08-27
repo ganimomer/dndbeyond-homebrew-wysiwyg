@@ -1,8 +1,8 @@
-/* D&D Beyond's browse page, standing in for the artwork.
+/* A D&D Beyond page of their own, standing in for the artwork.
  *
  * Sticky rather than tall: the block beside it scrolls, and a page-length frame
- * would put the list off screen exactly when the author is reading it. */
-.lf {
+ * would put its contents off screen exactly when the author is reading them. */
+.sf {
   position: sticky;
   top: 16px;
   display: flex;
@@ -18,19 +18,19 @@
   transition: opacity 0.24s ease, transform 0.24s ease;
 }
 
-.lf.is-open {
+.sf.is-open {
   opacity: 1;
   transform: none;
 }
 
 /* Nothing to click on the way out — a row clicked while the page fades would
- * be a second reference. (It also covers the frame's first paint, which is
- * behind the loading cover anyway.) */
-.lf:not(.is-open) {
+ * act on a panel that is already gone. (It also covers the frame's first
+ * paint, which is behind the loading cover anyway.) */
+.sf:not(.is-open) {
   pointer-events: none;
 }
 
-.lf-frame {
+.sf-frame {
   flex: 1;
   display: block;
   width: 100%;
@@ -40,7 +40,7 @@
 
 /* Over the frame for as long as what's in it isn't ours yet. Opaque, because
  * what it hides is D&D Beyond's own navigation bar mid-reload. */
-.lf-cover {
+.sf-cover {
   position: absolute;
   inset: 0;
   display: flex;
@@ -52,8 +52,35 @@
   color: #822000;
 }
 
+/* The same cover, over a page that arrived and turned out not to be ours to
+ * read. It says so, and offers the way back. */
+.sf-barred {
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  font-family: "Noto Sans", system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #242527;
+  text-align: center;
+}
+
+.sf-barred button {
+  padding: 6px 16px;
+  border: 1px solid #d8e1e8;
+  border-radius: 3px;
+  background: #ffffff;
+  font: inherit;
+  color: #1579bc;
+  cursor: pointer;
+}
+
+.sf-barred button:hover {
+  background: #f2f5f7;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .lf {
+  .sf {
     transition: none;
   }
 }

@@ -96,6 +96,14 @@ export const setHasLair = (monster: Monster, on: boolean): Command =>
     write: (adapter, value) => adapter.setHasLair(value),
   });
 
+export const setMythic = (monster: Monster, on: boolean): Command =>
+  field({
+    label: on ? "Mythic" : "Not mythic",
+    from: !!monster.isMythic,
+    to: on,
+    write: (adapter, value) => adapter.setMythic(value),
+  });
+
 export const setAbility = (monster: Monster, ability: Ability, score: number): Command =>
   field({
     label: `${ABILITY_ABBREV[ability]} ${score}`,

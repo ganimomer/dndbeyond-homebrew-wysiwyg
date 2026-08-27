@@ -11,7 +11,9 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 import type { Monster } from "../statblock/model.js";
 import { Artwork } from "./Artwork.js";
 import { LookupFrame } from "./lookup/LookupFrame.js";
+import { CompareFrame } from "./compare/CompareFrame.js";
 import { useLookupState } from "./lookup/lookup-context.js";
+import { useCompareState } from "./compare/compare-context.js";
 import { ItemDragProvider } from "./prose/drag-context.js";
 import { SectionBody } from "./prose/SectionBody.js";
 import { sectionState } from "./prose/section-state.js";
@@ -52,6 +54,7 @@ function Description({ monster }: { monster: Monster }) {
 export function StatBlock({ monster, onClose }: { monster: Monster; onClose?: () => void }) {
   const Layout = monster.ruleset === "5e" ? StatBlock5e : StatBlock55e;
   const lookup = useLookupState();
+  const compare = useCompareState();
   const layout = useRef<HTMLDivElement>(null);
   const aside = useRef<HTMLDivElement>(null);
 
@@ -103,18 +106,21 @@ export function StatBlock({ monster, onClose }: { monster: Monster; onClose?: ()
         <div class="sb-layout" ref={layout}>
           <Layout monster={monster} onClose={onClose} />
           {/* `--accent` is declared on the layouts themselves, and this column is
-              outside them — so it carries the creature's own. A lookup takes the
-              column whole: D&D Beyond's page is what the author is reading, and
-              a picture is not what they came for. */}
+              outside them — so it carries the creature's own. A framed D&D Beyond
+              page takes the column whole: what the author is reading is over
+              there, and a picture is not what they came for.
+
+              The lookup comes first in the markup so that a comparison behind it
+              can be hidden by a plain sibling rule — see CompareFrame.css. */}
           <div class="sb-aside" ref={aside} style={`--accent:${ACCENT[monster.ruleset]}`}>
-            {lookup ? (
-              <LookupFrame state={lookup} />
-            ) : (
+            {lookup ? <LookupFrame state={lookup} /> : null}
+            {compare ? <CompareFrame state={compare} /> : null}
+            {!lookup && !compare ? (
               <>
                 <Artwork monster={monster} onLoad={measure} />
                 <AddSectionButton monster={monster} />
               </>
-            )}
+            ) : null}
           </div>
         </div>
         <Description monster={monster} />

@@ -1,0 +1,108 @@
+<!--
+  D&D Beyond's monster page, trimmed from a real capture of
+  /monsters/17043-vampire.
+
+  Kept verbatim: the page heading the panel's own controls are appended to, and
+  the three description blocks in full — Traits, Actions and Legendary Actions,
+  the last of which opens on an unbolded preamble and is the case that proves an
+  entry doesn't have to be named. Between them they carry both marker shapes the
+  import has to read back: rendered rollables (`data-dicenotation`) and rendered
+  references (`data-tooltip-href`), the latter pointing at two different
+  compendiums.
+
+  Trimmed away: the attributes, ability table and tidbits, which the surgery
+  never touches, and everything below the block. `.mon-stat-block` itself is
+  kept because that is what tells a monster page from a listing of them.
+
+  A `Description` block is appended in the shape the *other* creatures print it
+  — the vampire's own is headingless, which is its own test, so both are here.
+
+  The comment thread at the foot is kept as its bare `ul.listing`, because that
+  class is the one thing on this page that also appears on a listing of
+  creatures: it is why "is this a listing?" has to ask about rows rather than
+  about `.listing`.
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Vampire - Monsters - D&amp;D Beyond</title>
+  </head>
+  <body class="site site-dndbeyond body-rpgmonster body-rpgmonster-details">
+    <div id="mega-menu-target"></div>
+    <header class="main">
+      <div class="page-heading">
+        <div class="page-heading__content">
+          <h1 class="page-title">Vampire</h1>
+        </div>
+      </div>
+    </header>
+
+    <div class="mon-stat-block">
+      <div class="mon-stat-block__header">
+        <div class="mon-stat-block__name">
+          <a class="mon-stat-block__name-link" href="/monsters/17043-vampire">Vampire</a>
+        </div>
+        <div class="mon-stat-block__meta">Medium Undead (Shapechanger), Lawful Evil</div>
+      </div>
+      <div class="mon-stat-block__description-blocks">
+        
+                  <div class="mon-stat-block__description-block"> 
+                      <div class="mon-stat-block__description-block-heading">Traits</div>
+                      <div class="mon-stat-block__description-block-content">
+                          <p><em><strong>Shapechanger.</strong></em> If the vampire isn’t in sunlight or running water, it can use its action to polymorph into a Tiny <a class="tooltip-hover monster-tooltip" href="/monsters/16802-bat" data-tooltip-href="/monsters/16802-tooltip">bat</a> or a Medium cloud of mist, or back into its true form.</p>
+      <p>While in <a class="tooltip-hover monster-tooltip" href="/monsters/16802-bat" data-tooltip-href="/monsters/16802-tooltip">bat</a> form, the vampire can’t speak, its walking speed is 5 feet, and it has a flying speed of 30 feet. Its statistics, other than its size and speed, are unchanged. Anything it is wearing transforms with it, but nothing it is carrying does. It reverts to its true form if it dies.</p>
+      <p>While in mist form, the vampire can’t take any actions, speak, or manipulate objects. It is weightless, has a flying speed of 20 feet, can hover, and can enter a hostile creature’s space and stop there. In addition, if air can pass through a space, the mist can do so without squeezing, and it can’t pass through water. It has advantage on Strength, Dexterity, and Constitution saving throws, and it is immune to all nonmagical damage, except the damage it takes from sunlight.</p>
+      <p><em><strong>Legendary Resistance (3/Day).</strong></em> If the vampire fails a saving throw, it can choose to succeed instead.</p>
+      <p><em><strong>Misty Escape.</strong></em> When it drops to 0 hit points outside its resting place, the vampire transforms into a cloud of mist (as in the Shapechanger trait) instead of falling <a class="tooltip-hover condition-tooltip" href="/sources/dnd/free-rules/rules-glossary#UnconsciousCondition" data-tooltip-href="/conditions/15-tooltip">unconscious</a>, provided that it isn’t in sunlight or running water. If it can’t transform, it is destroyed.</p>
+      <p>While it has 0 hit points in mist form, it can’t revert to its vampire form, and it must reach its resting place within 2 hours or be destroyed. Once in its resting place, it reverts to its vampire form. It is then <a class="tooltip-hover condition-tooltip" href="/sources/dnd/free-rules/rules-glossary#ParalyzedCondition" data-tooltip-href="/conditions/9-tooltip">paralyzed</a> until it regains at least 1 hit point. After spending 1 hour in its resting place with 0 hit points, it regains 1 hit point.</p>
+      <p><em><strong>Regeneration.</strong></em> The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn’t in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn’t function at the start of the vampire’s next turn.</p>
+      <p><em><strong>Spider Climb.</strong></em> The vampire can climb difficult surfaces, including upside down on ceilings, without needing to make an ability check.</p>
+      <p><em><strong>Vampire Weaknesses.</strong></em> The vampire has the following flaws:</p>
+      <p><em>Forbiddance.</em> The vampire can’t enter a residence without an invitation from one of the occupants.</p>
+      <p><em>Harmed by Running Water.</em> The vampire takes 20 acid damage if it ends its turn in running water.</p>
+      <p><em>Stake to the Heart.</em> If a piercing weapon made of wood is driven into the vampire’s heart while the vampire is <a class="tooltip-hover condition-tooltip" href="/sources/dnd/free-rules/rules-glossary#IncapacitatedCondition" data-tooltip-href="/conditions/7-tooltip">incapacitated</a> in its resting place, the vampire is <a class="tooltip-hover condition-tooltip" href="/sources/dnd/free-rules/rules-glossary#ParalyzedCondition" data-tooltip-href="/conditions/9-tooltip">paralyzed</a> until the stake is removed.</p>
+      <p><em>Sunlight Hypersensitivity.</em> The vampire takes 20 radiant damage when it starts its turn in sunlight. While in sunlight, it has disadvantage on attack rolls and ability checks.</p>                
+                      </div>
+                  </div>
+         
+                  <div class="mon-stat-block__description-block">
+                      <div class="mon-stat-block__description-block-heading">Actions</div>
+                      <div class="mon-stat-block__description-block-content">
+                          <p><em><strong>Multiattack. (Vampire Form Only).</strong></em> The vampire makes two attacks, only one of which can be a bite attack.</p>
+      <p><em><strong>Unarmed Strike (Vampire Form Only).</strong> Melee Weapon Attack:</em> <span data-dicenotation="1d20+9" data-rolltype="to hit" data-rollaction="Unarmed Strike">+9</span> to hit, reach 5 ft., one creature. <em>Hit:</em> 8 <span data-dicenotation="1d8+4" data-rolltype="damage" data-rollaction="Unarmed Strike" data-rolldamagetype="bludgeoning">(1d8 + 4)</span> bludgeoning damage. Instead of dealing damage, the vampire can grapple the target (escape DC 18).</p>
+      <p><em><strong>Bite. (Bat or Vampire Form Only).</strong> Melee Weapon Attack:</em> <span data-dicenotation="1d20+9" data-rolltype="to hit" data-rollaction="Bite">+9</span> to hit, reach 5 ft., one willing creature, or a creature that is <a class="tooltip-hover condition-tooltip" href="/sources/dnd/free-rules/rules-glossary#GrappledCondition" data-tooltip-href="/conditions/6-tooltip">grappled</a> by the vampire, <a class="tooltip-hover condition-tooltip" href="/sources/dnd/free-rules/rules-glossary#IncapacitatedCondition" data-tooltip-href="/conditions/7-tooltip">incapacitated</a>, or <a class="tooltip-hover condition-tooltip" href="/sources/dnd/free-rules/rules-glossary#RestrainedCondition" data-tooltip-href="/conditions/13-tooltip">restrained</a>. <em>Hit:</em> 7 <span data-dicenotation="1d6+4" data-rolltype="damage" data-rollaction="Bite" data-rolldamagetype="piercing">(1d6 + 4)</span> piercing damage plus 10 <span data-dicenotation="3d6" data-rolltype="damage" data-rollaction="Bite" data-rolldamagetype="necrotic">(3d6)</span> necrotic damage. The target’s hit point maximum is reduced by an amount equal to the necrotic damage taken, and the vampire regains hit points equal to that amount. The reduction lasts until the target finishes a long rest. The target dies if this effect reduces its hit point maximum to 0. A humanoid slain in this way and then buried in the ground rises the following night as a <a class="tooltip-hover monster-tooltip" href="/monsters/17044-vampire-spawn" data-tooltip-href="/monsters/17044-tooltip">vampire spawn</a> under the vampire’s control.</p>
+      <p><em><strong>Charm.</strong></em> The vampire targets one humanoid it can see within 30 feet of it. If the target can see the vampire, the target must succeed on a DC 17 Wisdom saving throw against this magic or be <a class="tooltip-hover condition-tooltip" href="/sources/dnd/free-rules/rules-glossary#CharmedCondition" data-tooltip-href="/conditions/2-tooltip">charmed</a> by the vampire. The <a class="tooltip-hover condition-tooltip" href="/sources/dnd/free-rules/rules-glossary#CharmedCondition" data-tooltip-href="/conditions/2-tooltip">charmed</a> target regards the vampire as a trusted friend to be heeded and protected. Although the target isn’t under the vampire’s control, it takes the vampire’s requests or actions in the most favorable way it can, and it is a willing target for the vampire’s bite attack.</p>
+      <p>Each time the vampire or the vampire’s companions do anything harmful to the target, it can repeat the saving throw, ending the effect on itself on a success. Otherwise, the effect lasts 24 hours or until the vampire is destroyed, is on a different plane of existence than the target, or takes a bonus action to end the effect.</p>
+      <p><em><strong>Children of the Night (1/Day).</strong></em> The vampire magically calls <span data-dicenotation="2d4" data-rolltype="roll" data-rollaction="Children of the Night">2d4</span> <a class="tooltip-hover monster-tooltip" href="/monsters/17028-swarm-of-bats" data-tooltip-href="/monsters/17028-tooltip">swarms of bats</a> or <a class="tooltip-hover monster-tooltip" href="/monsters/17032-swarm-of-rats" data-tooltip-href="/monsters/17032-tooltip">rats</a>, provided that the sun isn’t up. While outdoors, the vampire can call <span data-dicenotation="3d6" data-rolltype="roll" data-rollaction="Children of the Night">3d6</span> <a class="tooltip-hover monster-tooltip" href="/monsters/17062-wolf" data-tooltip-href="/monsters/17062-tooltip">wolves</a> instead. The called creatures arrive in <span data-dicenotation="1d4" data-rolltype="roll" data-rollaction="Children of the Night">1d4</span> rounds, acting as allies of the vampire and obeying its spoken commands. The beasts remain for 1 hour, until the vampire dies, or until the vampire dismisses them as a bonus action.</p>                            
+                      </div>
+                  </div>
+         
+                  <div class="mon-stat-block__description-block">
+                      <div class="mon-stat-block__description-block-heading">Legendary Actions</div>
+                      <div class="mon-stat-block__description-block-content">
+                          <p>The vampire can take 3 legendary actions, choosing from the options below. Only one legendary action option can be used at a time and only at the end of another creature’s turn. The vampire regains spent legendary actions at the start of its turn.</p>
+      <p><strong>Move.</strong> The vampire moves up to its speed without provoking opportunity attacks.</p>
+      <p><strong>Unarmed Strike.</strong> The vampire makes one unarmed strike.</p>
+      <p><strong>Bite (Costs 2 Actions).</strong> The vampire makes one bite attack.</p>
+                      </div>
+                  </div>
+          </div>
+    </div>
+
+    <div class="more-info-content">
+      <div class="mon-details__description-block">
+        <h3 class="mon-details__description-block-heading">Description</h3>
+        <div class="mon-details__description-block-content">
+          <p>Vampires are the most notorious of the undead, cunning and charming.</p>
+          <p>A vampire that is destroyed reforms in its coffin over the course of days.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="homebrew-comments">
+      <ul class="listing listing-comments j-comment-listing">
+        <li class="p-comments"><div class="j-comment">Best vampire.</div></li>
+      </ul>
+    </div>
+  </body>
+</html>
