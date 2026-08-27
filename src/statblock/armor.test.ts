@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { MUNDANE_ARMOR, armorAc, armorByName, armorFor } from "./armor.js";
+import { MUNDANE_ARMOR, SHIELD, armorAc, armorByName, armorFor } from "./armor.js";
 
 const armor = (name: string) => {
   const found = armorByName(name);
@@ -34,8 +34,14 @@ test("light armor takes the whole Dexterity modifier", () => {
 
 test("the twelve mundane body armors are all there, and nothing else", () => {
   assert.equal(MUNDANE_ARMOR.length, 12);
-  // A shield is additive, not a replacement, so it is deliberately absent.
+  // A shield is worn *alongside* body armor rather than instead of it, so it is
+  // deliberately out of the table "Replace…" offers.
   assert.equal(armorByName("Shield"), undefined);
+  assert.equal(armorFor({ text: "Shield", slug: "shield" }), undefined);
+});
+
+test("a shield is worth two points", () => {
+  assert.equal(SHIELD.bonus, 2);
 });
 
 test("recognises a reference by the name D&D Beyond displays", () => {
@@ -60,7 +66,7 @@ test("gear that is not armor is not armor", () => {
 });
 
 test("every armor's qualifier is something the AC row can print", () => {
-  for (const entry of MUNDANE_ARMOR) {
+  for (const entry of [...MUNDANE_ARMOR, SHIELD]) {
     // DDB's armor-class-type input rejects anything under two characters.
     assert.ok(entry.qualifier.length >= 2, entry.name);
     assert.equal(entry.qualifier, entry.qualifier.toLowerCase());

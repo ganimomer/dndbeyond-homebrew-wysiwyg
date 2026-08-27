@@ -8,10 +8,14 @@
  * only place in the editor that knows splint is a flat 17 and half plate is
  * 15 plus as much Dexterity as it will take.
  *
- * Mundane body armor only, and deliberately so. Magic armor ("Splint, +1")
- * varies by the item rather than by the kind, and a shield is additive rather
- * than a replacement — both want a different gesture than "replace this with
- * that", so neither is here yet.
+ * The *table* is mundane body armor only, and deliberately so: what belongs in
+ * it is the set of things that replace each other, since replacing is the whole
+ * gesture it exists to serve. A shield is not one of them — it is worn
+ * alongside armor rather than instead of it — so it sits outside the table as
+ * `SHIELD`, a flat bonus and a word for the parentheses.
+ *
+ * Magic armor ("Splint, +1") is still absent, because it varies by the item
+ * rather than by the kind.
  *
  * Rules knowledge, so it is DOM-free and network-free like everything else in
  * this directory. The compendium ids and macros live in the adapter.
@@ -84,6 +88,27 @@ export const MUNDANE_ARMOR: readonly Armor[] = [
   { name: "Splint Armor", slug: "splint-armor", aliases: ["splint"], base: 17, dex: "none", qualifier: "splint" },
   { name: "Plate Armor", slug: "plate-armor", aliases: ["plate"], base: 18, dex: "none", qualifier: "plate" },
 ];
+
+/**
+ * A shield, which is not an `Armor` because it does not answer the same
+ * question.
+ *
+ * Every row above says what a creature's class *is* once it is wearing that.
+ * A shield says only what it adds, and it adds to whatever was there — the
+ * armor the editor recognises, the natural armor it doesn't, or a number a
+ * homebrew author simply decided on. So it has a `bonus` where they have a
+ * `base` and a `dex`, and it stays out of `MUNDANE_ARMOR` so that nothing
+ * offering "replace this armor with that one" can ever offer it.
+ */
+export const SHIELD = {
+  /** As a reference to it reads, and as D&D Beyond's compendium spells it. */
+  name: "Shield",
+  slug: "shield",
+  /** Flat, and the same for every creature carrying one. */
+  bonus: 2,
+  /** What it adds to the armor-class row's parentheses, always last. */
+  qualifier: "shield",
+} as const;
 
 /**
  * The class this armor gives a creature with that Dexterity modifier.

@@ -366,3 +366,20 @@ test("new armor wins over a Dexterity change, which knows nothing of the type", 
   // Not 11 + 6 = 17, which is what the Dexterity offer alone would have said.
   assert.equal(hintFor("armor class")?.textContent, "←16");
 });
+
+test("an offer whose type names two things is taken whole", (t) => {
+  // A shield joining the gear of a creature already in splint: two more points,
+  // and a qualifier that now reads as a list.
+  const { hintFor, hints, field, committed, action } = setup(
+    t,
+    monsterWith({ value: 17, type: "splint" }, 13),
+    { suggestion: { value: 19, type: "splint and shield" } },
+  );
+  assert.deepEqual(hints(), ["armor bonus", "armor class", "armor type"]);
+  assert.equal(hintFor("armor type")?.textContent, "←splint and shield");
+
+  fireEvent.click(hintFor("armor bonus")!);
+  assert.equal(field("type").value, "splint and shield");
+  fireEvent.click(action("commit"));
+  assert.deepEqual(committed, [{ value: 19, type: "splint and shield" }]);
+});

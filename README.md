@@ -249,8 +249,8 @@ word, and a space after the query closes the menu again.
 **Gear you can act on.** In the Gear row those references are drawn as chips,
 because a thing a creature is carrying is an object rather than a word in a
 sentence. Clicking one selects it and opens a small menu: **Remove**, and — when
-the chip is a piece of armor the editor recognises — **Replace…**, which offers
-the SRD's twelve mundane body armors.
+the chip is a piece of *body* armor the editor recognises — **Replace…**, which
+offers the SRD's twelve mundane body armors.
 
 Picking one changes the gear, and *offers* the armor class that armor implies.
 The offer is three chips at once, on the bonus, the total and the type, and
@@ -276,12 +276,43 @@ a `TextNode` subclass and this editor has no node selection — so what marks a
 chip as selected is a recoloured `::selection`, and the chip's own look is CSS,
 never a class written onto an element Lexical's reconciler owns.
 
-Mundane body armor only, for now. Magic armor ("Splint, +1") varies by the item
-rather than by the kind, and a shield adds rather than replaces — both want a
-different gesture than "replace this with that". The armor list is also kept out
-of the `/` menu on purpose: offering twelve mundane items as *the* way to
-reference armor would quietly say a Splint +1 doesn't exist, and Equipment
-already reaches those through D&D Beyond's own listing.
+**A shield needs no gesture at all.** It is not one of a set of interchangeable
+kinds, so there is nothing to replace: it simply *arrives*, from the `/` menu or
+from D&D Beyond's own markup, and adds two points to whatever the creature had.
+So the editor watches the Gear row rather than any one menu — every way of
+changing gear commits through the same place — and when a shield appears or
+disappears it offers the same three chips, plus or minus two:
+
+```
+AC  [ 11 + ] 6 ←8  =  [17] ←19  ( [splint] ←splint and shield )
+```
+
+Two points *added to the stated class*, not a class recomputed. A shield adds to
+whatever was there, and what was there may be natural armor, a magic item, or a
+number a homebrew author simply decided on — none of which this editor can
+recompute and all of which it must not throw away. That is why removing armor
+still offers nothing while removing a shield offers −2: the shield knows what it
+contributed, the armor only knows what the total should have been.
+
+Which means the words in the parentheses are a **list** now, and one an author
+wrote long before this editor existed — so `armor-class.ts` reads it whichever
+way they wrote it. Commas and the word "and" are both separators and neither is
+required, so "plate, shield", "plate, shield and a ring" and "plate, shield, and
+a ring" all come apart the same way. What goes back is Oxford-comma'd, and the
+shield is always last, because the parentheses read best as the armor first and
+what was added to it after.
+
+Nothing is offered twice: gear that gains a shield the block already credits says
+nothing, because an author who wrote "and shield" in the parentheses themselves
+has already said the number covers it. Nor is anything offered on load — only on
+a change — so a creature that arrives carrying a shield is described, not nagged.
+
+Magic armor ("Splint, +1") is still out, because it varies by the item rather
+than by the kind. The armor list is also kept out of the `/` menu on purpose:
+offering twelve mundane items as *the* way to reference armor would quietly say a
+Splint +1 doesn't exist, and Equipment already reaches those through D&D Beyond's
+own listing — which is also how a shield gets onto the row, since `rowTarget`
+already reads their `equipment-shield` icon and writes `[armor]Shield[/armor]`.
 
 A reference also stops absorbing what is typed against it. `RefNode` is a
 `TextNode` subclass, so `Grappled` plus an `s` used to become
@@ -435,6 +466,7 @@ src/
 │   ├── ddb-listings.ts     skills/movements/senses — DDB's separate records
 │   ├── ddb-markup.ts       bidirectional DDB-macro ⇄ editor-span codec
 │   ├── ddb-text.ts         the same codec for the plain fields (Gear, Languages)
+│   ├── gear.ts             reading a Gear line for what changes the rest of the block
 │   ├── ddb-reference-map.ts  macro type → the compendiums it could mean, name → slug
 │   ├── ddb-reference-ids.ts  the harvested closed-set ids and names (generated)
 │   ├── reference-catalog.ts  what an author can reference, and what to write
@@ -446,8 +478,9 @@ src/
 ├── statblock/            the domain model — no DOM, no D&D Beyond
 │   ├── model.ts            Monster (`ruleset` discriminator, per-section HTML)
 │   ├── compute.ts          modifiers, saves, proficiency, CR → XP
-│   ├── skills.ts / movement.ts / senses.ts / adjustments.ts / armor-class.ts
-│   ├── armor.ts            the mundane armor table: what wearing each is worth
+│   ├── skills.ts / movement.ts / senses.ts / adjustments.ts
+│   ├── armor-class.ts      the AC split, and the parentheses read as a list
+│   ├── armor.ts            the mundane armor table, and what a shield adds
 │   └── sample.ts           era-accurate sample vampires (5e + 5.5e)
 ├── state/                the spine
 │   ├── store.ts            EditorStore: the creature + the session, one subscription

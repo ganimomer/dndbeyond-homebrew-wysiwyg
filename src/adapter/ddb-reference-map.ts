@@ -65,7 +65,12 @@ export interface ReferenceTarget {
  * Order alone would not be enough to pick between them, which is why the
  * resolver checks the name — see `ddb-references.ts`.
  */
-const ITEM_PATHS: readonly DdbPath[] = ["magic-items", "weapons", "armor", "adventuring-gear"];
+export const ITEM_PATHS: readonly DdbPath[] = [
+  "magic-items",
+  "weapons",
+  "armor",
+  "adventuring-gear",
+];
 
 /**
  * DDB's macro vocabulary, which is not consistent — `[condition]` is singular,

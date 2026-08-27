@@ -1,16 +1,17 @@
 /**
- * Replacing a creature's armor from the Gear row.
+ * Acting on a creature's gear from the Gear row.
  *
- * The promise here is the one the feature exists for: swapping the armor
- * changes the gear *and* leaves the armor class that armor implies waiting to
- * be accepted — never applied behind the author's back, because the number on
- * the block may have been set on purpose.
+ * The promise here is the one the feature exists for: changing what the
+ * creature is carrying changes the gear *and* leaves the armor class that gear
+ * implies waiting to be accepted — never applied behind the author's back,
+ * because the number on the block may have been set on purpose.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { fireEvent } from "../../test-support/render.js";
 import { renderWithStore } from "../../test-support/editor.js";
 import { emptyMonster, type Monster } from "../../statblock/model.js";
+import { Field } from "./Field.js";
 import { TextRow } from "./TextRow.js";
 
 /** D&D Beyond's own Warrior Veteran: DEX 13 (+1), splint armor, AC 17. */
@@ -25,6 +26,16 @@ function veteran(): Monster {
     gear: GEAR,
     armorClass: { value: 17, type: "splint" },
     abilities: { ...monster.abilities, dex: 13 },
+  };
+}
+
+/** The same veteran, with a shield already on the row and in the parentheses. */
+function shielded(): Monster {
+  const monster = veteran();
+  return {
+    ...monster,
+    gear: `${GEAR}, [armor]Shield[/armor]`,
+    armorClass: { value: 19, type: "splint and shield" },
   };
 }
 
@@ -173,6 +184,74 @@ test("clicking off a chip closes the menu", (t) => {
 
   click(root.querySelector<HTMLElement>(".sb-text-prose")!);
   assert.deepEqual(menuItems(), []);
+});
+
+test("a shield in the gear is counted into the armor a swap offers", (t) => {
+  const { chip, menuItem, option, store } = setup(t, shielded());
+  click(chip("Splint Armor"));
+  click(menuItem("Replace…")!);
+  click(option("Chain Mail"));
+
+  // Chain mail's flat 16, and the shield the creature is still carrying.
+  assert.deepEqual(store.getSession().pendingArmor, {
+    value: 18,
+    type: "chain mail and shield",
+  });
+});
+
+test("a shield chip can only be removed — it replaces nothing", (t) => {
+  const { chip, menuItems } = setup(t, shielded());
+  click(chip("Shield"));
+  assert.deepEqual(menuItems(), ["Remove"]);
+});
+
+/**
+ * The shield's own tests go through `Field` rather than `TextRow`, because the
+ * gear commit is where a shield coming or going is noticed and `Field` is what
+ * owns that commit — every route into it, the "/" menu and Remove alike, ends
+ * there.
+ */
+function gearRow(t: import("node:test").TestContext, monster: Monster) {
+  const written: string[] = [];
+  const view = renderWithStore(t, monster, () => <Field field="gear" monster={monster} />, {
+    setGear: (text: string) => written.push(text),
+  });
+  const chip = (text: string) =>
+    [...view.root.querySelectorAll<HTMLElement>(".ref")].find((el) => el.textContent === text)!;
+  const menuItem = (label: string) =>
+    [...view.root.querySelectorAll<HTMLElement>(".chip-menu .cm-item")].find(
+      (el) => el.querySelector(".cm-label")?.textContent === label,
+    );
+  return { ...view, written, chip, menuItem };
+}
+
+test("removing a shield offers its two points back", (t) => {
+  const { chip, menuItem, store, written } = gearRow(t, shielded());
+  click(chip("Shield"));
+  click(menuItem("Remove")!);
+
+  assert.equal(written[0], GEAR);
+  assert.deepEqual(store.getSession().pendingArmor, { value: 17, type: "splint" });
+  // And the creature still says 19 until someone accepts.
+  assert.equal(store.getMonster()?.armorClass.value, 19);
+});
+
+test("removing a shield the block never counted offers nothing", (t) => {
+  const monster = shielded();
+  const { chip, menuItem, store } = gearRow(t, {
+    ...monster,
+    armorClass: { value: 17, type: "splint" },
+  });
+  click(chip("Shield"));
+  click(menuItem("Remove")!);
+  assert.equal(store.getSession().pendingArmor, null);
+});
+
+test("removing gear that is not a shield leaves the armor class alone", (t) => {
+  const { chip, menuItem, store } = gearRow(t, shielded());
+  click(chip("Heavy Crossbow"));
+  click(menuItem("Remove")!);
+  assert.equal(store.getSession().pendingArmor, null);
 });
 
 test("the Languages row has no chips to act on", (t) => {

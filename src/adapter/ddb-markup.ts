@@ -26,6 +26,7 @@
  * payload DDB emits. The non-greedy match is what lets several rollables share
  * one line; nested braces would need a real tokenizer.
  */
+import type { RefToken } from "./types.js";
 
 /** `[rollable]display;{json}[/rollable]` — group 1 = display, group 2 = `{json}`. */
 const ROLLABLE = /\[rollable\]([\s\S]*?)(?:;(\{[\s\S]*?\}))?\[\/rollable\]/g;
@@ -48,6 +49,20 @@ function unescapeAttr(value: string): string {
 }
 
 /**
+ * A reference macro's innards split into what it links to and what it shows.
+ *
+ * "slug;display" carries a link target; a bare "display" does not. The display
+ * is always the last ";"-segment, so the slug is everything before it (which may
+ * itself contain ";" — `[items]crossbow, heavy;Heavy Crossbow[/items]` does not,
+ * but nothing stops one).
+ */
+function splitRef(inner: string): { slug?: string; display: string } {
+  const cut = inner.lastIndexOf(";");
+  if (cut < 0) return { display: inner };
+  return { slug: inner.slice(0, cut), display: inner.slice(cut + 1) };
+}
+
+/**
  * DDB macro HTML → editor HTML. Rollables and references become marker spans
  * carrying their payload; any stray unpaired macro tag is dropped. All other
  * markup (paragraphs, emphasis, lists…) passes through unchanged.
@@ -59,12 +74,7 @@ export function ddbToEditorHtml(html: string): string {
       return `<span class="roll"${attr}>${display}</span>`;
     })
     .replace(REFERENCE, (_all, type: string, inner: string) => {
-      // "slug;display" carries a link target; a bare "display" does not. The
-      // display is always the last ";"-segment, so the slug is everything
-      // before it (which may itself contain ";").
-      const cut = inner.lastIndexOf(";");
-      const slug = cut >= 0 ? inner.slice(0, cut) : undefined;
-      const display = cut >= 0 ? inner.slice(cut + 1) : inner;
+      const { slug, display } = splitRef(inner);
       const slugAttr = slug !== undefined ? ` data-slug="${escapeAttr(slug)}"` : "";
       return `<span class="ref" data-ref="${escapeAttr(type)}"${slugAttr}>${display}</span>`;
     })
@@ -85,4 +95,28 @@ export function editorHtmlToDdb(html: string): string {
       const prefix = slug !== undefined ? `${unescapeAttr(slug)};` : "";
       return `[${type}]${prefix}${display}[/${type}]`;
     });
+}
+
+/**
+ * The references a macro string carries, in the order it carries them.
+ *
+ * Reading rather than transforming, and here rather than anywhere else because
+ * this is the module that knows what a macro looks like. Callers who want to
+ * ask a question *about* a field's contents — does this Gear line carry a
+ * shield? — would otherwise have to write the regex a second time, or build a
+ * whole editor to hold the answer.
+ *
+ * Rollables are not references and are skipped: their payload is a die roll,
+ * not a link.
+ */
+export function macroRefs(text: string): RefToken[] {
+  const found: RefToken[] = [];
+  // A fresh `RegExp` because `REFERENCE` is `/g` and shared: `matchAll` would
+  // reject it outright, and `exec` would resume from wherever it was left.
+  const pattern = new RegExp(REFERENCE.source, REFERENCE.flags);
+  for (const [, type, inner] of text.matchAll(pattern)) {
+    const { slug, display } = splitRef(inner ?? "");
+    found.push({ ref: type ?? "", slug, text: display });
+  }
+  return found;
 }

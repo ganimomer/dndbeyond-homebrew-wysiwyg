@@ -15,6 +15,12 @@
  * AC 18. The offer is left on the session for the armor-class field to make;
  * see `use-armor-suggestion.ts`.
  *
+ * A shield is the other piece of gear the block cares about, and it is not
+ * handled here: it has no menu of its own, because it is not one of a set of
+ * interchangeable kinds. It is noticed where the Gear row commits — see
+ * `Field.tsx` — which is the one place every way of changing gear passes
+ * through. What this file owes it is the two points a swap must not drop.
+ *
  * Only Gear uses this. The Languages row shares `TextRow` and has no chips to
  * act on.
  */
@@ -22,7 +28,9 @@ import type { RefObject } from "preact";
 import type { VNode } from "preact";
 import { useState } from "preact/hooks";
 import { ARMOR_KIND, slugToWrite, type ReferenceEntity } from "../../adapter/reference-catalog.js";
-import { armorAc, armorByName, armorFor } from "../../statblock/armor.js";
+import { SHIELD, armorAc, armorByName, armorFor } from "../../statblock/armor.js";
+import { withHintPart } from "../../statblock/armor-class.js";
+import { gearHasShield } from "../../adapter/gear.js";
 import { abilityModifier } from "../../statblock/compute.js";
 import type { ProseEditor, RefHit } from "../../editor/prose-editor.js";
 import type { MenuItem } from "../shared/ContextMenu.js";
@@ -56,6 +64,12 @@ export function useGearChips(editor: RefObject<ProseEditor | null>): GearChips {
   /**
    * The author picked new armor.
    *
+   * A shield the creature is also carrying goes into the offer: the armor is
+   * being replaced, but the shield is not, so a class that left its two points
+   * out would be offering to make the creature worse for changing its coat.
+   * This is the one place the shield is *recomputed* rather than added as a
+   * delta — the whole class is being rebuilt here from what the gear says.
+   *
    * The session is written *before* the gear command runs, following the
    * convention `state/lair.ts` spells out: session changes emit synchronously
    * while a monster re-read is coalesced into a frame, so an offer left after
@@ -66,10 +80,13 @@ export function useGearChips(editor: RefObject<ProseEditor | null>): GearChips {
     const armor = armorByName(entity.name);
     if (!box || !hit || !armor) return dismiss();
 
+    const shielded = gearHasShield(monster.gear);
     store.update({
       pendingArmor: {
-        value: armorAc(armor, abilityModifier(monster.abilities.dex)),
-        type: armor.qualifier,
+        value:
+          armorAc(armor, abilityModifier(monster.abilities.dex)) +
+          (shielded ? SHIELD.bonus : 0),
+        type: shielded ? withHintPart(armor.qualifier, SHIELD.qualifier) : armor.qualifier,
       },
     });
     box.replaceRef(hit.key, {

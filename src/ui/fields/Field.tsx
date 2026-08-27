@@ -8,6 +8,8 @@
  */
 import type { Monster } from "../../statblock/model.js";
 import type { AdjustmentField } from "../../statblock/adjustments.js";
+import { shieldChange } from "../../statblock/armor-class.js";
+import { gearHasShield } from "../../adapter/gear.js";
 import { reveal, unreveal } from "../../state/session.js";
 import { useEditing, useSession, useStore } from "../store-context.js";
 import { AdjustmentsRow } from "./AdjustmentsRow.js";
@@ -96,8 +98,23 @@ export function Field({ field, monster }: { field: OptionalField; monster: Monst
             // state the "Add…" menu puts a blank row in. The ✕ below, which is
             // the deliberate way out, unreveals.
             if (value === "") store.update({ revealed: reveal(store.getSession(), name) });
-            if (name === "gear") editing.setGear(value);
-            else editing.setLanguages(value);
+            if (name === "gear") {
+              // Every way of changing the gear arrives here — the "/" menu, the
+              // chip menu's Remove, and plain typing — which is why a shield
+              // coming or going is noticed here rather than in any one of them.
+              // The offer is left on the session *before* the command, per the
+              // convention in `state/lair.ts`: session changes emit
+              // synchronously while the monster re-read is coalesced into a
+              // frame, so an offer left afterwards would be a render behind the
+              // gear it explains.
+              const offer = shieldChange(
+                monster.armorClass,
+                gearHasShield(monster.gear),
+                gearHasShield(value),
+              );
+              if (offer) store.update({ pendingArmor: offer });
+              editing.setGear(value);
+            } else editing.setLanguages(value);
           }}
           onClear={clearText}
         />
