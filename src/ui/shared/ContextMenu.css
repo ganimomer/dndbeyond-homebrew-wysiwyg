@@ -79,6 +79,18 @@
   background: #f2f5f7;
 }
 
+/* An action that isn't available yet. Note the absence of `pointer-events:
+ * none`: the row still has to take a hover, because its `title` is the only
+ * thing that says why it's greyed out. */
+.cm-item.disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.cm-item.disabled:hover {
+  background: none;
+}
+
 /* Also worn by the empty <span> a menu item with no icon puts here, so the
  * labels beside it still line up. */
 .cm-icon {

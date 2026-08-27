@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { renamedEditUrl } from "./edit-url.js";
+import { detailsUrl, renamedEditUrl } from "./edit-url.js";
 
 const EDIT = "https://www.dndbeyond.com/homebrew/creations/monsters/6700407-copy_of_vampire/edit";
 
@@ -67,4 +67,39 @@ test("unparseable URLs are shrugged off", () => {
   assert.equal(renamedEditUrl(EDIT, "not a url"), null);
   assert.equal(renamedEditUrl(EDIT, "/homebrew/creations/monsters/6700407-lord/edit"), null);
   assert.equal(renamedEditUrl("", EDIT), null);
+});
+
+test("the details page is the edit URL's id-and-slug, one level up", () => {
+  assert.equal(detailsUrl(EDIT), "https://www.dndbeyond.com/monsters/6700407-copy_of_vampire");
+  assert.equal(detailsUrl(`${EDIT}/`), "https://www.dndbeyond.com/monsters/6700407-copy_of_vampire");
+  assert.equal(
+    detailsUrl(`${EDIT}?saved=1`),
+    "https://www.dndbeyond.com/monsters/6700407-copy_of_vampire",
+  );
+});
+
+test("the details page keeps the origin it was found on", () => {
+  assert.equal(
+    detailsUrl("https://staging.dndbeyond.com/homebrew/creations/monsters/1-goblin/edit"),
+    "https://staging.dndbeyond.com/monsters/1-goblin",
+  );
+});
+
+test("a slugless edit URL names no details page", () => {
+  // `/monsters/<id>` answers 404 — the slug isn't decoration, it's the address.
+  assert.equal(detailsUrl("https://www.dndbeyond.com/homebrew/creations/monsters/6700407/edit"), null);
+});
+
+test("anywhere but a monster's edit page has no details page", () => {
+  for (const elsewhere of [
+    "https://www.dndbeyond.com/homebrew/creations/monsters",
+    "https://www.dndbeyond.com/homebrew/creations/monsters/6700407-vampire",
+    "https://www.dndbeyond.com/homebrew/creations/monsters/6700407-vampire/delete",
+    "https://www.dndbeyond.com/monsters/6700407-vampire",
+    "/homebrew/creations/monsters/6700407-vampire/edit",
+    "not a url",
+    "",
+  ]) {
+    assert.equal(detailsUrl(elsewhere), null, elsewhere);
+  }
 });

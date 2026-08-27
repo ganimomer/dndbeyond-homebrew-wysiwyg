@@ -27,6 +27,18 @@ export interface SaveState {
   origins: ReadonlySet<SaveOrigin>;
 }
 
+/**
+ * Whether anything is still to be persisted — waiting out the debounce, in
+ * flight, or failed.
+ *
+ * Worth a name because the "still waiting" case doesn't read off `status`:
+ * an edit that hasn't reached its debounce yet is `idle`, and it's the
+ * non-empty `origins` that gives it away.
+ */
+export function isDirty(state: SaveState): boolean {
+  return state.status !== "idle" || state.origins.size > 0;
+}
+
 export interface AutosaveOptions {
   /** How long to coalesce edits before saving. */
   debounceMs?: number;

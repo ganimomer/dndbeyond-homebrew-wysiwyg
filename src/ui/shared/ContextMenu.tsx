@@ -17,6 +17,16 @@ export interface MenuItem {
   icon?: IconName;
   /** Renders the item in a warning colour (e.g. Close). */
   danger?: boolean;
+  /**
+   * Greys the row out and makes it inert. Say why in `title` — an action that
+   * is merely unavailable, with no explanation, reads as a bug.
+   *
+   * Honoured by `ContextMenu`. `ChipMenu` draws the same `.cm-*` rows from its
+   * own markup and ignores this; no chip item sets it today.
+   */
+  disabled?: boolean;
+  /** Native hover tooltip. Chiefly there to explain a `disabled` row. */
+  title?: string;
   onClick: () => void;
 }
 
@@ -31,6 +41,13 @@ export interface ContextMenuProps {
   triggerClass?: string;
   /** Extra class on the popover, e.g. "compact" for a long list. */
   menuClass?: string;
+}
+
+function rowClass(item: MenuItem): string {
+  let cls = "cm-item";
+  if (item.danger) cls += " danger";
+  if (item.disabled) cls += " disabled";
+  return cls;
 }
 
 export function ContextMenu({
@@ -86,8 +103,14 @@ export function ContextMenu({
         {items.map((item) => (
           <li
             key={item.label}
-            class={item.danger ? "cm-item danger" : "cm-item"}
+            class={rowClass(item)}
+            title={item.title}
+            aria-disabled={item.disabled ? "true" : undefined}
             onClick={() => {
+              // A disabled row swallows the click and stays put: closing the
+              // menu would take its tooltip — the only thing explaining why
+              // nothing happened — away with it.
+              if (item.disabled) return;
               // Closed first, so the re-render the click sets off finds a
               // settled menu.
               setOpen(false);

@@ -25,7 +25,8 @@ export type IconName =
   | "dragIndicator"
   | "cellMerge"
   | "crown"
-  | "castle";
+  | "castle"
+  | "openInNew";
 
 export interface IconSpec {
   /** Only when it isn't the legacy set's 24×24 grid. */
@@ -53,6 +54,11 @@ export const ICONS: Record<IconName, IconSpec> = {
   // rule to punch through.
   castle: {
     d: "M2 21V7h2v2h2V7h2v6h1V3h2v2h2V3h2v10h1V7h2v2h2V7h2v14H14v-5h-4v5H2Z",
+  },
+  // open_in_new — the one menu item that leaves the editor, for the creature's
+  // public page. The arrow out of the box is what says "in a new tab".
+  openInNew: {
+    d: "M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z",
   },
   close: {
     d: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z",

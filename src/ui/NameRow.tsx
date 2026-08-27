@@ -16,10 +16,18 @@ import { SaveSlot } from "./shared/SaveSlot.js";
 import { HEADER_ORIGIN } from "../editor/save-indicator.js";
 import { NameField } from "./fields/NameField.js";
 import { CloseButton } from "./shared/CloseButton.js";
+import { useSaveState } from "./shared/use-save-state.js";
+import { isDirty } from "../editor/autosave.js";
+import { detailsUrl } from "../adapter/edit-url.js";
+
+/** Why "Go to details page" is greyed out. */
+const UNSAVED_NOTE =
+  "Waiting for your last edits to save — the details page would still show the old version.";
 
 export function NameRow({ monster, onClose }: { monster: Monster; onClose?: () => void }) {
   const editing = useEditing();
   const store = useStore();
+  const unsaved = isDirty(useSaveState());
   // Offer only the layout we're not currently in.
   const other = monster.ruleset === "5e" ? "5.5e" : "5e";
 
@@ -41,6 +49,23 @@ export function NameRow({ monster, onClose }: { monster: Monster; onClose?: () =
   }
   if (!monster.hasLair) {
     items.push({ label: "Add lair", icon: "castle", onClick: () => void addLair(store) });
+  }
+  // Last, below the three that change the creature: this is the one that leaves.
+  //
+  // Disabled while a save is outstanding, because the page it opens is rendered
+  // by D&D Beyond from what it has stored — which, mid-debounce, is the
+  // creature as it was before the last few edits. Waiting for the save instead
+  // isn't an option: it takes longer than the click's transient activation
+  // lasts, and the new tab would be blocked as a popup.
+  const details = detailsUrl(location.href);
+  if (details) {
+    items.push({
+      label: "Go to details page",
+      icon: "openInNew",
+      disabled: unsaved,
+      title: unsaved ? UNSAVED_NOTE : undefined,
+      onClick: () => void window.open(details, "_blank", "noopener"),
+    });
   }
 
   return (

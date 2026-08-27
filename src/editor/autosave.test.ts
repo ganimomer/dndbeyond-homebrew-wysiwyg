@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { AutosaveController, type SaveState } from "./autosave.js";
+import { AutosaveController, isDirty, type SaveState } from "./autosave.js";
 
 // The controller is deliberately DOM-free, so these run on bare node:test with
 // node's fake clock. Timings are tiny; the real debounce is 3 s.
@@ -208,6 +208,42 @@ test("flush() resolves rather than hanging when the save keeps failing", async (
 
   assert.equal(controller.state.status, "error");
   assert.equal(flushed.done, true, "a dead network must not strand the caller");
+});
+
+test("isDirty covers the debounce, not just the request", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const saver = deferredSave();
+  const { controller } = makeController(saver.save);
+
+  assert.equal(isDirty(controller.state), false, "nothing edited yet");
+
+  controller.request("header");
+  assert.equal(controller.state.status, "idle", "still waiting out the debounce");
+  assert.equal(isDirty(controller.state), true, "…but the edit isn't saved");
+
+  t.mock.timers.tick(DEBOUNCE);
+  assert.equal(isDirty(controller.state), true, "in flight");
+
+  saver.finish();
+  await settle();
+  assert.equal(isDirty(controller.state), false, "saved");
+});
+
+test("isDirty stays true while a save is failed and awaiting a retry", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const saver = deferredSave();
+  const { controller } = makeController(saver.save);
+
+  controller.request("header");
+  t.mock.timers.tick(DEBOUNCE);
+  saver.finish(new Error("offline"));
+  await settle();
+  t.mock.timers.tick(RETRY);
+  saver.finish(new Error("offline"));
+  await settle();
+
+  assert.equal(controller.state.status, "error");
+  assert.equal(isDirty(controller.state), true);
 });
 
 /** Tracks whether a promise has resolved, without awaiting it. */

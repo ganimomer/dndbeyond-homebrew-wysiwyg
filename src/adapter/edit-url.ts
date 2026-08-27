@@ -11,6 +11,9 @@
 /** `/homebrew/creations/monsters/<id>[-<slug>]/edit` — id captured, slug free-form. */
 const EDIT_PATH = /^\/homebrew\/creations\/monsters\/(\d+)(?:-[^/]*)?\/edit\/?$/i;
 
+/** The same path, capturing `<id>-<slug>` whole — and only when it has a slug. */
+const SLUGGED_EDIT_PATH = /^\/homebrew\/creations\/monsters\/(\d+-[^/]+)\/edit\/?$/i;
+
 function monsterId(url: URL): string | null {
   return EDIT_PATH.exec(url.pathname)?.[1] ?? null;
 }
@@ -46,4 +49,22 @@ export function renamedEditUrl(current: string, response: string): string | null
   if (!id || id !== monsterId(to)) return null;
 
   return samePath(from, to) ? null : to.href;
+}
+
+/**
+ * The creature's public page, given the edit page's URL — or `null` when there
+ * isn't one to go to.
+ *
+ * `/monsters/<id>-<slug>`: the very segment the edit URL already carries, moved
+ * out from under `/homebrew/creations/`. Reused verbatim rather than rebuilt
+ * from the name, for the same reason `renamedEditUrl` exists — we don't know
+ * how DDB slugifies, and a slug that's off by a character answers `404` just as
+ * a missing one does. Which is why a slugless edit URL yields `null`: the id on
+ * its own names no page.
+ */
+export function detailsUrl(href: string): string | null {
+  const url = parse(href);
+  if (!url) return null;
+  const segment = SLUGGED_EDIT_PATH.exec(url.pathname)?.[1];
+  return segment ? new URL(`/monsters/${segment}`, url.origin).href : null;
 }
