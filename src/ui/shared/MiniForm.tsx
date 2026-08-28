@@ -103,7 +103,7 @@ export function useOutsideClick(
     };
     window.addEventListener("click", handler, true);
     return () => window.removeEventListener("click", handler, true);
-  }, [open, onOutside]);
+  }, [form, open, onOutside]);
 }
 
 /** A field's text as a whole number, or `fallback` when it's blank or junk. */

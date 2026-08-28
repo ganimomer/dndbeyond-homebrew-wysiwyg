@@ -82,7 +82,7 @@ test("an author who asked not to see things move doesn't wait for them", async (
   assert.deepEqual(seen, [null, "open", "closing", null], "gone on the next tick");
 });
 
-test("picking tells the asker what was picked, once", async (t) => {
+test("picking tells the asker what was picked, once", async () => {
   const controller = new LookupController();
   const picks: unknown[] = [];
   controller.open(request({ onPick: (pick) => picks.push(pick) }));
@@ -94,7 +94,7 @@ test("picking tells the asker what was picked, once", async (t) => {
   assert.deepEqual(picks, [FIREBALL]);
 });
 
-test("closing tells the asker instead, so the reference is abandoned", async (t) => {
+test("closing tells the asker instead, so the reference is abandoned", async () => {
   const controller = new LookupController();
   let cancelled = 0;
   let picked = 0;

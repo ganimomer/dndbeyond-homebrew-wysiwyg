@@ -1,7 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { SelectOption } from "../../adapter/types.js";
-import { emptyMonster, type Ability, type Monster } from "../../statblock/model.js";
+import {
+  emptyMonster,
+  type Ability,
+  type Monster,
+  type Ruleset,
+} from "../../statblock/model.js";
 import { fireEvent, renderInShadowRoot } from "../../test-support/render.js";
 import { AbilityScores } from "./AbilityScores.js";
 
@@ -32,7 +37,7 @@ function vampire(saves: Partial<Record<string, number>> = {}): Monster {
 
 function setup(
   t: import("node:test").TestContext,
-  { ruleset = "5.5e" as const, saves = {}, selected = [] as string[] } = {},
+  { ruleset = "5.5e" as Ruleset, saves = {}, selected = [] as string[] } = {},
 ) {
   const { adapter, calls } = stubAdapter(selected);
   const committed: Array<[Ability, number]> = [];

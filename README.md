@@ -1,5 +1,7 @@
 # Microbrewery
 
+[![CI](https://github.com/ganimomer/dndbeyond-homebrew-wysiwyg/actions/workflows/ci.yml/badge.svg)](https://github.com/ganimomer/dndbeyond-homebrew-wysiwyg/actions/workflows/ci.yml)
+
 A browser extension that turns the [D&D Beyond](https://www.dndbeyond.com)
 homebrew **monster** builder into a WYSIWYG editor. On the editor page it adds a
 floating **"Open in Microbrewery"** button; opening it shows a **live stat-block
@@ -569,16 +571,37 @@ can't leak into the stat block and vice versa.
 
 ## Build
 
+Node 22 or newer (`scripts/test.mjs` globs with `node:fs`'s `globSync`). There
+is an `.nvmrc`, so `nvm use` picks the right one.
+
 ```bash
 npm install
 npm run build          # builds both dist/firefox and dist/chrome
 npm run build:firefox  # Firefox only
 npm run build:chrome   # Chrome only
 npm run dev:firefox    # rebuild on change
-npm run typecheck
 
 npm run harvest:references   # re-reads DDB's closed-compendium ids (network)
 ```
+
+## Checks
+
+```bash
+npm run check          # everything below, in the order CI runs it
+```
+
+| | |
+|---|---|
+| `npm run lint` | ESLint over the whole repo, build scripts included |
+| `npm run typecheck` | the extension |
+| `npm run typecheck:tests` | the tests, which have their own tsconfig |
+| `npm test` | the suite, under `node:test` against a jsdom document |
+| `npm run build` | both browsers |
+| `npm run lint:ext` | Mozilla's add-on linter over `dist/firefox` |
+
+`npm run check` is exactly what [the CI workflow](.github/workflows/ci.yml)
+runs, so a green local run is a green pull request. Every PR into `main` has to
+pass it before it can be merged.
 
 ## Load the extension
 

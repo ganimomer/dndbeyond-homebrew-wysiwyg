@@ -19,7 +19,7 @@ export function htmlHasContent(html: string | undefined): boolean {
   if (!html || !html.trim()) return false;
   const t = document.createElement("template");
   t.innerHTML = html;
-  const text = (t.content.textContent ?? "").replace(/ /g, " ").trim();
+  const text = (t.content.textContent ?? "").replace(/\u00a0/g, " ").trim();
   return !!text || !!t.content.querySelector("img, image, svg, table");
 }
 

@@ -45,7 +45,7 @@ function compared(t: TestContext, fixture: string = page) {
     frame.remove();
   });
 
-  const win = frame.contentWindow!;
+  const win = frame.contentWindow as Window & typeof globalThis;
   return {
     doc,
     imports,

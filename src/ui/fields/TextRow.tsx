@@ -87,6 +87,7 @@ export function TextRow({ field, value, label, placeholder, onCommit, onClear }:
       editor.current = null;
     };
     // Created once. `html` seeds it; the effect below keeps up.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [field]);
 
   // Only the kind stage takes keys off the editor. The entity stage has the
@@ -102,6 +103,7 @@ export function TextRow({ field, value, label, placeholder, onCommit, onClear }:
     // caret — the same guard, for the same reasons, as a prose entry's.
     if (box.hasFocus() || references.isAway() || chips.isAway()) return;
     box.setContent(html);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [html, references.stage, chips.isAway()]);
 
   return (

@@ -38,7 +38,7 @@ function listing(t: TestContext, fixture: string = spells, options: ListingOptio
     frame.remove();
   });
 
-  const win = frame.contentWindow!;
+  const win = frame.contentWindow as Window & typeof globalThis;
   return {
     doc,
     picks,

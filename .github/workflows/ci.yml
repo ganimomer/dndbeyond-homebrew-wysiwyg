@@ -1,0 +1,67 @@
+# The merge gate. Every pull request into `main` has to come through here
+# green; a branch ruleset on `main` requires the "CI" check below by name, so
+# renaming the job renames the required check and quietly opens the gate.
+#
+# `npm run check` is the same sequence, in the same order, for running locally.
+name: CI
+
+on:
+  # Fires on every push to a branch with an open PR, so every commit that could
+  # reach `main` is checked. Adding `push` for all branches on top would double
+  # each run without covering anything new.
+  pull_request:
+  # And on `main` itself, so its history stays demonstrably green after a merge.
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A new push supersedes the run still going for the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # Each check runs even after an earlier one fails: the whole job takes
+      # about a minute, so seeing every failure at once beats fixing them one
+      # round-trip apiece.
+      - name: Lint
+        if: '!cancelled()'
+        run: npm run lint
+
+      - name: Typecheck the extension
+        if: '!cancelled()'
+        run: npm run typecheck
+
+      - name: Typecheck the tests
+        if: '!cancelled()'
+        run: npm run typecheck:tests
+
+      - name: Test
+        if: '!cancelled()'
+        run: npm test
+
+      - name: Build both browsers
+        if: '!cancelled()'
+        run: npm run build
+
+      # Mozilla's own add-on linter, over the artifact that would be submitted.
+      # It fails on errors only; its warnings are printed for reading.
+      - name: Lint the Firefox build
+        if: '!cancelled()'
+        run: npm run lint:ext

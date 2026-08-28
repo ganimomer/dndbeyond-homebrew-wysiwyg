@@ -28,7 +28,7 @@ export function useSyncedValue(
     const root = input.getRootNode() as unknown as DocumentOrShadowRoot;
     if (root.activeElement === input) return;
     input.value = value;
-  }, [value]);
+  }, [ref, value]);
 }
 
 /**

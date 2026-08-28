@@ -65,11 +65,11 @@ async function caretAt(host: HTMLElement, offset: number) {
 
 /** Puts the caret after the slash command already in the prose, picks the one
  * kind it matches, and types into the box that opens. */
-async function ask(scene: ReturnType<typeof scene>, prose: string, typed: string) {
-  await caretAt(scene.host, prose.length);
-  fireEvent.click(scene.root.querySelector(".rm-option")!);
+async function ask(view: ReturnType<typeof scene>, prose: string, typed: string) {
+  await caretAt(view.host, prose.length);
+  fireEvent.click(view.root.querySelector(".rm-option")!);
   await settle();
-  fireEvent.input(scene.root.querySelector(".rm-filter")!, { target: { value: typed } });
+  fireEvent.input(view.root.querySelector(".rm-filter")!, { target: { value: typed } });
 }
 
 const askForASpell = (view: ReturnType<typeof scene>, typed: string) =>

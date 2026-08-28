@@ -1,0 +1,23 @@
+{
+  // The tests' own typecheck.
+  //
+  // They run through esbuild + node:test rather than the extension build, so
+  // they get Node's types and reach for jsdom directly — both of which the app
+  // config deliberately excludes. Same strictness otherwise: what the tests
+  // assert about the code is only as trustworthy as the tests' own types.
+  //
+  //   npm run typecheck:tests
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "webextension-polyfill"]
+  },
+  // `src/platform/globals.d.ts` comes along for the `*.css` and `*.html`
+  // module declarations the fixtures and components are imported through.
+  "include": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/test-support",
+    "src/platform/globals.d.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

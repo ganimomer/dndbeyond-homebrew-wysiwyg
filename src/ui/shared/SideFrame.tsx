@@ -79,7 +79,7 @@ export function SideFrame({ src, title, open, dress, blocked, class: extra }: Si
     setLoading(false);
     dressed.current?.();
     dressed.current = null;
-    let doc: Document | null = null;
+    let doc: Document | null;
     try {
       doc = frame.current?.contentDocument ?? null;
     } catch {

@@ -198,16 +198,18 @@ test("a pass that fires after stop() does nothing", (t) => {
   t.after(() => host.remove());
 
   const { source, asked } = stubSource();
-  let escaped: (() => void) | null = null;
+  // Held on an object rather than in a `let`: the compiler cannot see that the
+  // scheduler ever ran, so a bare local would still be narrowed to `null` here.
+  const escaped: { run: (() => void) | null } = { run: null };
   const preloader = new RefPreloader({
     scope: root,
     source,
     // A canceller that does nothing, so the pass survives `stop()`.
-    schedule: (run) => ((escaped = run), () => {}),
+    schedule: (run) => ((escaped.run = run), () => {}),
   });
   preloader.start();
   preloader.stop();
-  escaped?.();
+  escaped.run?.();
 
   assert.deepEqual(asked, []);
 });

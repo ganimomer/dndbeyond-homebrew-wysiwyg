@@ -106,7 +106,7 @@ for (const ruleset of ["5e", "5.5e"] as const) {
       "armor class is inside a dex-dependent element",
     );
     assert.equal(
-      root.querySelector('.sb-chips[data-field="hitPoints"]')?.closest(".line")?.dataset.dep,
+      root.querySelector('.sb-chips[data-field="hitPoints"]')?.closest<HTMLElement>(".line")?.dataset.dep,
       "con",
     );
   });

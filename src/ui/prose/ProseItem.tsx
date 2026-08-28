@@ -104,6 +104,7 @@ export function ProseItem({
       editor.current = null;
     };
     // Created once. `html` seeds it; the effect below keeps up.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name]);
 
   // Only the kind stage takes keys off the editor. The entity stage has the
@@ -120,6 +121,7 @@ export function ProseItem({
     // `ReferenceMenuControl.isAway`.
     if (current.hasFocus() || references.isAway()) return;
     current.setContent(html);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [html, references.stage]);
 
   return (

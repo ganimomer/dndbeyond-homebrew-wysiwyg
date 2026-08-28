@@ -24,7 +24,8 @@ function deferredSave() {
     finish: (error?: Error) => {
       const s = settlers.shift();
       assert.ok(s, "expected an outstanding save call");
-      error ? s.reject(error) : s.resolve();
+      if (error) s.reject(error);
+      else s.resolve();
     },
   };
 }
