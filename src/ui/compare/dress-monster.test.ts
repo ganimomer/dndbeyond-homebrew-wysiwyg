@@ -1,10 +1,16 @@
 /**
- * The surgery on D&D Beyond's monster page, done to a real capture of one.
+ * The surgery on D&D Beyond's monster page, done to real captures of two.
  *
  * As with the listing's: run against a frame's document rather than a parsed
  * one, because that is what it faces in the overlay and because a document with
  * no browsing context has no computed styles — and part of what this does is a
  * stylesheet.
+ *
+ * Two captures because there are two renderers. A 2014 creature is printed in
+ * `mon-stat-block__…` and a 2024 one in `mon-stat-block-2024__…`, and which the
+ * author gets is decided by the creature they went to look at, not by the block
+ * they are writing. `EDITIONS` below runs everything that should hold of both
+ * over both; the tests after it are about one capture's own particulars.
  */
 import { test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
@@ -12,6 +18,7 @@ import type { SectionKey } from "../../statblock/model.js";
 import { dressMonster } from "./dress-monster.js";
 import { joinItems, splitItems } from "../prose/section-items.js";
 import page from "./__fixtures__/monster-details.html";
+import page2024 from "./__fixtures__/monster-details-2024.html";
 import listing from "../lookup/__fixtures__/monster-listing.html";
 import { isListing } from "../lookup/dress-listing.js";
 
@@ -91,6 +98,87 @@ test("a page reached by following a link out of one is left alone, but not a dea
   assert.ok(view.doc.querySelector(".microbrewery-nav"), "and still a way back");
   view.click(view.doc.querySelectorAll(".microbrewery-nav button")[0]!);
   assert.equal(view.backs(), 1);
+});
+
+/** The same page, printed by each of D&D Beyond's two stat-block renderers. */
+const EDITIONS = [
+  {
+    what: "a 2014 creature",
+    fixture: page,
+    root: ".mon-stat-block",
+    // Its Bonus Actions block is the one the other has and this one hasn't.
+    headings: ["Traits", "Actions", "Legendary Actions", "Description"],
+    opensWith: "Shapechanger.",
+  },
+  {
+    what: "a 2024 creature",
+    fixture: page2024,
+    root: ".mon-stat-block-2024",
+    headings: ["Traits", "Actions", "Bonus Actions", "Legendary Actions", "Description"],
+    opensWith: "Legendary Resistance (3/Day, or 4/Day in Lair).",
+  },
+];
+
+for (const edition of EDITIONS) {
+  test(`every block ${edition.what} prints is banded`, (t) => {
+    const view = compared(t, edition.fixture);
+    for (const heading of edition.headings) {
+      assert.ok(view.block(heading), `${heading} should have been cut into entries`);
+    }
+    assert.equal(view.doc.querySelectorAll(".mb-content").length, edition.headings.length);
+  });
+
+  test(`the entries of ${edition.what} are named, and each gets a button`, (t) => {
+    const view = compared(t, edition.fixture);
+    const traits = view.block("Traits")!;
+    const entries = entriesOf(traits);
+    assert.ok(entries.length > 1, "more than one trait, so the split really ran");
+    assert.ok(text(entries[0]!).startsWith(edition.opensWith), text(entries[0]!).slice(0, 60));
+    assert.equal(traits.querySelectorAll(".mb-import").length, entries.length);
+    assert.equal(traits.querySelectorAll(".mb-gap").length, entries.length - 1);
+  });
+
+  test(`the cut of ${edition.what} is a partition`, (t) => {
+    const view = compared(t, edition.fixture);
+    for (const heading of edition.headings) {
+      const entries = entriesOf(view.block(heading)!).map((body) => body.innerHTML);
+      assert.equal(
+        joinItems(splitItems(joinItems(entries))),
+        joinItems(entries),
+        `${heading} re-splits to itself`,
+      );
+    }
+  });
+
+  test(`merging on ${edition.what} keeps every word`, (t) => {
+    const view = compared(t, edition.fixture);
+    const actions = view.block("Actions")!;
+    const before = entriesOf(actions).map((body) => body.innerHTML);
+    view.click(actions.querySelector(".mb-merge")!);
+    const after = entriesOf(actions).map((body) => body.innerHTML);
+    assert.equal(after.length, before.length - 1);
+    assert.equal(joinItems(after), joinItems(before));
+  });
+
+  test(`the chrome around ${edition.what} goes, and its stat block stays`, (t) => {
+    const view = compared(t, edition.fixture);
+    assert.equal(view.shown("#mega-menu-target"), false);
+    assert.equal(view.shown(edition.root), true);
+    assert.ok(view.doc.querySelector(".microbrewery-nav"), "and the way back is offered");
+  });
+}
+
+test("an entry that nests its bold and italic the other way round still starts one", (t) => {
+  // D&D Beyond writes both. Most entries open `<em><strong>Name.</strong></em>`;
+  // a few — Vampire Weakness among them — open `<strong><em>Name.</em></strong>`,
+  // and an entry the splitter couldn't see the bold through would be swallowed
+  // by the trait above it instead of standing on its own.
+  const view = compared(t, page2024);
+  const traits = entriesOf(view.block("Traits")!);
+  const weakness = traits.find((body) => text(body).startsWith("Vampire Weakness."));
+
+  assert.ok(weakness, `Vampire Weakness should be its own entry, got ${traits.map(text).map((t) => t.slice(0, 22))}`);
+  assert.match(weakness!.innerHTML, /<strong><em>/, "and this is the nesting that proves it");
 });
 
 test("each block of prose is cut into the entries the editor would cut", (t) => {

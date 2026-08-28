@@ -59,10 +59,42 @@ const SECTION_BY_LABEL = new Map<string, SectionKey>(
   Object.entries(SECTION_LABEL).map(([key, label]) => [label.toLowerCase(), key as SectionKey]),
 );
 
-/** The two shapes a block of prose comes in: the stat block's, and Description's. */
-const BLOCKS = ".mon-stat-block__description-block, .mon-details__description-block";
-const HEADING = ".mon-stat-block__description-block-heading, .mon-details__description-block-heading";
-const CONTENT = ".mon-stat-block__description-block-content, .mon-details__description-block-content";
+/**
+ * Where a block of prose lives, in every spelling D&D Beyond prints one in.
+ *
+ * Three, not one. The 2014 and 2024 stat blocks are separate renderers with
+ * parallel class names — `mon-stat-block__…` and `mon-stat-block-2024__…` — and
+ * a creature is printed by whichever edition it belongs to, quite apart from
+ * which edition the author is writing in. Description sits outside the block
+ * altogether, in `mon-details__…`, and is the same either way.
+ *
+ * Listed rather than matched by prefix: a `[class*=…]` would also catch
+ * `__description-block*s*`, the container these sit in, and a fourth renderer
+ * is something to look at rather than something to absorb silently.
+ */
+const BLOCK_PREFIXES = ["mon-stat-block", "mon-stat-block-2024", "mon-details"];
+const blockSelector = (suffix: string) =>
+  BLOCK_PREFIXES.map((prefix) => `.${prefix}__description-block${suffix}`).join(", ");
+
+const BLOCKS = blockSelector("");
+const HEADING = blockSelector("-heading");
+const CONTENT = blockSelector("-content");
+
+/**
+ * A block's children, less the whitespace between them.
+ *
+ * The same liberty `splitItems` takes, and taken here for the same reason: DDB
+ * newline-separates its paragraphs, and a blank text node is presentation in
+ * the source rather than part of any entry. Shared by both branches below, so
+ * that what an entry holds doesn't depend on which kind of section it came
+ * from — a Description that kept its indentation would fail the partition
+ * check the list sections pass.
+ */
+function blocks(content: Element): ChildNode[] {
+  return [...content.childNodes].filter(
+    (node) => node.nodeType !== 3 || !!(node.textContent ?? "").trim(),
+  );
+}
 
 /**
  * A block's children grouped into entries, by the editor's own rule.
@@ -73,9 +105,7 @@ const CONTENT = ".mon-stat-block__description-block-content, .mon-details__descr
  */
 function partition(content: Element): ChildNode[][] {
   const groups: ChildNode[][] = [];
-  for (const node of [...content.childNodes]) {
-    // Whitespace between blocks is presentation in the source, not content.
-    if (node.nodeType === 3 && !(node.textContent ?? "").trim()) continue;
+  for (const node of blocks(content)) {
     if (groups.length === 0 || leadsWithBold(node)) groups.push([node]);
     else groups[groups.length - 1]!.push(node);
   }
@@ -98,7 +128,7 @@ function dressBlock(
 ): void {
   const groups = LIST_SECTIONS.has(section)
     ? partition(content)
-    : [[...content.childNodes]].filter((group) => group.length > 0);
+    : [blocks(content)].filter((group) => group.length > 0);
   if (groups.length === 0) return;
 
   const bodies = groups.map((nodes) => {
