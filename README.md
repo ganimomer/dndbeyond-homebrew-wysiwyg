@@ -572,7 +572,12 @@ can't leak into the stat block and vice versa.
 ## Build
 
 Node 22 or newer (`scripts/test.mjs` globs with `node:fs`'s `globSync`). There
-is an `.nvmrc`, so `nvm use` picks the right one.
+is an `.nvmrc`, so `nvm use` picks the right one. [BUILDING.md](BUILDING.md)
+has the full environment, and is what an add-on reviewer is handed.
+
+The manifests in `targets/` carry no `version`; the build stamps one, from
+`--version` if given and from `package.json` otherwise. Releases pass the
+version computed off the last git tag — see [docs/RELEASING.md](docs/RELEASING.md).
 
 ```bash
 npm install
@@ -706,4 +711,8 @@ writes both, and the two save paths agree.
 
 ## License
 
-TBD.
+[MIT](LICENSE).
+
+Not affiliated with, endorsed by, or connected to Wizards of the Coast or D&D
+Beyond. "D&D Beyond" and "Dungeons & Dragons" are their trademarks, used here
+only to say what this edits.

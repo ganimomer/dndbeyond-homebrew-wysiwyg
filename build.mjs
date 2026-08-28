@@ -7,11 +7,17 @@
  * This script bundles the shared entry points with esbuild and drops the
  * right manifest next to them in `dist/<browser>/`.
  *
- *   node build.mjs --browser firefox [--watch]
- *   node build.mjs --browser chrome  [--watch]
+ * The manifests in `targets/` carry no `version` — the one in `dist/` is
+ * stamped here, so there is a single answer to what version this is. A release
+ * passes `--version` (computed from the git tag; see
+ * .github/workflows/release.yml) and everything else falls back to
+ * package.json, which keeps `npm run dev:*` working unchanged.
+ *
+ *   node build.mjs --browser firefox [--watch] [--version X.Y.Z]
+ *   node build.mjs --browser chrome  [--watch] [--version X.Y.Z]
  */
 import * as esbuild from "esbuild";
-import { cp, mkdir, rm } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -66,26 +72,58 @@ const options = {
   },
 };
 
-async function copyStatic() {
-  await cp(
-    resolve(root, "targets", browser, "manifest.json"),
+/**
+ * The version this build stamps into the manifest.
+ *
+ * Both stores parse a manifest version as one to four dot-separated integers,
+ * so a semver pre-release tag ("1.0.0-rc.1") is not a thing either of them will
+ * install. Rejecting it here means a release fails at the build rather than at
+ * the store.
+ */
+async function resolveVersion() {
+  const explicit = valueOf("--version");
+  if (explicit === undefined) {
+    const pkg = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
+    return pkg.version;
+  }
+  if (!/^\d+(\.\d+){0,3}$/.test(explicit)) {
+    console.error(
+      `--version "${explicit}" is not a manifest version: one to four ` +
+        `dot-separated integers, no pre-release suffix.`,
+    );
+    process.exit(1);
+  }
+  return explicit;
+}
+
+async function copyStatic(version) {
+  const manifest = JSON.parse(
+    await readFile(resolve(root, "targets", browser, "manifest.json"), "utf8"),
+  );
+  // Stamped, never copied: `targets/` deliberately holds no version, so there
+  // is nothing here that can drift out of step with the release.
+  manifest.version = version;
+  await writeFile(
     resolve(outdir, "manifest.json"),
+    `${JSON.stringify(manifest, null, 2)}\n`,
   );
 }
 
 async function run() {
+  const version = await resolveVersion();
+
   await rm(outdir, { recursive: true, force: true });
   await mkdir(outdir, { recursive: true });
 
   if (watch) {
     const ctx = await esbuild.context(options);
     await ctx.watch();
-    await copyStatic();
+    await copyStatic(version);
     console.log(`[${browser}] watching for changes…`);
   } else {
     await esbuild.build(options);
-    await copyStatic();
-    console.log(`[${browser}] built → dist/${browser}`);
+    await copyStatic(version);
+    console.log(`[${browser}] built ${version} → dist/${browser}`);
   }
 }
 

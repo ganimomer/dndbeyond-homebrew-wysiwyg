@@ -1,0 +1,150 @@
+# Cuts a release: builds `main`, tags it, and publishes the archives.
+#
+# Run by hand from the Actions tab. Deliberately not automatic — both stores
+# review what you send them, and a version you did not mean to ship is not
+# easily taken back.
+#
+# Nothing here commits to `main`. The tags are the record of what has shipped,
+# which is also what keeps this workflow on the right side of the branch
+# ruleset: a bot pushing a version bump would simply be refused.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Which part of the version to increment"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      version:
+        description: "Exact version (X.Y.Z), overriding the bump. Needed for the first release, which has no tag to count from."
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # `workflow_dispatch` can be aimed at any branch from the Actions tab,
+      # and releases come from `main` only.
+      - name: Refuse to release off main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Releases come from main. This run was aimed at ${{ github.ref }}."
+          exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          # Whole history and every tag: one is what the version is counted
+          # from, the other is what the release notes are written from.
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Work out the version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION=$(node scripts/next-version.mjs --version "${{ inputs.version }}")
+          else
+            VERSION=$(node scripts/next-version.mjs --bump "${{ inputs.bump }}")
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Releasing $VERSION"
+
+      # `main` is gated, but the gate never saw a build carrying this version.
+      - name: Check
+        run: npm run check
+
+      - name: Build both browsers
+        run: |
+          V="${{ steps.version.outputs.version }}"
+          node build.mjs --browser firefox --version "$V"
+          node build.mjs --browser chrome  --version "$V"
+
+      # A stamping failure would otherwise ship whatever package.json last said,
+      # quietly, forever.
+      - name: Confirm the manifests carry it
+        run: |
+          V="${{ steps.version.outputs.version }}"
+          for browser in firefox chrome; do
+            GOT=$(node -p "require('./dist/$browser/manifest.json').version")
+            if [ "$GOT" != "$V" ]; then
+              echo "::error::dist/$browser/manifest.json says $GOT, expected $V"
+              exit 1
+            fi
+            echo "dist/$browser/manifest.json: $GOT"
+          done
+
+      - name: Package
+        run: |
+          V="${{ steps.version.outputs.version }}"
+          mkdir -p dist/release
+          # Zipped from inside, so manifest.json sits at the archive root —
+          # which is where both browsers insist on finding it.
+          (cd dist/firefox && zip -qr -X "../release/microbrewery-firefox-$V.zip" .)
+          (cd dist/chrome  && zip -qr -X "../release/microbrewery-chrome-$V.zip" .)
+          # AMO requires source for anything bundled or minified, and rebuilds
+          # it themselves. `git archive` is exactly the tracked tree: no
+          # node_modules, no dist, no local scratch.
+          git archive --format=zip --prefix="microbrewery-$V/" HEAD \
+            -o "dist/release/microbrewery-source-$V.zip"
+          ls -lh dist/release
+
+      - name: Write the release notes
+        id: notes
+        run: |
+          PREV=$(git tag --list 'v*' --sort=-v:refname | head -1)
+          {
+            if [ -n "$PREV" ]; then
+              echo "## Changes since $PREV"
+              echo
+              git log --format='- %s' --no-merges "$PREV..HEAD"
+            else
+              echo "## The first release"
+              echo
+              git log --format='- %s' --no-merges
+            fi
+            echo
+            echo "## Installing"
+            echo
+            echo "**Firefox** — \`microbrewery-firefox-${{ steps.version.outputs.version }}.zip\`."
+            echo "Not yet on addons.mozilla.org, so it installs unsigned: unzip it, open"
+            echo '`about:debugging#/runtime/this-firefox`, and **Load Temporary Add-on…** on the'
+            echo "\`manifest.json\` inside. Temporary add-ons are dropped when Firefox restarts."
+            echo
+            echo "**Chrome / Edge** — \`microbrewery-chrome-${{ steps.version.outputs.version }}.zip\`."
+            echo 'Unzip it, open `chrome://extensions`, enable **Developer mode**, then'
+            echo "**Load unpacked** on the unzipped folder."
+            echo
+            echo "\`microbrewery-source-*.zip\` is the source archive for add-on review; it is"
+            echo "not something you install."
+          } > notes.md
+          cat notes.md
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="${{ steps.version.outputs.version }}"
+          gh release create "v$V" \
+            --target "$GITHUB_SHA" \
+            --title "v$V" \
+            --notes-file notes.md \
+            dist/release/*.zip

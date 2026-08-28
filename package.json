@@ -4,6 +4,7 @@
   "description": "Browser extension that turns the D&D Beyond homebrew creation page into a WYSIWYG editor with a live stat-block preview.",
   "type": "module",
   "private": true,
+  "license": "MIT",
   "engines": {
     "node": ">=22"
   },
