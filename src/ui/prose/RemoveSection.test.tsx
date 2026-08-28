@@ -132,7 +132,7 @@ test("a removed section goes back on the Add section menu", (t) => {
   const monster = creature("5.5e");
   const { root, repaint } = renderBlock(t, monster, { revealedSections: ["reactions"] });
   const offered = () =>
-    [...root.querySelectorAll(".sb-add-section .cm-item .cm-label")].map((n) => n.textContent);
+    [...root.querySelectorAll(".name-menu .cm-submenu .cm-label")].map((n) => n.textContent);
   assert.ok(!offered().includes("Reactions"), "on the block, so not on offer");
 
   fireEvent.click(trash(root, "reactions"));

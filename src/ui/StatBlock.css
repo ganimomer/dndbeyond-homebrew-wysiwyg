@@ -3,7 +3,7 @@
 .sb-layout {
   display: flex;
   /* Stretch, not flex-start: the aside has to span the whole row so its sticky
-   * "Add section" button has somewhere to travel. */
+   * artwork has somewhere to travel. */
   align-items: stretch;
   /* Left-align the block+aside group so the Description below lines up with the
    * stat block's left edge (not centered under it). */

@@ -4,7 +4,29 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+  /* Pinned to the top of the window for as long as the block is on screen: on
+   * a long creature the author's tools — the save light, the actions menu, the
+   * way out — are the last things that should need scrolling back for.
+   *
+   * The padding is the block's own 15px top padding, carried by the row and
+   * taken straight back off again: it changes nothing at rest, and once the row
+   * pins it is what keeps the paper running all the way to the top of the
+   * window rather than starting at the name. */
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--paper-lit);
+  padding-top: 15px;
+  margin-top: -15px;
 }
+
+/* Pinned, the row is the same paper as the block sliding under it, and text
+ * would appear to stop at an invisible line. `is-stuck` is set from the row's
+ * own IntersectionObserver — see NameRow.tsx. */
+.statblock .name-row.is-stuck {
+  box-shadow: 0 3px 6px rgba(15, 23, 42, 0.12);
+}
+
 .statblock .name-row .name {
   flex: 1;
 }

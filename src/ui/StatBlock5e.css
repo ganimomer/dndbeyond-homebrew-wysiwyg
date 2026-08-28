@@ -9,13 +9,20 @@
 .statblock.v5e {
   --accent: #822000;
   --rule: #922610;
+  --paper: #fdf5ee;
+  /* The paper with the top glow below already mixed into it. The name row is
+   * opaque so the block can scroll under it, and this is the one colour that
+   * makes it invisible where it rests — over the brightest part of that glow.
+   * (The glow fades horizontally too, by about three values at the row's outer
+   * corners; that is beneath noticing, a live gradient would not be.) */
+  --paper-lit: #f7eee4;
   box-sizing: border-box;
   position: relative;
   font-family: "Scala Sans Offc", Roboto, Helvetica, sans-serif;
   font-size: 15px;
   line-height: 1.32;
   color: #242528;
-  background-color: #fdf5ee;
+  background-color: var(--paper);
   background-image:
     repeating-linear-gradient(0deg, rgba(120, 90, 40, 0.022) 0 2px, transparent 2px 4px),
     radial-gradient(120% 60% at 50% 0%, rgba(150, 120, 70, 0.06), transparent 70%);

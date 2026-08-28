@@ -41,7 +41,6 @@ import miniFormCss from "./shared/MiniForm.css";
 import sensesRowCss from "./fields/SensesRow.css";
 import textRowCss from "./fields/TextRow.css";
 import addFieldCss from "./fields/AddFieldMenu.css";
-import addSectionCss from "./AddSectionButton.css";
 import saveSlotCss from "./shared/SaveSlot.css";
 import proseCss from "./prose/ProseSection.css";
 import proseItemCss from "./prose/ProseItem.css";
@@ -89,7 +88,6 @@ const STYLES = [
   sensesRowCss,
   textRowCss,
   addFieldCss,
-  addSectionCss,
   saveSlotCss,
   proseCss,
   proseItemCss,

@@ -1,14 +1,14 @@
 /**
- * The "Add section" button beside the block: what it offers, and what picking
- * something from it does. Whether a revealed section then *renders* is the
- * block's business — see StatBlock.test.tsx.
+ * The "Add section" row in the name row's menu: what it offers, and what
+ * picking something from it does. Whether a revealed section then *renders* is
+ * the block's business — see StatBlock.test.tsx.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { emptyMonster, type Monster, type Ruleset } from "../statblock/model.js";
-import { fireEvent } from "../test-support/render.js";
-import { renderBlock } from "../test-support/editor.js";
-import { ADDABLE_SECTIONS, SECTION_LABEL } from "./prose/section-registry.js";
+import { emptyMonster, type Monster, type Ruleset } from "../../statblock/model.js";
+import { fireEvent } from "../../test-support/render.js";
+import { renderBlock } from "../../test-support/editor.js";
+import { ADDABLE_SECTIONS, SECTION_LABEL } from "./section-registry.js";
 
 const creature = (ruleset: Ruleset, overrides: Partial<Monster> = {}): Monster => ({
   ...emptyMonster(),
@@ -16,9 +16,11 @@ const creature = (ruleset: Ruleset, overrides: Partial<Monster> = {}): Monster =
   ...overrides,
 });
 
-/** The sections the button is currently offering, in menu order. */
+/** The sections the row is currently offering, in menu order. Every row is in
+ * the DOM whether or not the menu is open — the popover is hidden with CSS —
+ * so reading them takes no clicking. */
 const offered = (root: ShadowRoot): string[] =>
-  [...root.querySelectorAll(".sb-add-section .cm-item .cm-label")].map((n) => n.textContent ?? "");
+  [...root.querySelectorAll(".name-menu .cm-submenu .cm-label")].map((n) => n.textContent ?? "");
 
 for (const ruleset of ["5e", "5.5e"] as const) {
   test(`${ruleset} offers every section a blank creature hasn't got`, (t) => {
@@ -30,13 +32,13 @@ for (const ruleset of ["5e", "5.5e"] as const) {
     );
   });
 
-  test(`${ruleset} drops the button once there is nothing left to add`, (t) => {
+  test(`${ruleset} drops the row once there is nothing left to add`, (t) => {
     const descriptionHtml = Object.fromEntries(
       ADDABLE_SECTIONS.map((key) => [key, `<p>${key}</p>`]),
     );
     const { root } = renderBlock(t, creature(ruleset, { descriptionHtml }));
 
-    assert.equal(root.querySelector(".sb-add-section"), null);
+    assert.equal(root.querySelector(".name-menu .cm-parent"), null);
   });
 }
 
@@ -74,7 +76,7 @@ test("legendary, mythic and lair are not on offer", (t) => {
 test("picking a section reveals it and names the editor to land in", (t) => {
   const { root, store } = renderBlock(t, creature("5.5e"));
 
-  const item = [...root.querySelectorAll<HTMLElement>(".sb-add-section .cm-item")].find(
+  const item = [...root.querySelectorAll<HTMLElement>(".name-menu .cm-submenu .cm-item")].find(
     (li) => li.textContent === "Bonus Actions",
   )!;
   fireEvent.click(item);

@@ -25,12 +25,18 @@ const creature = (overrides: Partial<Monster> = {}): Monster => ({
 
 const trigger = (root: ShadowRoot) => root.querySelector<HTMLElement>(".name-menu .cm-trigger")!;
 
+/** The menu's own rows — not the ones inside a row's flyout. */
+const rows = (root: ShadowRoot): HTMLElement[] => [
+  ...root.querySelectorAll<HTMLElement>(".name-menu > .cm > .cm-menu > .cm-item"),
+];
+
+/** A row's own label, which its flyout's labels must not be read into. */
+const labelOf = (row: HTMLElement): string => row.querySelector(".cm-label")?.textContent ?? "";
+
 /** Opens the menu and hands back the "Go to details page" row. */
 function detailsItem(root: ShadowRoot): HTMLElement {
   fireEvent.click(trigger(root));
-  const item = [...root.querySelectorAll<HTMLElement>(".name-menu .cm-item")].find((li) =>
-    (li.textContent ?? "").includes(LABEL),
-  );
+  const item = rows(root).find((li) => labelOf(li) === LABEL);
   assert.ok(item, `the menu offers "${LABEL}"`);
   return item!;
 }
@@ -53,10 +59,13 @@ test("the menu offers the details page last, below the items that change the cre
   const { root } = renderWithStore(t, creature(), (s) => <NameRow monster={s.getMonster()!} />);
   fireEvent.click(trigger(root));
 
-  const labels = [...root.querySelectorAll<HTMLElement>(".name-menu .cm-item")].map(
-    (li) => li.textContent ?? "",
-  );
-  assert.deepEqual(labels, ["Use 5e stat block", "Make legendary", "Add lair", LABEL]);
+  assert.deepEqual(rows(root).map(labelOf), [
+    "Use 5e stat block",
+    "Make legendary",
+    "Add lair",
+    "Add section…",
+    LABEL,
+  ]);
 });
 
 test("with the form clean, it opens the creature's public page in a new tab", (t) => {
@@ -100,9 +109,7 @@ test("it comes back on its own when the save lands, without reopening the menu",
   // The menu stays open across the save; only `useSaveState` repaints it.
   await store.autosave.flush();
 
-  const item = [...root.querySelectorAll<HTMLElement>(".name-menu .cm-item")].find((li) =>
-    (li.textContent ?? "").includes(LABEL),
-  )!;
+  const item = rows(root).find((li) => labelOf(li) === LABEL)!;
   assert.equal(item.classList.contains("disabled"), false);
   // Preact blanks a removed attribute rather than dropping it; either way there
   // is no longer a tooltip to show.

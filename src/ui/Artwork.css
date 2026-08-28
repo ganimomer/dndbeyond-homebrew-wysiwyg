@@ -1,7 +1,11 @@
 /* Creature artwork, top-aligned beside the stat block, with the upload menu that
  * appears over it on hover. */
 .sb-image {
-  position: relative;
+  /* Stays beside the block as it scrolls, the way the name row stays above it.
+   * Sticky still gives `.sb-image-menu` the box it positions against, and its
+   * travel is the whole row's height — see `.sb-layout` in StatBlock.css. */
+  position: sticky;
+  top: 0;
   flex: none;
   width: 100%;
   margin: 0;

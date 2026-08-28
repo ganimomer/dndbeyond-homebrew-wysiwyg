@@ -43,7 +43,7 @@
   display: none;
 }
 
-.cm.open .cm-menu {
+.cm.open > .cm-menu {
   display: block;
 }
 
@@ -63,6 +63,32 @@
 
 .cm-menu.compact .cm-icon {
   display: none;
+}
+
+/* A row that opens rows of its own: the flyout hangs off it, so the row is what
+ * the flyout is positioned against. */
+.cm-item.cm-parent {
+  position: relative;
+}
+
+.cm-caret {
+  margin-left: auto;
+  color: #6f7478;
+  line-height: 1;
+}
+
+/* Leftward, over the stat block, where there is always room: the kebab sits at
+ * the block's right edge, and a flyout to the right would cross the artwork
+ * column and run off a narrow window. Written at `.cm-menu.cm-submenu` and
+ * placed after `.compact`, whose `left: 0; right: auto` it has to beat. */
+.cm-menu.cm-submenu {
+  top: -5px;
+  left: auto;
+  right: calc(100% + 5px);
+}
+
+.cm-item.cm-parent.is-open > .cm-submenu {
+  display: block;
 }
 
 .cm-item {

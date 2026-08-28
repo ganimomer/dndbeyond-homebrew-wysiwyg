@@ -101,12 +101,14 @@ export function StatBlock55e({ monster, onClose }: { monster: Monster; onClose?:
 
   return (
     <div class="statblock v55e">
-      {/* Name through tidbits is one section: a reader sees a single block of
-          basic information, not a header plus attributes plus stats plus
-          tidbits. */}
-      <section class="basics">
-        <NameRow monster={monster} onClose={onClose} />
+      {/* The name is the block's own child rather than the first line of the
+          basics: pinned to the top of the window, it has to be free to travel
+          the whole block, and sticky never outlives the box it sits in. */}
+      <NameRow monster={monster} onClose={onClose} />
 
+      {/* Meta through tidbits is one section: a reader sees a single block of
+          basic information, not attributes plus stats plus tidbits. */}
+      <section class="basics">
         {visibleMeta(monster, revealed).size || monster.isLegendary || monster.hasLair ? (
           <div class="meta">
             {/* The sentence is wrapped because it isn't one element: `MetaLine`

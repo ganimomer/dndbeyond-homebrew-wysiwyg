@@ -9,13 +9,18 @@
 .statblock.v55e {
   --accent: #5b160c;
   --meta: #68747b;
+  --paper: #f5f3ee;
+  /* The paper with the top glow below already mixed into it — see the 2014
+   * block's, which explains why the pinned name row wants this and not
+   * `--paper`. */
+  --paper-lit: #efece4;
   --frame: #afa47a;
   box-sizing: border-box;
   font-family: "Scala Sans Offc", Roboto, Helvetica, sans-serif;
   font-size: 15px;
   line-height: 1.35;
   color: #242528;
-  background-color: #f5f3ee;
+  background-color: var(--paper);
   /* Subtle paper texture (own asset) in place of DDB's PNG. */
   background-image:
     repeating-linear-gradient(0deg, rgba(120, 90, 40, 0.022) 0 2px, transparent 2px 4px),
@@ -33,7 +38,7 @@
 }
 
 /* The basics — name through tidbits — are one section. */
-.statblock.v55e .basics .name-row,
+.statblock.v55e .name-row,
 .statblock.v55e .basics .meta {
   line-height: 1.1;
 }

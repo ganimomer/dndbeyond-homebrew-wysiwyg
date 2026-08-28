@@ -19,7 +19,7 @@ import { useSession, useStore } from "./store-context.js";
 import { ContextMenu } from "./shared/ContextMenu.js";
 import { Icon } from "./shared/Icon.js";
 
-export function Artwork({ monster, onLoad }: { monster: Monster; onLoad?: () => void }) {
+export function Artwork({ monster }: { monster: Monster }) {
   const store = useStore();
   const session = useSession();
   // A file chosen this session outranks the form's own preview, which is
@@ -41,7 +41,7 @@ export function Artwork({ monster, onLoad }: { monster: Monster; onLoad?: () => 
 
   return (
     <div class={classes.join(" ")}>
-      <img src={src} alt={monster.name} onLoad={onLoad} />
+      <img src={src} alt={monster.name} />
       <div class="sb-image-overlay">
         {held ? null : (
           <div class="sb-image-menu">

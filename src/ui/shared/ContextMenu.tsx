@@ -36,8 +36,28 @@ export interface MenuItem {
   onClick: () => void;
 }
 
-export interface ContextMenuProps {
+/**
+ * A row that opens rows of its own rather than doing something itself.
+ *
+ * One level deep, and deliberately so: this is a commands menu, and anything
+ * that wants a tree of choices wants a picker instead. Kept as a separate
+ * shape rather than an optional field on `MenuItem` so that an ordinary item
+ * still *has* to say what it does.
+ */
+export interface SubMenu {
+  label: string;
+  icon?: IconName;
   items: MenuItem[];
+}
+
+export type MenuEntry = MenuItem | SubMenu;
+
+function isSubMenu(entry: MenuEntry): entry is SubMenu {
+  return "items" in entry;
+}
+
+export interface ContextMenuProps {
+  items: MenuEntry[];
   /** Trigger glyph; defaults to the kebab "⋮" when there's no icon either. */
   triggerText?: string;
   /** Material icon shown before the trigger's text, e.g. the "Add…" plus. */
@@ -56,6 +76,12 @@ function rowClass(item: MenuItem): string {
   return cls;
 }
 
+/** The icon gutter every row keeps, filled or not, so the labels line up. */
+function RowIcon({ icon, tone }: { icon?: IconName; tone?: "brand" }) {
+  if (!icon) return <span class="cm-icon" />;
+  return <Icon name={icon} class={tone ? `cm-icon tone-${tone}` : "cm-icon"} />;
+}
+
 export function ContextMenu({
   items,
   triggerText,
@@ -65,6 +91,14 @@ export function ContextMenu({
   menuClass,
 }: ContextMenuProps) {
   const [open, setOpen] = useState(false);
+  // Which submenu is showing, by label. Never outlives the menu itself: a
+  // reopened kebab starts at its top level.
+  const [openSub, setOpenSub] = useState<string | null>(null);
+
+  const close = () => {
+    setOpen(false);
+    setOpenSub(null);
+  };
 
   // Closes on a click anywhere else, or on Escape. `composedPath()` because
   // this lives in a shadow root, where a listener on `window` would otherwise
@@ -74,10 +108,14 @@ export function ContextMenu({
     if (!open) return;
     const onClick = (event: Event) => {
       const trigger = event.composedPath().find((n) => (n as HTMLElement)?.classList?.contains?.("cm"));
-      if (!trigger) setOpen(false);
+      if (!trigger) close();
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key !== "Escape") return;
+      // A flyout is its own layer to back out of, so Escape takes one step at
+      // a time rather than dropping the author out of the menu entirely.
+      if (openSub) setOpenSub(null);
+      else close();
     };
     window.addEventListener("click", onClick, true);
     window.addEventListener("keydown", onKey, true);
@@ -85,9 +123,34 @@ export function ContextMenu({
       window.removeEventListener("click", onClick, true);
       window.removeEventListener("keydown", onKey, true);
     };
-  }, [open]);
+  }, [open, openSub]);
 
   const label = triggerText ?? (triggerIcon ? "" : "⋮");
+
+  /** One acting row, at either level. */
+  const Row = ({ item }: { item: MenuItem }) => (
+    <li
+      class={rowClass(item)}
+      title={item.title}
+      aria-disabled={item.disabled ? "true" : undefined}
+      onClick={(event) => {
+        // A row inside a flyout sits *within* the row that opened it, so
+        // without this its click would bubble up and toggle that one shut.
+        event.stopPropagation();
+        // A disabled row swallows the click and stays put: closing the
+        // menu would take its tooltip — the only thing explaining why
+        // nothing happened — away with it.
+        if (item.disabled) return;
+        // Closed first, so the re-render the click sets off finds a
+        // settled menu.
+        close();
+        item.onClick();
+      }}
+    >
+      <RowIcon icon={item.icon} tone={item.iconTone} />
+      <span class="cm-label">{item.label}</span>
+    </li>
+  );
 
   return (
     <div class={open ? "cm open" : "cm"}>
@@ -99,41 +162,41 @@ export function ContextMenu({
           // Without this the click reaches the outside-click listener the very
           // open it just registered, and closes the menu again.
           event.stopPropagation();
-          setOpen(!open);
+          if (open) close();
+          else setOpen(true);
         }}
       >
         {triggerIcon ? <Icon name={triggerIcon} size={16} /> : null}
         {label}
       </button>
       <ul class={menuClass ? `cm-menu ${menuClass}` : "cm-menu"}>
-        {items.map((item) => (
-          <li
-            key={item.label}
-            class={rowClass(item)}
-            title={item.title}
-            aria-disabled={item.disabled ? "true" : undefined}
-            onClick={() => {
-              // A disabled row swallows the click and stays put: closing the
-              // menu would take its tooltip — the only thing explaining why
-              // nothing happened — away with it.
-              if (item.disabled) return;
-              // Closed first, so the re-render the click sets off finds a
-              // settled menu.
-              setOpen(false);
-              item.onClick();
-            }}
-          >
-            {item.icon ? (
-          <Icon
-            name={item.icon}
-            class={item.iconTone ? `cm-icon tone-${item.iconTone}` : "cm-icon"}
-          />
-        ) : (
-          <span class="cm-icon" />
+        {items.map((entry) =>
+          isSubMenu(entry) ? (
+            <li
+              key={entry.label}
+              class={openSub === entry.label ? "cm-item cm-parent is-open" : "cm-item cm-parent"}
+              aria-haspopup="true"
+              aria-expanded={openSub === entry.label ? "true" : "false"}
+              onClick={(event) => {
+                // Same reason as the trigger's: this click must not reach the
+                // outside-click listener and close the menu under it.
+                event.stopPropagation();
+                setOpenSub(openSub === entry.label ? null : entry.label);
+              }}
+            >
+              <RowIcon icon={entry.icon} />
+              <span class="cm-label">{entry.label}</span>
+              <span class="cm-caret">›</span>
+              <ul class="cm-menu compact cm-submenu">
+                {entry.items.map((item) => (
+                  <Row key={item.label} item={item} />
+                ))}
+              </ul>
+            </li>
+          ) : (
+            <Row key={entry.label} item={entry} />
+          ),
         )}
-            <span class="cm-label">{item.label}</span>
-          </li>
-        ))}
       </ul>
     </div>
   );
