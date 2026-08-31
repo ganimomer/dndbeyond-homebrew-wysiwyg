@@ -1,0 +1,45 @@
+/* An editable box (Lexical mounts here) — one entry of a list section, or the
+ * whole of the Description. Inherits the surrounding stat-block typography so it
+ * reads identically to the read-only sections, with a quiet affordance that it
+ * can be edited and a focus ring while active. */
+.sb-prose {
+  outline: none;
+  border-radius: 3px;
+  transition: box-shadow 0.12s ease, background 0.12s ease;
+}
+.sb-prose:hover {
+  box-shadow: 0 0 0 1px rgba(91, 22, 12, 0.25);
+}
+.sb-prose:focus,
+.sb-prose:focus-within {
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}
+.sb-prose p {
+  margin: 0 0 10px;
+}
+.sb-prose p:last-child {
+  /* The box ends here; whatever separates it from the next entry is that list's
+   * own gap (see SectionList.css), so this must not add to it. */
+  margin-bottom: 0;
+}
+
+/* A box with nothing in it yet — a freshly added section, or a freshly added
+ * entry. An empty contenteditable collapses to nothing, so hold a line open and
+ * say what belongs there, in the same quiet italic the meta placeholders use. An
+ * added entry has no placeholder text of its own, so it just holds the line. */
+.sb-prose.is-empty {
+  position: relative;
+  min-height: 1.5em;
+}
+.sb-prose.is-empty::before {
+  content: attr(data-placeholder);
+  display: block;
+  opacity: 0.5;
+  font-style: italic;
+  /* The caret sits in the real (empty) paragraph underneath; the prompt is
+   * decoration and must never take a click or land in a selection. */
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+}

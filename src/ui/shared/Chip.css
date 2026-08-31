@@ -1,0 +1,37 @@
+/* Chips for multi-value fields (subtypes in the meta line, skills in the
+ * tidbits). Each carries a ✕; how a value is *added* differs per field — the
+ * subtypes use a searchable <datalist> box, the skills a "＋" dropdown. */
+.statblock .sb-chip {
+  display: inline-flex;
+  align-items: baseline;
+  /* The label/detail/✕ are flex items, so the separating whitespace collapses;
+   * the gap is what actually spaces them. */
+  gap: 4px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(91, 22, 12, 0.1);
+}
+.statblock .sb-chip-remove {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.55;
+}
+.statblock .sb-chip-remove:hover {
+  opacity: 1;
+}
+.statblock .sb-chip-detail {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Dimmed and inert while an add/remove request is in flight — these write
+ * straight to D&D Beyond's own skill endpoints rather than through autosave. */
+.statblock .sb-chips.is-busy {
+  opacity: 0.55;
+  pointer-events: none;
+}

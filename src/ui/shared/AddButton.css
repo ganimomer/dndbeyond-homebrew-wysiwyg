@@ -1,0 +1,53 @@
+/* Adding something to the block: the "Add…" menu at the foot of the basics, and
+ * the "Add trait" at the foot of each list section.
+ *
+ * One class because the two had drifted into looking like unrelated controls —
+ * the menu a washed-out pill, the section button a small Roboto link with no
+ * ground under it — when they are the same offer in two places. A shared class
+ * is the thing that keeps them from drifting again.
+ *
+ * Coloured like a chip, because chips are what these sit among: the chip's own
+ * wash at rest, and on hover the darker one the chip rows' "＋" uses. The label
+ * stays at full strength and only the glyph is quiet — the bargain the hit
+ * points' gear makes (see HitPointsField.css), and the thing that stops an
+ * affordance reading as a disabled one. Dimming the whole button, which is what
+ * both of these used to do, is what made "Add…" look switched off.
+ *
+ * Loaded after ContextMenu.css on purpose: `.cm-trigger`'s own `all: unset` has
+ * the same specificity as `.sb-add`, so only cascade order decides it, and one
+ * of these buttons is a `.cm-trigger`. See the STYLES array in App.tsx. */
+.sb-add {
+  /* Both hosts want the reset: one is a bare <button>, and the other is a
+   * `.cm-trigger` whose own reset this rule is taking over from. */
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px 1px 4px;
+  border-radius: 4px;
+  background: rgba(91, 22, 12, 0.1);
+  color: inherit;
+  font: inherit;
+  font-size: 0.85em;
+  transition: background 0.12s ease;
+}
+
+.sb-add:hover {
+  background: rgba(91, 22, 12, 0.18);
+}
+
+.sb-add svg {
+  display: block;
+  opacity: 0.5;
+  transition: opacity 0.12s ease;
+}
+
+.sb-add:hover svg,
+.sb-add:focus-visible svg {
+  opacity: 1;
+}
+
+.sb-add:focus-visible {
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}

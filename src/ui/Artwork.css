@@ -1,0 +1,103 @@
+/* Creature artwork, top-aligned beside the stat block, with the upload menu that
+ * appears over it on hover. */
+.sb-image {
+  /* Stays beside the block as it scrolls, the way the name row stays above it.
+   * Sticky still gives `.sb-image-menu` the box it positions against, and its
+   * travel is the whole row's height — see `.sb-layout` in StatBlock.css. */
+  position: sticky;
+  top: 0;
+  flex: none;
+  width: 100%;
+  margin: 0;
+  border-radius: 6px;
+  /* The overlay is drawn to the picture's own rounded corners. */
+  overflow: hidden;
+}
+.sb-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The dim, and everything drawn on top of it. Hidden until the pointer is over
+ * the artwork — or until an upload is running, which holds it open regardless:
+ * what's on screen isn't what D&D Beyond has yet, and shouldn't look settled. */
+.sb-image-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+.sb-image:hover .sb-image-overlay,
+.sb-image:focus-within .sb-image-overlay,
+.sb-image.is-busy .sb-image-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* The menu, at the artwork's top-right corner. */
+.sb-image-menu {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+/* Light and prominent, against a picture we know nothing else about: a
+ * translucent disc under the dots so they read over a pale image too. */
+.sb-image .cm-trigger.on-image {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 26px;
+  background: rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+}
+.sb-image .cm-trigger.on-image:hover {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+/* Where an upload reports itself: spinner, tick, or what went wrong, centred on
+ * the picture. */
+.sb-image-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* The shared `.save-spinner` is sized in `em`; this is what makes it big
+   * enough to read as the artwork's own rather than a heading's. */
+  font-size: 44px;
+  color: #ffffff;
+}
+.sb-image-state .save-spinner {
+  border-width: 3px;
+  opacity: 0.9;
+}
+.sb-image-state.is-success {
+  color: #34a853;
+}
+.sb-image-state.is-success svg {
+  display: block;
+  /* A disc behind the tick, so it reads at a glance rather than as a stray mark. */
+  background: #ffffff;
+  border-radius: 50%;
+  padding: 5px;
+}
+.sb-image-state.is-error {
+  /* Text, so it takes its own size rather than the spinner's. */
+  font-family: Roboto, "Open Sans", Helvetica, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 4px;
+  color: #ffffff;
+  background: rgba(178, 30, 30, 0.92);
+}

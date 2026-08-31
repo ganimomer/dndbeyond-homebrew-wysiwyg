@@ -1,0 +1,40 @@
+/* The value a field is being offered because another one moved. Amber, like the
+ * needs-review wash it's the actionable cousin of — and a real tab stop, so the
+ * focus ring has to be unmistakable. */
+.statblock .sb-hint {
+  appearance: none;
+  border: none;
+  background: rgba(214, 158, 46, 0.3);
+  color: inherit;
+  font: inherit;
+  font-size: 0.85em;
+  line-height: 1.4;
+  padding: 0 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.statblock .sb-hint:hover {
+  background: rgba(214, 158, 46, 0.55);
+}
+.statblock .sb-hint:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent, #5b160c);
+}
+
+.statblock .sb-chip-add {
+  appearance: none;
+  border: none;
+  background: rgba(91, 22, 12, 0.1);
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  padding: 0 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.65;
+}
+.statblock .sb-chip-add:hover {
+  opacity: 1;
+}

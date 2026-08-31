@@ -1,0 +1,133 @@
+/* The filterable picker, in its two faces: the "＋" on a chip row, and a meta
+ * line slot reading as the value it holds. Either way the popover matches the
+ * context menu's white card, so the two still read as one family. */
+
+.cp {
+  position: relative;
+  display: inline-flex;
+}
+
+.cp-trigger {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  /* `font` carries line-height, so the trigger takes the same line box as the
+   * text beside it and the two end up exactly the same height. */
+  font: inherit;
+  color: inherit;
+}
+
+/* The chip row's "＋": chip-sized, and quiet until wanted. */
+.cp-trigger.add {
+  padding: 0 5px;
+  background: rgba(91, 22, 12, 0.1);
+  opacity: 0.65;
+}
+
+.cp-trigger.add:hover {
+  opacity: 1;
+  background: rgba(91, 22, 12, 0.18);
+}
+
+/* A meta line slot (size, creature type, alignment). A chosen value sits in a
+ * chip, whose background this inherits, so the trigger only darkens on hover —
+ * the treatment the hit-points chip button already uses. A slot still prompting
+ * ("Alignment…") has no chip around it and carries the hover alone. */
+.cp-trigger.value {
+  padding: 0 1px;
+}
+
+.cp-trigger.value:hover {
+  background: rgba(91, 22, 12, 0.08);
+}
+
+.sb-chip .cp-trigger.value:hover {
+  background: rgba(91, 22, 12, 0.18);
+}
+
+.cp-trigger.value.is-placeholder {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.cp-trigger:focus-visible {
+  outline: 1px solid var(--accent, #5b160c);
+  outline-offset: 1px;
+}
+
+.cp-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 10;
+  width: 200px;
+  padding: 4px;
+  background: #ffffff;
+  border: 1px solid #d8e1e8;
+  border-radius: 3px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
+  font-family: Roboto, "Open Sans", Helvetica, sans-serif;
+  font-size: 13px;
+  /* The meta line this can hang from is italic; the popover is not. */
+  font-style: normal;
+  color: #242527;
+  display: none;
+}
+
+.cp.open .cp-panel {
+  display: block;
+}
+
+.cp-filter {
+  box-sizing: border-box;
+  display: block;
+  /* Lines up with the options, which carry the same 2px side margin. */
+  width: calc(100% - 4px);
+  margin: 2px 2px 4px;
+  padding: 5px 7px;
+  border: 1px solid #d8e1e8;
+  border-radius: 3px;
+  font: inherit;
+  color: inherit;
+  background: #ffffff;
+}
+
+.cp-filter:focus {
+  outline: none;
+  border-color: #1579bc;
+}
+
+/* Only the options scroll, so the filter box stays put while the list moves. */
+.cp-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.cp-option {
+  padding: 6px 8px;
+  margin: 2px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.cp-option.is-active {
+  background: #f2f5f7;
+}
+
+/* The value the field currently holds, as a native select bolds its own. */
+.cp-option.is-selected {
+  font-weight: 600;
+}
+
+.cp-empty {
+  padding: 6px 8px;
+  margin: 2px;
+  color: #6f7478;
+  font-style: italic;
+}

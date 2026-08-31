@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Microbrewery",
+  "description": "A WYSIWYG editor for the D&D Beyond homebrew monster builder, with a live stat-block preview.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "dndbeyond-homebrew-wysiwyg@ganimomer.dev",
+      "strict_min_version": "115.0"
+    }
+  },
+  "permissions": ["storage"],
+  "host_permissions": ["*://*.dndbeyond.com/*"],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.dndbeyond.com/homebrew/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

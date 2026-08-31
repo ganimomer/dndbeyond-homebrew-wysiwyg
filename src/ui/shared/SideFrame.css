@@ -1,0 +1,86 @@
+/* A D&D Beyond page of their own, standing in for the artwork.
+ *
+ * Sticky rather than tall: the block beside it scrolls, and a page-length frame
+ * would put its contents off screen exactly when the author is reading them. */
+.sf {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 32px);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.18);
+  /* Mounts here and is moved a paint later — see `arrived`. */
+  opacity: 0;
+  transform: translateX(24px);
+  transition: opacity 0.24s ease, transform 0.24s ease;
+}
+
+.sf.is-open {
+  opacity: 1;
+  transform: none;
+}
+
+/* Nothing to click on the way out — a row clicked while the page fades would
+ * act on a panel that is already gone. (It also covers the frame's first
+ * paint, which is behind the loading cover anyway.) */
+.sf:not(.is-open) {
+  pointer-events: none;
+}
+
+.sf-frame {
+  flex: 1;
+  display: block;
+  width: 100%;
+  border: 0;
+  background: #ffffff;
+}
+
+/* Over the frame for as long as what's in it isn't ours yet. Opaque, because
+ * what it hides is D&D Beyond's own navigation bar mid-reload. */
+.sf-cover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  /* `.save-spinner` is drawn in `em`. */
+  font-size: 40px;
+  color: #822000;
+}
+
+/* The same cover, over a page that arrived and turned out not to be ours to
+ * read. It says so, and offers the way back. */
+.sf-barred {
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  font-family: "Noto Sans", system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #242527;
+  text-align: center;
+}
+
+.sf-barred button {
+  padding: 6px 16px;
+  border: 1px solid #d8e1e8;
+  border-radius: 3px;
+  background: #ffffff;
+  font: inherit;
+  color: #1579bc;
+  cursor: pointer;
+}
+
+.sf-barred button:hover {
+  background: #f2f5f7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sf {
+    transition: none;
+  }
+}

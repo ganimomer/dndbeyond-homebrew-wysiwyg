@@ -1,0 +1,147 @@
+/*
+ * D&D Beyond 5e stat block ("mon-stat-block"), reimplemented on our own class
+ * tree under `.statblock.v5e`. Values mirror DDB's compiled CSS: the #822000
+ * accent, MrsEavesSmallCaps name, tapered edge/section bars, and a single
+ * six-across ability row. Fonts are named to inherit DDB's licensed faces at
+ * runtime; off-site they fall back.
+ */
+
+.statblock.v5e {
+  --accent: #822000;
+  --rule: #922610;
+  --paper: #fdf5ee;
+  /* The paper with the top glow below already mixed into it. The name row is
+   * opaque so the block can scroll under it, and this is the one colour that
+   * makes it invisible where it rests — over the brightest part of that glow.
+   * (The glow fades horizontally too, by about three values at the row's outer
+   * corners; that is beneath noticing, a live gradient would not be.) */
+  --paper-lit: #f7eee4;
+  box-sizing: border-box;
+  position: relative;
+  font-family: "Scala Sans Offc", Roboto, Helvetica, sans-serif;
+  font-size: 15px;
+  line-height: 1.32;
+  color: #242528;
+  background-color: var(--paper);
+  background-image:
+    repeating-linear-gradient(0deg, rgba(120, 90, 40, 0.022) 0 2px, transparent 2px 4px),
+    radial-gradient(120% 60% at 50% 0%, rgba(150, 120, 70, 0.06), transparent 70%);
+  border: 1px solid #d4d0ce;
+  box-shadow: 0 0 5px #979aa4;
+  padding: 15px;
+}
+
+.statblock.v5e * {
+  box-sizing: border-box;
+}
+
+/* Tapered top/bottom edge bars (own asset, in place of DDB's PNG). */
+.statblock.v5e::before,
+.statblock.v5e::after {
+  content: "";
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  height: 5px;
+  background: var(--rule);
+  clip-path: polygon(0 50%, 1% 0, 99% 0, 100% 50%, 99% 100%, 1% 100%);
+}
+.statblock.v5e::before {
+  top: -3px;
+}
+.statblock.v5e::after {
+  bottom: -3px;
+}
+
+.statblock.v5e .name {
+  font-family: MrsEavesSmallCaps, "Scala Sans Offc", Roboto, Helvetica, sans-serif;
+  font-weight: bold;
+  font-size: 34px;
+  color: var(--accent);
+  line-height: 1.1;
+  margin: 0;
+}
+
+.statblock.v5e .meta {
+  margin: 2px 0 8px;
+}
+
+/* Tapered section separators. */
+.statblock.v5e .rule {
+  height: 5px;
+  border: none;
+  margin: 8px 0;
+  background: var(--rule);
+  clip-path: polygon(0 50%, 1% 0, 99% 0, 100% 50%, 99% 100%, 1% 100%);
+}
+
+/* The basics — name through tidbits — are one section; the accent belongs to
+ * its labelled lines, not to the meta line above them. */
+.statblock.v5e .basics .line {
+  color: var(--accent);
+  margin: 2px 0;
+  line-height: 1.2;
+}
+.statblock.v5e .basics .label {
+  font-weight: bold;
+}
+
+/* Single six-across ability row. */
+.statblock.v5e .ability-block {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 10px 0;
+  color: var(--accent);
+  text-align: center;
+}
+.statblock.v5e .ability-block .stat {
+  width: 16.6667%;
+  padding: 5px 0;
+}
+.statblock.v5e .ability-block .heading {
+  font-weight: bold;
+}
+.statblock.v5e .ability-block .modifier {
+  margin-left: 2px;
+}
+
+.statblock.v5e h4 {
+  color: var(--accent);
+  font-family: "Scala Sans Offc", Roboto, Helvetica, sans-serif;
+  font-size: 24px;
+  font-weight: normal;
+  line-height: 1.4;
+  border-bottom: 1px solid var(--accent);
+  margin: 14px 0 6px;
+  padding-bottom: 2px;
+}
+
+.statblock.v5e .entry,
+.statblock.v5e .intro {
+  margin: 8px 0;
+}
+.statblock.v5e .entry-label {
+  font-weight: bold;
+  font-style: italic;
+}
+
+.statblock.v5e .roll {
+  white-space: nowrap;
+  border-bottom: 1px dotted rgba(130, 32, 0, 0.4);
+}
+
+.statblock.v5e .ref {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: rgba(130, 32, 0, 0.4);
+  text-underline-offset: 2px;
+}
+
+/* Pointing at a reference offers its definition, so say so — and firm the
+ * underline up, since the token is about to do something. Kept to CSS on
+ * purpose: the tooltip controller must never touch this element, or Lexical's
+ * reconciler will fight it for the attributes. */
+.statblock.v5e .ref:hover {
+  cursor: help;
+  text-decoration-color: rgba(130, 32, 0, 0.9);
+}

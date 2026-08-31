@@ -1,0 +1,7 @@
+/* The skills row: chips laid out inline, with the add menu trailing them. */
+.statblock .sb-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+}

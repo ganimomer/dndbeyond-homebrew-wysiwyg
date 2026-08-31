@@ -1,0 +1,33 @@
+/* The foot of the basics section: what a stat block *could* say but doesn't.
+ *
+ * The trigger's own look is `.sb-add` (see shared/AddButton.css), shared with
+ * the "Add trait" at the foot of each description section — the two are the same
+ * offer and used to look like different controls. All that's left here is where
+ * it sits, and the box the meta line types into. */
+.statblock .add-field {
+  margin: 8px 0 2px;
+}
+.statblock .meta-add {
+  /* Auto-size to the placeholder/typed text so nothing is cropped (the `size`
+   * attribute only approximates width). Falls back to `size` where unsupported. */
+  field-sizing: content;
+  min-width: 4ch;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0 1px;
+  border-radius: 3px;
+}
+.statblock .meta-add::placeholder {
+  color: inherit;
+  opacity: 0.5;
+  font-style: italic;
+}
+.statblock .meta-add:hover {
+  background: rgba(91, 22, 12, 0.08);
+}
+.statblock .meta-add:focus {
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}

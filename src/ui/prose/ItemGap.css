@@ -1,0 +1,86 @@
+/* The band between two entries. It is the 12px that used to be the list's flex
+ * `gap` — the same rhythm, but as a box of its own, because a gap can't be
+ * hovered and a box can. The band above the first entry is a line rather than a
+ * space: there was never a gap there, and a drop indicator needs no height. */
+.sb-item-gap {
+  position: relative;
+  height: 12px;
+}
+.sb-item-gap:first-child {
+  height: 0;
+}
+
+/* "Merge", across the whole gap: what it does is join the entry above to the
+ * one below, so it reads as the seam between them rather than as a button
+ * belonging to either. Taller than the band it sits in — 12px is too little to
+ * read a word in — and centred on it, so it overlaps each entry by a few pixels
+ * while it's showing and costs the section no height at all.
+ *
+ * Coloured like the section's "Add trait" (see shared/AddButton.css), since it
+ * is the same kind of offer: an author's tool, not part of the creature. */
+.sb-merge {
+  all: unset;
+  box-sizing: border-box;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 20px;
+  /* Under the format bar's 3: that hangs in this same band whenever the entry
+   * below has the caret, and it is the one reporting on live text. */
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  font-size: 0.78em;
+  background: rgba(91, 22, 12, 0.1);
+  /* Out of sight until the gap is pointed at, and taking no clicks while it is
+   * invisible — the bargain every author's tool on the block makes. */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease, background 0.12s ease;
+}
+
+.sb-item-gap:hover > .sb-merge,
+.sb-merge:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sb-merge:hover {
+  background: rgba(91, 22, 12, 0.18);
+}
+
+.sb-merge svg {
+  display: block;
+  opacity: 0.55;
+  transition: opacity 0.12s ease;
+}
+.sb-merge:hover svg {
+  opacity: 1;
+}
+
+.sb-merge:focus-visible {
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}
+
+/* Where the entry in hand would land. A rule across the gap rather than a
+ * highlight on an entry, because what is being chosen is a place between two
+ * entries, not one of them. */
+.sb-item-gap.is-drop-target::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 1px;
+  background: var(--accent, #5b160c);
+}

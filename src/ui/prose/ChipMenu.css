@@ -1,0 +1,37 @@
+/* The popover under a selected chip. The rows are ContextMenu's (.cm-item,
+ * .cm-icon, .cm-label, all defined there); what is here is only the panel,
+ * which that component draws with `position: absolute; top: 100%` off its own
+ * trigger and this one places by arithmetic. */
+
+.chip-menu {
+  position: absolute;
+  z-index: 10;
+  padding: 4px;
+  width: 180px;
+  background: #ffffff;
+  border: 1px solid #d8e1e8;
+  border-radius: 3px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
+  font-family: Roboto, "Open Sans", Helvetica, sans-serif;
+  font-size: 13px;
+  color: #242527;
+}
+
+/* The rows are <button>s here rather than <li>s, so they are tab stops that
+ * Enter and Space activate without help — but they must not look like buttons. */
+.chip-menu .cm-item {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.chip-menu .cm-item:hover,
+.chip-menu .cm-item:focus-visible {
+  background: #f2f5f7;
+}

@@ -1,0 +1,21 @@
+/* The chips that stand for D&D Beyond's checkboxes, at the right of the meta
+ * row. They ride upright even though the meta line reads in italic — the italic
+ * belongs to the sentence beside them, not to the row (see MetaLine.css). */
+.statblock .status-chips {
+  display: inline-flex;
+  align-items: baseline;
+  flex: none;
+  gap: 4px;
+}
+
+.statblock .status-chip {
+  white-space: nowrap;
+}
+
+/* `center` rather than the chip's usual baseline: what lines up inside one of
+ * these is a glyph and a word, not two pieces of text. */
+.statblock .status-chip .sb-chip-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}

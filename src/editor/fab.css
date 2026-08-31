@@ -1,0 +1,43 @@
+/* The floating "Open in Microbrewery" launcher. Lives in its own shadow root,
+ * isolated from D&D Beyond's page styles. */
+
+:host {
+  all: initial;
+}
+
+.fab {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 2147483000;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "Noto Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: #fdf1dc;
+  background: #7a200d;
+  border: 1px solid #5b160c;
+  border-radius: 999px;
+  padding: 10px 18px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(50, 30, 10, 0.35);
+  user-select: none;
+  transition: background 0.12s ease, transform 0.12s ease;
+}
+
+.fab:hover {
+  background: #922610;
+  transform: translateY(-1px);
+}
+
+.fab:active {
+  transform: translateY(0);
+}
+
+.fab .icon {
+  font-size: 16px;
+  line-height: 1;
+}

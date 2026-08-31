@@ -1,0 +1,172 @@
+/* What the compare panel does to D&D Beyond's monster page.
+ *
+ * Injected into their document, so nothing here is scoped by a shadow root and
+ * everything of ours is prefixed `mb-`. The stat block itself is left exactly as
+ * they draw it — that is what the author came to look at. All this adds is a
+ * gutter down the left of each block of prose, and the two controls that live
+ * in it. */
+
+#mega-menu-target,
+.ad-container,
+.page-header__extras,
+#footer-push,
+#skip-to-content-link,
+footer.ddb-footer,
+.details-aside,
+.homebrew-comments,
+.p-comments,
+.monster-tags,
+.environment-tags {
+  display: none !important;
+}
+
+.page-heading__content {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.microbrewery-nav {
+  flex: none;
+  display: flex;
+  gap: 8px;
+}
+
+.microbrewery-nav button {
+  padding: 6px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.microbrewery-nav button:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* The gutter. Made by indenting the block rather than by hanging the buttons
+ * outside it, so nothing of ours can fall off the edge of the stat block's
+ * card and be clipped. */
+.mb-content {
+  padding-left: 34px !important;
+}
+
+.mb-entry {
+  position: relative;
+  border-radius: 3px;
+  outline: none;
+}
+
+.mb-entry:hover,
+.mb-entry:focus-visible {
+  background: rgba(21, 121, 188, 0.08);
+  box-shadow: 0 0 0 4px rgba(21, 121, 188, 0.08);
+}
+
+/* One beat of D&D Beyond's own red to say the entry went across. The live block
+ * lights the arriving copy at the same moment, in the same colour family. */
+.mb-entry.is-imported {
+  background: rgba(228, 7, 18, 0.12);
+  box-shadow: 0 0 0 4px rgba(228, 7, 18, 0.12);
+}
+
+.mb-entry-body > *:first-child {
+  margin-top: 0;
+}
+
+/* Pointing left, at the block it would land in. Hidden until the entry is under
+ * the pointer or holds focus — the same bargain the editor's own per-entry
+ * controls make, so a page at rest reads as the stat block it is. */
+.mb-import {
+  position: absolute;
+  top: 2px;
+  left: -30px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #d8e1e8;
+  border-radius: 3px;
+  background: #ffffff;
+  color: #822000;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, background 0.12s ease;
+}
+
+.mb-entry:hover .mb-import,
+.mb-entry:focus-within .mb-import,
+.mb-import:focus-visible {
+  opacity: 1;
+}
+
+.mb-import:hover {
+  background: #fdf1dc;
+}
+
+/* An entry whose name is already on the creature. It still imports — it just
+ * says so first, in the title. */
+.mb-import.is-clash {
+  color: #9a3412;
+  border-color: #e0b48a;
+}
+
+/* The band between two entries, and the button that reads them as one. Zero
+ * height of its own, so banding a section costs it no length. */
+.mb-gap {
+  position: relative;
+  height: 0;
+}
+
+.mb-merge {
+  position: absolute;
+  top: -10px;
+  left: -30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 6px;
+  border: 1px solid #d8e1e8;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1579bc;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  z-index: 1;
+}
+
+.mb-gap:hover .mb-merge,
+.mb-merge:focus-visible {
+  opacity: 1;
+}
+
+/* A band is 0px tall, so it needs a hit area of its own to be hoverable at all
+ * — 12px, centred on the join, and behind the button it reveals. */
+.mb-gap::before {
+  content: "";
+  position: absolute;
+  left: -34px;
+  right: 0;
+  top: -6px;
+  height: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mb-import,
+  .mb-merge {
+    transition: none;
+  }
+}

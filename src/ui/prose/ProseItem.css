@@ -1,0 +1,29 @@
+/* One editable entry. `relative` is load-bearing: the format toolbar above it
+ * and the trash in its corner are both positioned against this box. */
+.sb-item {
+  position: relative;
+}
+
+/* The entry something just did to. It plays once and fades to nothing — a mark
+ * that outlived what put it there would be decoration, not a pointer. The amber
+ * is `needs-review`'s: the block already says "look here" in that colour. */
+.sb-item.is-spotlit {
+  border-radius: 3px;
+  animation: sb-spotlight 3s ease-out both;
+}
+@keyframes sb-spotlight {
+  0%,
+  40% {
+    background: rgba(214, 158, 46, 0.28);
+    box-shadow: 0 0 0 3px rgba(214, 158, 46, 0.28);
+  }
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 3px transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-item.is-spotlit {
+    animation-duration: 1ms;
+  }
+}

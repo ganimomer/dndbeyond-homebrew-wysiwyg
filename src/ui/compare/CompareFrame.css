@@ -1,0 +1,17 @@
+/* The compare panel is a `SideFrame`, and everything about how it arrives and
+ * leaves is there. What is here is only what makes this one different. */
+
+/* Wider: a listing reads fine in a column, a whole stat block does not. */
+.overlay.is-comparing .sb-aside {
+  flex: 1 1 640px;
+}
+
+/* A lookup opened mid-comparison hides the comparison rather than replacing it.
+ * The frame stays mounted and so stays loaded — coming back from naming a spell
+ * costs no page load and loses nobody's place. Written as a sibling rule rather
+ * than with `:has()`, which the Firefox this still builds for hasn't got: the
+ * aside renders the lookup first, so a compare panel with an `.sf` before it is
+ * one with a lookup over it. */
+.sb-aside .sf ~ .cf {
+  display: none;
+}

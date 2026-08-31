@@ -1,0 +1,25 @@
+/* A meta line slot before the editor turns it into a picker: inline text,
+ * dimmed where it's still prompting ("Alignment…"). Once wired, the mark moves
+ * to the picker's trigger (see option-picker.css) — left here it would dim the
+ * popover hanging inside the slot along with the prompt. */
+.statblock .meta-slot.is-placeholder {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+/* The meta row is the sentence and, on a legendary creature, the crown at its
+ * far end. Only the sentence is italic: the italic is what the line *is*, not
+ * something the row imposes, and scoping it here means the chip never has to
+ * set a value back to normal to escape it. Both layouts keep their own margins
+ * and colour; neither sets `display`, so this is the only rule that does. */
+.statblock .meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.statblock .meta-sentence {
+  font-style: italic;
+  min-width: 0;
+}

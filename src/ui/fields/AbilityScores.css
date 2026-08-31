@@ -1,0 +1,70 @@
+/* Editable ability score. Sits transparently inside the stat block, inheriting
+ * the surrounding type so it reads as text until focused. */
+.statblock .score-input {
+  font: inherit;
+  color: inherit;
+  text-align: center;
+  width: 2.75ch;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+  appearance: textfield;
+  cursor: text;
+}
+.statblock .score-input::-webkit-outer-spin-button,
+.statblock .score-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.statblock .score-input:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+.statblock .score-input:focus {
+  outline: none;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}
+
+/* 5e cells lay the score out inline, so keep the input on the text baseline. */
+.statblock.v5e .score-input {
+  width: 2.5ch;
+  text-align: right;
+  vertical-align: baseline;
+}
+
+/* The 5.5e Save cell: a character-sheet proficiency dot beside the bonus, the
+ * whole cell being the toggle. Filling the cell is what makes the small dot a
+ * comfortable target; the icon inherits the table's accent via currentColor. */
+.statblock .save-toggle {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  width: 100%;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.statblock .save-toggle svg {
+  display: block;
+  opacity: 0.75;
+}
+.statblock .save-toggle:hover {
+  background: rgba(91, 22, 12, 0.1);
+}
+.statblock .save-toggle:hover svg {
+  opacity: 1;
+}
+.statblock .save-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--accent, #5b160c);
+}

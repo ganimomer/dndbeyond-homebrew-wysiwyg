@@ -1,0 +1,104 @@
+<!--
+  D&D Beyond's 2024 monster page, trimmed from a real capture of
+  /monsters/5195251-vampire.
+
+  Beside `monster-details.html` on purpose, and for the same reason
+  `monster-listing.html` sits beside `spell-listing.html`: the 2014 and 2024
+  stat blocks are separate renderers with parallel class names, and a creature
+  is printed by whichever edition it belongs to regardless of which edition the
+  author is writing in. Everything the surgery reaches for is spelled
+  `mon-stat-block-2024__…` here and `mon-stat-block__…` there, and running both
+  through the same tests is what says the panel knows both.
+
+  Two other differences the pair pins down: this one carries a Bonus Actions
+  block, which the 2014 vampire hasn't got; and it opens its entries
+  `<strong><em>Name.</em></strong>` where the other writes
+  `<em><strong>Name.</strong></em>` — the bold and the italic the other way
+  round, which the splitter has to see through either way.
+
+  Trimmed away: the attributes, stat table and tidbits, which the surgery never
+  touches. The `.mon-stat-block-2024` root is kept, and so is the comment
+  thread's own `ul.listing`, for the same reason its 2014 sibling keeps them.
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Vampire - Monsters - D&amp;D Beyond</title>
+  </head>
+  <body class="site site-dndbeyond body-rpgmonster body-rpgmonster-details">
+    <div id="mega-menu-target"></div>
+    <header class="main">
+      <div class="page-heading">
+        <div class="page-heading__content">
+          <h1 class="page-title">Vampire</h1>
+        </div>
+      </div>
+    </header>
+
+    <div class="mon-stat-block-2024">
+      <div class="mon-stat-block-2024__header">
+        <div class="mon-stat-block-2024__name">
+          <a class="mon-stat-block-2024__name-link" href="/monsters/5195251-vampire">Vampire</a>
+        </div>
+        <div class="mon-stat-block-2024__meta">Medium or Small Undead (Shapechanger), Lawful Evil</div>
+      </div>
+      <div class="mon-stat-block-2024__description-blocks">
+        
+                  <div class="mon-stat-block-2024__description-block">
+                      <div class="mon-stat-block-2024__description-block-heading">Traits</div>
+                      <div class="mon-stat-block-2024__description-block-content">
+                          <p><em><strong>Legendary Resistance (3/Day, or 4/Day in Lair).</strong></em> If the vampire fails a saving throw, it can choose to succeed instead.</p>
+      <p><em><strong>Misty Escape.</strong></em> If the vampire drops to 0 Hit Points outside its resting place, the vampire uses Shape-Shift to become mist (no action required). If it can’t use Shape-Shift, it is destroyed.</p>
+      <p>While it has 0 Hit Points in mist form, it can’t return to its vampire form, and it must reach its resting place within 2 hours or be destroyed. Once in its resting place, it returns to its vampire form and has the <a class="tooltip-hover condition-tooltip" href="/sources/dnd/free-rules/rules-glossary#ParalyzedCondition" data-tooltip-href="/conditions/9-tooltip">Paralyzed</a> condition until it regains any Hit Points, and it regains 1 Hit Point after spending 1 hour there.</p>
+      <p><em><strong>Spider Climb.</strong></em> The vampire can climb difficult surfaces, including along ceilings, without needing to make an ability check.</p>
+      <p><strong><em>Vampire Weakness.</em></strong> The vampire has these weaknesses:</p>
+      <p><strong>Forbiddance.</strong> The vampire can’t enter a residence without an invitation from an occupant.<br> <strong>Running Water.</strong> The vampire takes 20 Acid damage if it ends its turn in running water.<br> <strong>Stake to the Heart.</strong> If a weapon that deals Piercing damage is driven into the vampire’s heart while the vampire has the <a class="tooltip-hover condition-tooltip" href="/sources/dnd/free-rules/rules-glossary#IncapacitatedCondition" data-tooltip-href="/conditions/7-tooltip">Incapacitated</a> condition in its resting place, the vampire has the <a class="tooltip-hover condition-tooltip" href="/sources/dnd/free-rules/rules-glossary#ParalyzedCondition" data-tooltip-href="/conditions/9-tooltip">Paralyzed</a> condition until the weapon is removed.<br> <strong>Sunlight.</strong> The vampire takes 20 Radiant damage if it starts its turn in sunlight. While in sunlight, it has <a class="tooltip-hover rule-tooltip" href="/sources/dnd/free-rules/rules-glossary#Disadvantage" data-tooltip-href="/rules-glossary/53-tooltip">Disadvantage</a> on attack rolls and ability checks.</p>
+                      </div>
+                  </div>
+        
+                  <div class="mon-stat-block-2024__description-block">
+                      <div class="mon-stat-block-2024__description-block-heading">Actions</div>
+                      <div class="mon-stat-block-2024__description-block-content">
+                          <p><em><strong>Multiattack (Vampire Form Only).</strong></em> The vampire makes two Grave Strike attacks and uses Bite.</p>
+      <p><em><strong>Grave Strike (Vampire Form Only).</strong> Melee Attack Roll:</em> <span data-dicenotation="1d20+9" data-rolltype="to hit" data-rollaction="Grave Strike">+9</span>, reach 5 ft. <em>Hit:</em> 8 <span data-dicenotation="1d8+4" data-rolltype="damage" data-rollaction="Grave Strike" data-rolldamagetype="Bludgeoning">(1d8 + 4)</span> Bludgeoning damage plus 7 <span data-dicenotation="2d6" data-rolltype="damage" data-rollaction="Grave Strike" data-rolldamagetype="Necrotic">(2d6)</span> Necrotic damage. If the target is a Large or smaller creature, it has the <a class="tooltip-hover condition-tooltip" href="/sources/dnd/free-rules/rules-glossary#GrappledCondition" data-tooltip-href="/conditions/6-tooltip">Grappled</a> condition (escape DC 14) from one of two hands.</p>
+      <p><em><strong>Bite (Bat or Vampire Form Only).</strong> Constitution Saving Throw:</em> DC 17, one creature within 5 feet that is willing or that has the <a class="tooltip-hover condition-tooltip" href="/sources/dnd/free-rules/rules-glossary#GrappledCondition" data-tooltip-href="/conditions/6-tooltip">Grappled</a>, <a class="tooltip-hover condition-tooltip" href="/sources/dnd/free-rules/rules-glossary#IncapacitatedCondition" data-tooltip-href="/conditions/7-tooltip">Incapacitated</a>, or <a class="tooltip-hover condition-tooltip" href="/sources/dnd/free-rules/rules-glossary#RestrainedCondition" data-tooltip-href="/conditions/13-tooltip">Restrained</a> condition. <em>Failure:</em> 6 <span data-dicenotation="1d4+4" data-rolltype="damage" data-rollaction="Bite" data-rolldamagetype="Piercing">(1d4 + 4)</span> Piercing damage plus 13 <span data-dicenotation="3d8" data-rolltype="damage" data-rollaction="Bite" data-rolldamagetype="Necrotic">(3d8)</span> Necrotic damage. The target’s Hit Point maximum decreases by an amount equal to the Necrotic damage taken, and the vampire regains Hit Points equal to that amount. A Humanoid reduced to 0 Hit Points by this damage and then buried rises the following sunset as a <a class="tooltip-hover monster-tooltip" href="/monsters/5195249-vampire-spawn" data-tooltip-href="/monsters/5195249-tooltip">Vampire Spawn</a> under the vampire’s control.</p>
+                      </div>
+                  </div>
+        
+                  <div class="mon-stat-block-2024__description-block">
+                      <div class="mon-stat-block-2024__description-block-heading">Bonus Actions</div>
+                      <div class="mon-stat-block-2024__description-block-content">
+                          <p><em><strong>Charm <span data-dicenotation="1d6" data-rolltype="recharge" data-rollaction="Charm">(Recharge 5–6)</span>.</strong></em> The vampire casts <a class="tooltip-hover spell-tooltip" href="/spells/2618964-charm-person" data-tooltip-href="/spells/2618964-tooltip">Charm Person</a>, requiring no spell components and using Charisma as the spellcasting ability (spell save DC 17), and the duration is 24 hours. The <a class="tooltip-hover condition-tooltip" href="/sources/dnd/free-rules/rules-glossary#CharmedCondition" data-tooltip-href="/conditions/2-tooltip">Charmed</a> target is a willing recipient of the vampire’s Bite, the damage of which doesn’t end the spell. When the spell ends, the target is unaware it was Charmed by the vampire.</p>
+      <p><em><strong>Shape-Shift.</strong></em> If the vampire isn’t in sunlight or running water, it <a class="tooltip-hover rule-tooltip" href="/sources/dnd/free-rules/rules-glossary#ShapeShifting" data-tooltip-href="/rules-glossary/100-tooltip">shape-shifts</a> into a Tiny bat (Speed 5 ft., Fly Speed 30 ft.) or a Medium cloud of mist (Speed 5 ft., Fly Speed 20 ft. [hover]), or it returns to its vampire form. Anything it is wearing transforms with it.</p>
+      <p>While in bat form, the vampire can’t speak. Its game statistics, other than its size and Speed, are unchanged.</p>
+      <p>While in mist form, the vampire can’t take any actions, speak, or manipulate objects. It is weightless and can enter an enemy’s space and stop there. If air can pass through a space, the mist can do so, but it can’t pass through liquid. It has Resistance to all damage, except the damage it takes from sunlight.</p>
+                      </div>
+                  </div>
+        
+                  <div class="mon-stat-block-2024__description-block">
+                      <div class="mon-stat-block-2024__description-block-heading">Legendary Actions</div>
+                      <div class="mon-stat-block-2024__description-block-content">
+                          <p class="legendary-actions">Legendary Action Uses: 3 (4 in Lair). Immediately after another creature’s turn, the vampire can expend a use to take one of the following actions. The vampire regains all expended uses at the start of each of its turns.</p>
+      <p><em><strong>Beguile.</strong></em> The vampire casts <a class="tooltip-hover spell-tooltip" href="/spells/2618985-command" data-tooltip-href="/spells/2618985-tooltip">Command</a>, requiring no spell components and using Charisma as the spellcasting ability (spell save DC 17). The vampire can’t take this action again until the start of its next turn.</p>
+      <p><em><strong>Deathless Strike.</strong></em> The vampire moves up to half its Speed, and it makes one Grave Strike attack.</p>
+                      </div>
+                  </div>
+          </div>
+    </div>
+
+    <div class="more-info-content">
+      <div class="mon-details__description-block">
+        <h3 class="mon-details__description-block-heading">Description</h3>
+        <div class="mon-details__description-block-content">
+          <p>Vampires are the most notorious of the undead, cunning and charming.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="homebrew-comments">
+      <ul class="listing listing-comments j-comment-listing">
+        <li class="p-comments"><div class="j-comment">Best vampire.</div></li>
+      </ul>
+    </div>
+  </body>
+</html>

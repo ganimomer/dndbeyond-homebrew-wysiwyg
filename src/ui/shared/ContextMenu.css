@@ -1,0 +1,141 @@
+/* Kebab context menu, matching D&D Beyond's Encounters "actions" menu:
+ * a grey 3-dot trigger and a white popover with light-bordered rounded rows. */
+
+.cm {
+  position: relative;
+  display: inline-flex;
+}
+
+.cm-trigger {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  color: #6f7478;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.cm-trigger:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.cm-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 10;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  width: 210px;
+  background: #ffffff;
+  border: 1px solid #d8e1e8;
+  border-radius: 3px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
+  font-family: Roboto, "Open Sans", Helvetica, sans-serif;
+  font-size: 13px;
+  color: #242527;
+  display: none;
+}
+
+.cm.open > .cm-menu {
+  display: block;
+}
+
+/* A long single-column list (all 18 skills) rather than a few actions: no icon
+ * gutter, tighter rows, and scrolling once it outgrows the popover. */
+.cm-menu.compact {
+  width: 200px;
+  max-height: 280px;
+  overflow-y: auto;
+  left: 0;
+  right: auto;
+}
+
+.cm-menu.compact .cm-item {
+  padding: 6px 8px;
+}
+
+.cm-menu.compact .cm-icon {
+  display: none;
+}
+
+/* A row that opens rows of its own: the flyout hangs off it, so the row is what
+ * the flyout is positioned against. */
+.cm-item.cm-parent {
+  position: relative;
+}
+
+.cm-caret {
+  margin-left: auto;
+  color: #6f7478;
+  line-height: 1;
+}
+
+/* Leftward, over the stat block, where there is always room: the kebab sits at
+ * the block's right edge, and a flyout to the right would cross the artwork
+ * column and run off a narrow window. Written at `.cm-menu.cm-submenu` and
+ * placed after `.compact`, whose `left: 0; right: auto` it has to beat. */
+.cm-menu.cm-submenu {
+  top: -5px;
+  left: auto;
+  right: calc(100% + 5px);
+}
+
+.cm-item.cm-parent.is-open > .cm-submenu {
+  display: block;
+}
+
+.cm-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px;
+  margin: 2px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.cm-item:hover {
+  background: #f2f5f7;
+}
+
+/* An action that isn't available yet. Note the absence of `pointer-events:
+ * none`: the row still has to take a hover, because its `title` is the only
+ * thing that says why it's greyed out. */
+.cm-item.disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.cm-item.disabled:hover {
+  background: none;
+}
+
+/* Also worn by the empty <span> a menu item with no icon puts here, so the
+ * labels beside it still line up. */
+.cm-icon {
+  width: 18px;
+  flex: 0 0 18px;
+  display: block;
+  color: #1579bc;
+}
+
+.cm-item.danger .cm-icon {
+  color: #b00;
+}
+
+/* D&D Beyond's own red — the fill on the wordmark in its header, which is the
+ * mark the glyph wearing this was lifted from. */
+.cm-icon.tone-brand {
+  color: #e40712;
+}
+
+.cm-label {
+  flex: 1;
+}

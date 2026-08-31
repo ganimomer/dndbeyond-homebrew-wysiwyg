@@ -1,0 +1,71 @@
+/* The small avatar's upload report, at the top-right corner of the overlay.
+ * Fixed rather than in flow: it belongs to the screen, not to the document the
+ * author is scrolling through. */
+.avatar-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 320px;
+  padding: 10px 14px 10px 10px;
+  border-radius: 6px;
+  border: 1px solid;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.22);
+  font-family: Roboto, "Open Sans", Helvetica, sans-serif;
+  font-size: 13px;
+  line-height: 1.35;
+  animation: avatar-toast-in 0.18s ease-out;
+}
+
+@keyframes avatar-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar-toast {
+    animation: none;
+  }
+}
+
+.avatar-toast.is-success {
+  color: #14532d;
+  background: #ecfdf3;
+  border-color: #a7e0bd;
+}
+.avatar-toast.is-error {
+  color: #7f1d1d;
+  background: #fef2f2;
+  border-color: #f0b1b1;
+}
+
+/* The uploaded icon at the size it will actually be used: DDB's listing pages
+ * draw it small, and this is the only place the author gets to see it. */
+.avatar-toast-thumb {
+  flex: 0 0 35px;
+  width: 35px;
+  height: 35px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.avatar-toast-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.avatar-toast-text strong {
+  font-weight: 700;
+}
+
+.avatar-toast-icon {
+  display: block;
+  margin-left: auto;
+}
