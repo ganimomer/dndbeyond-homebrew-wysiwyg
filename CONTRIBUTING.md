@@ -1,6 +1,95 @@
-# Releasing
+# Contributing
 
-## Cutting a release
+## Getting set up
+
+Node **22 or newer** — a real floor, not a preference: `scripts/test.mjs` globs
+with `node:fs`'s `globSync`, which doesn't exist before it. There's an `.nvmrc`,
+so `nvm use` picks the right one.
+
+```bash
+npm install
+```
+
+## Build
+
+```bash
+npm run build          # builds both dist/firefox and dist/chrome
+npm run build:firefox  # Firefox only
+npm run build:chrome   # Chrome only
+npm run dev:firefox    # rebuild on change
+
+npm run harvest:references   # re-reads DDB's closed-compendium ids (network)
+```
+
+`build.mjs` bundles the shared `src/` into `dist/<browser>/` and copies that
+browser's manifest over it. The manifests in `targets/` carry no `version`; the
+build stamps one, from `--version` if given and from `package.json` otherwise.
+
+Load the result unpacked — see [Install](README.md#install).
+
+## Checks
+
+```bash
+npm run check          # everything below, in the order CI runs it
+```
+
+| | |
+|---|---|
+| `npm run lint` | ESLint over the whole repo, build scripts included |
+| `npm run typecheck` | the extension |
+| `npm run typecheck:tests` | the tests, which have their own tsconfig |
+| `npm test` | the suite, under `node:test` against a jsdom document |
+| `npm run build` | both browsers |
+| `npm run lint:ext` | Mozilla's add-on linter over `dist/firefox` |
+
+`npm run check` is exactly what [the CI workflow](.github/workflows/ci.yml)
+runs, so a green local run is a green pull request. Every PR into `main` has to
+pass it before it can be merged.
+
+## How it's laid out
+
+```
+src/content/    content-script entry: detect the editor, launcher ↔ panel
+src/background/ background entry
+src/platform/   browser.* API wrapper (webextension-polyfill) + build globals
+src/adapter/    the seam between our model and D&D Beyond's DOM
+src/statblock/  the domain model — no DOM, no D&D Beyond
+src/state/      EditorStore, and every edit as a Command
+src/ui/         the injected editor, in Preact
+src/editor/     Lexical, reference tooltips, autosave
+targets/        the thin per-browser layer — just manifests
+```
+
+Three seams carry the design.
+
+**The `PageAdapter` interface.** Everything above it is browser- and
+page-agnostic; everything below knows D&D Beyond's DOM. Supporting another
+content type later means adding an adapter, not touching the editor.
+
+**The store.** `EditorStore` holds the creature — re-read from DDB's form, which
+stays the source of truth, so their inputs and ours never disagree — plus the
+session state that only the editor knows: which optional rows the user revealed,
+which abilities they have touched, what the armor was worth before they started.
+`App` is its only subscriber; everything below reads through context.
+
+**Commands.** Every edit is a `Command` that knows how to apply itself and how
+to put itself back, captured with the value it replaced. That is what collapsed
+the save requests into one path, and what `transaction()` — templates, bulk
+edits — is built on. (Undo is not wired to a key; the pipeline is.)
+
+The injected UI lives entirely inside a **shadow root**, so DDB's page styles
+can't leak into the stat block and vice versa.
+
+## Where the reasoning lives
+
+In the code. Every module opens with a header comment explaining what it is for
+and why it is the way it is — which redirect tier costs a second and how the
+design avoids paying it, why the first tooltip that answers isn't the answer,
+why a shield adds to the stated armor class instead of recomputing it. Those
+comments are the design record; read a file's header before changing it, and
+keep it true when you do.
+
+## Releasing
 
 Actions → **Release** → *Run workflow*, on `main`. Pick `patch`, `minor` or
 `major`; leave **version** blank unless you mean to override it.
@@ -25,7 +114,7 @@ workflow will stop and say so. Put the version you want in the **version** box
 Nothing is ever committed back to `main`. The tags are the record of what has
 shipped, which is also why this doesn't collide with the branch ruleset.
 
-## Submitting to the stores
+## Publishing to the stores
 
 **None of this is automated, and the first submission can't be** — there is no
 listing for an API to update until you have made one by hand. Do it once per
